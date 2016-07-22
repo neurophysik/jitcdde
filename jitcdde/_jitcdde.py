@@ -161,13 +161,13 @@ class jitcdde():
 					self.DDE.get_next_step(self.pws_factor*self.dt)
 					if self.DDE.past_within_step:
 						
-						# If possible, halve step size to make integration explicit:
+						# If possible, adjust step size to make integration explicit:
 						if self.DDE.past_within_step < self.pws_adaption_factor*self.pws_factor*self.dt:
 							self.pws_factor *= self.pws_adaption_factor
 							self._control_for_min_step()
 							continue
 						
-						# Try to come within an acceptable error within pws_max_iterations iterations; otherwise halve step size:
+						# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
 						for count in range(1,self.pws_max_iterations+1):
 							old_new_y = self.DDE.past[-1][1]
 							self.DDE.get_next_step(self.pws_factor*self.dt)
