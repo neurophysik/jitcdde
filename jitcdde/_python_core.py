@@ -17,6 +17,7 @@ class dde_integrator(object):
 		self.past = past
 		self.t, self.y, self.diff = self.past[-1]
 		self.n = len(self.y)
+		self.step_count = 0 # For benchmarking purposes.
 		
 		t, y, current_y, past_y, anchors = jitcdde._jitcdde.provide_advanced_symbols()
 		Y = sympy.symarray("Y", self.n)
@@ -85,6 +86,7 @@ class dde_integrator(object):
 		return self.f(t, y)
 	
 	def get_next_step(self, delta_t):
+		self.step_count += 1
 		self.past_within_step = False
 		k_1 = self.diff
 		k_2 = self.eval_f(self.t + 0.5 *delta_t, self.y + 0.5 *delta_t*k_1)
