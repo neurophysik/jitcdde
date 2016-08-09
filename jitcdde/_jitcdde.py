@@ -9,6 +9,10 @@ import jitcdde._python_core as python_core
 import sympy
 import numpy as np
 
+#sigmoid = lambda x: 1/(1+np.exp(-x))
+#sigmoid = lambda x: 1 if x>0 else 0
+sigmoid = lambda x: (np.tanh(x)+1)/2
+
 def provide_advanced_symbols():
 	t = sympy.Symbol("t", real=True)
 	current_y = sympy.Function("current_y")
@@ -93,12 +97,14 @@ class jitcdde():
 			pws_atol = 0.0,
 			pws_rtol = 1e-5,
 			pws_max_iterations = 10,
-			pws_adaption_factor = 0.5,
+			pws_factor = 3,
+			pws_base_increase_chance = 0.1,
+			pws_increase = False,
 			raise_exception = False,
 			):
 		
 		"""
-		TODO: component-wise shit
+		TODO: component-wise cool shit
 		"""
 		
 		assert min_step <= first_step <= max_step, "Bogus step parameters."
@@ -114,7 +120,8 @@ class jitcdde():
 		assert np.all(pws_atol>=0.0), "negative pws_atol"
 		assert np.all(pws_rtol>=0.0), "negative pws_rtol"
 		assert 0<pws_max_iterations, "non-positive pws_max_iterations"
-		assert 0.0<pws_adaption_factor<1.0, "bogus pws_adaption_factor"
+		assert 2<=pws_factor, "pws_factor smaller than 2"
+		assert pws_base_increase_chance>=0, "negative pws_base_increase_chance"
 		
 		self.atol = atol
 		self.rtol = rtol
@@ -130,16 +137,36 @@ class jitcdde():
 		self.pws_atol = pws_atol
 		self.pws_rtol = pws_rtol
 		self.pws_max_iterations = pws_max_iterations
-		self.pws_adaption_factor = pws_adaption_factor
+		self.pws_factor = pws_factor
+		self.pws_base_increase_chance = pws_base_increase_chance
+		
 		self.q = 3.
-		self.pws_factor = 1.0
+		self.last_pws = False
+		
+		if pws_increase:
+			self.do_increase = lambda p: np.random.random < p
+		else:
+			self.increase_credit = 0.0
+			def do_increase(p):
+				self.increase_credit += p
+				if self.increase_credit >= 0.98:
+					self.increase_credit = 0.0
+					return True
+				else:
+					return False
+			self.do_increase = do_increase
 	
 	def _control_for_min_step(self):
-		if self.pws_factor*self.dt < self.min_step:
-			raise UnsuccessfulIntegration(
-				"Step size under min_step (%f). dt=%f, pws_factor=%f" %
-				(self.min_step, self.dt, self.pws_factor)
-				)
+		if self.dt < self.min_step:
+			raise UnsuccessfulIntegration("Step size under min_step (%e)." % self.min_step)
+	
+	def _increase_chance(self, new_dt):
+		q = new_dt/self.last_pws
+		is_explicit = sigmoid(1-q)
+		far_from_explicit = sigmoid(q-self.pws_factor)
+		few_iterations = sigmoid(1-self.count/self.pws_factor)
+		profile = is_explicit+far_from_explicit*few_iterations
+		return profile + self.pws_base_increase_chance*(1-profile)
 	
 	def _adjust_step_size(self):
 		p = np.max(np.abs(self.DDE.error)/(self.atol + self.rtol*np.abs(self.DDE.past[-1][1])))
@@ -151,38 +178,43 @@ class jitcdde():
 			self.successful = True
 			self.DDE.accept_step()
 			if p < self.increase_threshold:
-				self.dt *= min(self.safety_factor*p**(-1/(self.q+1)), self.max_factor)
+				new_dt = min(
+					self.dt*min(self.safety_factor*p**(-1/(self.q+1)), self.max_factor),
+					self.max_step
+					)
+				
+				if (not self.last_pws) or self.do_increase(self._increase_chance(new_dt)):
+					self.dt = new_dt
+					self.count = 0
+					self.last_pws = False
 	
 	def integrate(self, target_time):
 		try:
 			while self.DDE.t < target_time:
 				self.successful = False
 				while not self.successful:
-					self.DDE.get_next_step(self.pws_factor*self.dt)
+					self.DDE.get_next_step(self.dt)
+					
 					if self.DDE.past_within_step:
+						self.last_pws = self.DDE.past_within_step
 						
 						# If possible, adjust step size to make integration explicit:
-						if self.DDE.past_within_step < self.pws_adaption_factor*self.pws_factor*self.dt:
-							self.pws_factor *= self.pws_adaption_factor
+						if self.dt > self.pws_factor*self.DDE.past_within_step:
+							self.dt /= self.pws_factor
 							self._control_for_min_step()
 							continue
 						
 						# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
-						for count in range(1,self.pws_max_iterations+1):
+						for self.count in range(1,self.pws_max_iterations+1):
 							old_new_y = self.DDE.past[-1][1]
-							self.DDE.get_next_step(self.pws_factor*self.dt)
+							self.DDE.get_next_step(self.dt)
 							new_y = self.DDE.past[-1][1]
 							difference = np.abs(new_y-old_new_y)
 							tolerance = self.pws_atol + np.abs(self.pws_rtol*new_y)
 							if np.all(difference < tolerance):
-								if count < 1/self.pws_adaption_factor:
-									self.pws_factor = min(
-										1.0,
-										self.pws_factor/self.pws_adaption_factor
-										)
 								break
 						else:
-							self.pws_factor *= self.pws_adaption_factor
+							self.dt /= self.pws_factor
 							self._control_for_min_step()
 							continue
 					
