@@ -142,6 +142,7 @@ class jitcdde():
 		
 		self.q = 3.
 		self.last_pws = False
+		self.count = 0
 		
 		if pws_fuzzy_increase:
 			self.do_increase = lambda p: np.random.random() < p
