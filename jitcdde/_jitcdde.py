@@ -99,7 +99,7 @@ class jitcdde():
 			pws_max_iterations = 10,
 			pws_factor = 3,
 			pws_base_increase_chance = 0.1,
-			pws_increase = False,
+			pws_fuzzy_increase = True,
 			raise_exception = False,
 			):
 		
@@ -143,8 +143,8 @@ class jitcdde():
 		self.q = 3.
 		self.last_pws = False
 		
-		if pws_increase:
-			self.do_increase = lambda p: np.random.random < p
+		if pws_fuzzy_increase:
+			self.do_increase = lambda p: np.random.random() < p
 		else:
 			self.increase_credit = 0.0
 			def do_increase(p):
