@@ -26,12 +26,18 @@ class TestIntegration(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
 		self.DDE = jitcdde(f)
+		self.DDE.set_integration_parameters(
+			raise_exception = True,
+			rtol = 1e-7,
+			pws_rtol = 1e-7,
+			first_step = 20,
+			max_step = 100
+			)
 	
 	def setUp(self):
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
 		self.DDE.generate_f_lambda()
-		self.DDE.set_integration_parameters(raise_exception=True, rtol=1e-7, pws_rtol=1e-7)
 		self.y_99 = None
 	
 	def assert_consistency_with_previous(self, value):
@@ -67,6 +73,28 @@ class TestPastWithinStep(TestIntegration):
 	@classmethod
 	def setUpClass(self):
 		self.DDE = jitcdde(f_with_tiny_delay)
+		self.DDE.set_integration_parameters(
+			raise_exception = True,
+			rtol = 1e-7,
+			pws_rtol = 1e-7,
+			first_step = 20,
+			max_step = 100,
+			pws_fuzzy_increase = False
+			)
+
+class TestPastWithinStepFuzzy(TestIntegration):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = jitcdde(f_with_tiny_delay)
+		self.DDE.set_integration_parameters(
+			raise_exception = True,
+			rtol = 1e-7,
+			pws_rtol = 1e-7,
+			first_step = 20,
+			max_step = 100,
+			pws_fuzzy_increase = True
+			)
+
 
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
@@ -95,6 +123,14 @@ class TestIntegrationParameters(unittest.TestCase):
 		self.DDE.set_integration_parameters(min_step=1e-3, rtol=0, atol=1e-10)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
+
+class TestPWSParameters(TestIntegrationParameters):
+	def setUp(self):
+		self.DDE = jitcdde(f_with_tiny_delay)
+		for point in get_past_points():
+			self.DDE.add_past_point(*point)
+		self.DDE.generate_f_lambda()
+
 
 unittest.main(buffer=True)
 

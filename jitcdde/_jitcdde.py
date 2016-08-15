@@ -99,7 +99,7 @@ class jitcdde():
 			pws_max_iterations = 10,
 			pws_factor = 3,
 			pws_base_increase_chance = 0.1,
-			pws_fuzzy_increase = True,
+			pws_fuzzy_increase = False,
 			raise_exception = False,
 			):
 		
@@ -212,7 +212,7 @@ class jitcdde():
 							new_y = self.DDE.past[-1][1]
 							difference = np.abs(new_y-old_new_y)
 							tolerance = self.pws_atol + np.abs(self.pws_rtol*new_y)
-							if np.all(difference < tolerance):
+							if np.all(difference <= tolerance):
 								break
 						else:
 							self.dt /= self.pws_factor
