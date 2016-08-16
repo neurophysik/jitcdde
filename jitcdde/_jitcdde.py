@@ -65,7 +65,7 @@ def _sympify_helpers(helpers):
 	return [(helper[0], sympy.sympify(helper[1]).doit()) for helper in helpers]
 
 class UnsuccessfulIntegration(Exception):
-    pass
+	pass
 
 class jitcdde():
 	def __init__(self, f_sym, helpers=None, n=None):
