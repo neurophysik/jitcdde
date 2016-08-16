@@ -7,6 +7,9 @@ import jitcdde._jitcdde
 
 import sympy
 import numpy as np
+from itertools import count
+
+MIN_GARBAGE = 100
 
 class dde_integrator(object):
 	def __init__(self,
@@ -18,6 +21,7 @@ class dde_integrator(object):
 		self.t, self.y, self.diff = self.past[-1]
 		self.n = len(self.y)
 		self.step_count = 0 # For benchmarking purposes.
+		self.last_garbage = -1
 		
 		t, y, current_y, past_y, anchors = jitcdde._jitcdde.provide_advanced_symbols()
 		Y = sympy.symarray("Y", self.n)
@@ -103,9 +107,14 @@ class dde_integrator(object):
 	
 	def accept_step(self):
 		self.t, self.y, self.diff = self.past[-1]
-	
+
 	def clear_past(self, delay):
 		threshold = self.t - delay
-		while self.past[1][0] < threshold:
-			self.past.pop(0)
+		while self.past[self.last_garbage+2][0] < threshold:
+			self.last_garbage += 1
 		
+		if self.last_garbage>=MIN_GARBAGE:
+			self.past = self.past[self.last_garbage+1:]
+			self.anchor_mem -= self.last_garbage+1
+			self.last_garbage = -1
+

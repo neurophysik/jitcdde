@@ -180,7 +180,6 @@ class jitcdde():
 			self._control_for_min_step()
 		else:
 			self.successful = True
-			self.DDE.clear_past(self.max_delay)
 			self.DDE.accept_step()
 			if p < self.increase_threshold:
 				new_dt = min(
@@ -234,11 +233,13 @@ class jitcdde():
 				return np.nan*np.ones(self.n)
 		
 		else:
-			return self.DDE.get_past_state(
+			result = self.DDE.get_past_state(
 				target_time,
 				(self.DDE.past[-2], self.DDE.past[-1])
 				)
-		
+			self.DDE.clear_past(self.max_delay)
+			return result
+
 	def integrate_blindly(self, target_time, step=0.1):
 		total_integration_time = target_time-self.DDE.t
 		number = int(round(total_integration_time/step))
@@ -248,3 +249,4 @@ class jitcdde():
 		for _ in range(number):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
+			self.DDE.clear_past(self.max_delay)
