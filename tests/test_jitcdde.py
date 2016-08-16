@@ -22,17 +22,21 @@ def get_past_points():
 
 y_99_ref = 1.2538230733065612
 
+test_parameters = {
+	"max_delay": tau,
+	"raise_exception": True,
+	"rtol": 1e-7,
+	"pws_rtol": 1e-7,
+	"first_step": 20,
+	"max_step": 100,
+	"pws_rtol": 1e-7,
+	}
+
 class TestIntegration(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
 		self.DDE = jitcdde(f)
-		self.DDE.set_integration_parameters(max_delay=tau,
-			raise_exception = True,
-			rtol = 1e-7,
-			pws_rtol = 1e-7,
-			first_step = 20,
-			max_step = 100
-			)
+		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def setUp(self):
 		for point in get_past_points():
@@ -73,43 +77,36 @@ class TestPastWithinStep(TestIntegration):
 	@classmethod
 	def setUpClass(self):
 		self.DDE = jitcdde(f_with_tiny_delay)
-		self.DDE.set_integration_parameters(max_delay=tau,
-			raise_exception = True,
-			rtol = 1e-7,
-			pws_rtol = 1e-7,
-			first_step = 20,
-			max_step = 100,
-			pws_fuzzy_increase = False
-			)
+		self.DDE.set_integration_parameters(pws_fuzzy_increase=False, **test_parameters)
 
 class TestPastWithinStepFuzzy(TestIntegration):
 	@classmethod
 	def setUpClass(self):
 		self.DDE = jitcdde(f)
-		self.DDE.set_integration_parameters(max_delay=tau,
-			raise_exception = True,
-			rtol = 1e-7,
-			pws_rtol = 1e-7,
-			first_step = 20,
-			max_step = 100
-			)
+		self.DDE.set_integration_parameters(pws_fuzzy_increase=True, **test_parameters)
 
 def f_generator():
 	yield 0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t)
 
-class TestGeneratior(TestIntegration):
+class TestGenerator(TestIntegration):
 	@classmethod
 	def setUpClass(self):
 		self.DDE = jitcdde(f_generator)
-		self.DDE.set_integration_parameters(max_delay=tau,
-			raise_exception = True,
-			rtol = 1e-7,
-			pws_rtol = 1e-7,
-			first_step = 20,
-			max_step = 100,
-			pws_fuzzy_increase = True
-			)
+		self.DDE.set_integration_parameters(**test_parameters)
 
+delayed_y, denominator, undelayed_term = sympy.symbols("delayed_y denominator undelayed_term")
+f_alt_helpers = [
+	(delayed_y, y(0,t-tau)),
+	(denominator, (1.0 + delayed_y**p)),
+	(undelayed_term, - 0.1*y(0,t))
+	]
+f_alt = [0.25 * delayed_y / denominator + undelayed_term]
+
+class TestHelpers(TestIntegration):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = jitcdde(f_alt, f_alt_helpers)
+		self.DDE.set_integration_parameters(**test_parameters)
 
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
