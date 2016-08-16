@@ -95,6 +95,10 @@ def _sympify_helpers(helpers):
 	return [(helper[0], sympy.sympify(helper[1]).doit()) for helper in helpers]
 
 class UnsuccessfulIntegration(Exception):
+	"""
+		This exception is raised when the integrator cannot meet the accuracy and step-size requirements and the argument `raise_exception` of `set_integration_parameters` is set.
+	"""
+	
 	pass
 
 class jitcdde():
