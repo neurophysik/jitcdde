@@ -42,7 +42,7 @@ def _handle_input(f_sym,n):
 			raise ValueError("len(f_sym) and n do not match.")
 		return (lambda: (entry.doit() for entry in f_sym), len_f)
 
-def depends_on_any(helper, other_helpers):
+def _depends_on_any(helper, other_helpers):
 	for other_helper in other_helpers:
 		if helper[1].has(other_helper[0]):
 			return True
@@ -51,7 +51,7 @@ def depends_on_any(helper, other_helpers):
 def _sort_helpers(helpers):
 	if len(helpers)>1:
 		for j,helper in enumerate(helpers):
-			if not depends_on_any(helper, helpers):
+			if not _depends_on_any(helper, helpers):
 				helpers.insert(0,helpers.pop(j))
 				break
 		else:
