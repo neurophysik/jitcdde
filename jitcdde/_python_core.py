@@ -103,3 +103,9 @@ class dde_integrator(object):
 	
 	def accept_step(self):
 		self.t, self.y, self.diff = self.past[-1]
+	
+	def clear_past(self, delay):
+		threshold = self.t - delay
+		while self.past[1][0] < threshold:
+			self.past.pop(0)
+		

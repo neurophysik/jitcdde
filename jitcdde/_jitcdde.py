@@ -84,6 +84,7 @@ class jitcdde():
 		self.DDE = python_core.dde_integrator(self.f_sym(), self.past, self.helpers)
 	
 	def set_integration_parameters(self,
+			max_delay,
 			atol = 0.0,
 			rtol = 1e-5,
 			first_step = 1.0,
@@ -107,6 +108,7 @@ class jitcdde():
 		TODO: component-wise cool shit
 		"""
 		
+		assert max_delay >= 0.0, "Negative maximum delay."
 		assert min_step <= first_step <= max_step, "Bogus step parameters."
 		assert decrease_threshold>=1.0, "decrease_threshold smaller than 1"
 		assert increase_threshold<=1.0, "increase_threshold larger than 1"
@@ -123,6 +125,7 @@ class jitcdde():
 		assert 2<=pws_factor, "pws_factor smaller than 2"
 		assert pws_base_increase_chance>=0, "negative pws_base_increase_chance"
 		
+		self.max_delay = max_delay
 		self.atol = atol
 		self.rtol = rtol
 		self.dt = first_step
@@ -177,6 +180,7 @@ class jitcdde():
 			self._control_for_min_step()
 		else:
 			self.successful = True
+			self.DDE.clear_past(self.max_delay)
 			self.DDE.accept_step()
 			if p < self.increase_threshold:
 				new_dt = min(
@@ -234,3 +238,13 @@ class jitcdde():
 				target_time,
 				(self.DDE.past[-2], self.DDE.past[-1])
 				)
+		
+	def integrate_blindly(self, target_time, step=0.1):
+		total_integration_time = target_time-self.DDE.t
+		number = int(round(total_integration_time/step))
+		dt = total_integration_time/number
+		
+		assert(number*dt == total_integration_time)
+		for _ in range(number):
+			self.DDE.get_next_step(dt)
+			self.DDE.accept_step()
