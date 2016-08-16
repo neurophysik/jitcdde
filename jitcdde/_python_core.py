@@ -108,7 +108,7 @@ class dde_integrator(object):
 	def accept_step(self):
 		self.t, self.y, self.diff = self.past[-1]
 
-	def clear_past(self, delay):
+	def forget(self, delay):
 		threshold = self.t - delay
 		while self.past[self.last_garbage+2][0] < threshold:
 			self.last_garbage += 1

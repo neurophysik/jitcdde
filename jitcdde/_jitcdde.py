@@ -237,7 +237,7 @@ class jitcdde():
 				target_time,
 				(self.DDE.past[-2], self.DDE.past[-1])
 				)
-			self.DDE.clear_past(self.max_delay)
+			self.DDE.forget(self.max_delay)
 			return result
 
 	def integrate_blindly(self, target_time, step=0.1):
@@ -249,4 +249,4 @@ class jitcdde():
 		for _ in range(number):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
-			self.DDE.clear_past(self.max_delay)
+			self.DDE.forget(self.max_delay)
