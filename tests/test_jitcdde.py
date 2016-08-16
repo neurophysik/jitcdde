@@ -96,8 +96,8 @@ class TestGenerator(TestIntegration):
 
 delayed_y, denominator, undelayed_term = sympy.symbols("delayed_y denominator undelayed_term")
 f_alt_helpers = [
-	(delayed_y, y(0,t-tau)),
 	(denominator, (1.0 + delayed_y**p)),
+	(delayed_y, y(0,t-tau)),
 	(undelayed_term, - 0.1*y(0,t))
 	]
 f_alt = [0.25 * delayed_y / denominator + undelayed_term]
