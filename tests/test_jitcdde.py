@@ -85,7 +85,22 @@ class TestPastWithinStep(TestIntegration):
 class TestPastWithinStepFuzzy(TestIntegration):
 	@classmethod
 	def setUpClass(self):
-		self.DDE = jitcdde(f_with_tiny_delay)
+		self.DDE = jitcdde(f)
+		self.DDE.set_integration_parameters(max_delay=tau,
+			raise_exception = True,
+			rtol = 1e-7,
+			pws_rtol = 1e-7,
+			first_step = 20,
+			max_step = 100
+			)
+
+def f_generator():
+	yield 0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t)
+
+class TestGeneratior(TestIntegration):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = jitcdde(f_generator)
 		self.DDE.set_integration_parameters(max_delay=tau,
 			raise_exception = True,
 			rtol = 1e-7,
