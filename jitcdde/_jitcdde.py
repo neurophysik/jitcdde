@@ -13,7 +13,40 @@ import numpy as np
 #sigmoid = lambda x: 1 if x>0 else 0
 sigmoid = lambda x: (np.tanh(x)+1)/2
 
+def provide_basic_symbols():
+	"""
+	provides the basic symbols that must be used to define the differential equation.
+	
+	Returns
+	-------
+	t : SymPy symbol
+		represents time
+	y : SymPy function
+		represents the DDE’s state, with the first integer argument denoting the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands, so do not be surprised when you are looking at the output for some reason and it looks different than what you entered or expected (see `provide_advanced_symbols` for more details).
+	"""
+	
+	return provide_advanced_symbols()[:2]
+
 def provide_advanced_symbols():
+	"""
+	provides all symbols that you may want to use to to define the differential equation.
+	
+	You may just as well define the respective symbols and functions directly with SymPy, but using this function is the best way to get the most of future versions of JiTCODE, in particular avoiding incompatibilities. If you wish to use other symbols for the dynamical variables, you can use `convert_to_required_symbols` for conversion.
+	
+	Returns
+	-------
+	t : SymPy symbol
+		represents time
+	y : SymPy function
+		same as for `provide_basic_symbols`.
+	current_y : SymPy function
+		represents the DDE’s current state, with the integer argument denoting the component
+	past_y : SymPy function
+		represents the DDE’s past state, with the integer argument denoting the component and the second argument being a pair of past points (anchors) from which the past state is interpolated (or, in rare cases, extrapolated).
+	anchors : SymPy function
+		represents the pair of anchors pertaining to a specific time point with the symbolic argument denoting that time point.
+	"""
+	
 	t = sympy.Symbol("t", real=True)
 	current_y = sympy.Function("current_y")
 	anchors = sympy.Function("anchors")
@@ -28,9 +61,6 @@ def provide_advanced_symbols():
 				return past_y(time, index, anchors(time))
 	
 	return t, y, current_y, past_y, anchors
-
-def provide_basic_symbols():
-	return provide_advanced_symbols()[:2]
 
 def _handle_input(f_sym,n):
 	if isgeneratorfunction(f_sym):
