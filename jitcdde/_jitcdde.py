@@ -102,6 +102,19 @@ class UnsuccessfulIntegration(Exception):
 	pass
 
 class jitcdde():
+	"""
+	Parameters
+	----------
+	f_sym : iterable of SymPy expressions or generator function yielding SymPy expressions
+		The `i`-th element is the `i`-th component of the value of the DDE’s derivative :math:`f(t,y)`.
+	
+	helpers : list of length-two iterables, each containing a SymPy symbol and a SymPy expression
+		Each helper is a variable that will be calculated before evaluating the derivative and can be used in the latter’s computation. The first component of the tuple is the helper’s symbol as referenced in the derivative or other helpers, the second component describes how to compute it from `t`, `y` and other helpers. This is for example useful to realise a mean-field coupling, where the helper could look like `(mean, sympy.Sum(y(i),(i,0,99))/100)`. (See `example_2` for an example.)
+	
+	n : integer
+		Length of `f_sym`. While JiTCDDE can easily determine this itself (and will, if necessary), this may take some time if `f_sym` is a generator function and `n` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
+	"""
+
 	def __init__(self, f_sym, helpers=None, n=None):
 		self.f_sym, self.n = _handle_input(f_sym,n)
 		self.f = None
@@ -110,7 +123,7 @@ class jitcdde():
 		self._tmpdir = None
 		self._modulename = "jitced"
 		self.past = []
-		
+	
 	def add_past_point(self, time, state, diff):
 		self.past.append((time, state, diff))
 	
