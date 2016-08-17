@@ -124,8 +124,21 @@ class jitcdde():
 		self._modulename = "jitced"
 		self.past = []
 	
-	def add_past_point(self, time, state, diff):
-		self.past.append((time, state, diff))
+	def add_past_point(self, time, state, derivative):
+		"""
+		adds an anchor point from which the past of the DDE is interpolated.
+		
+		Parameters
+		----------
+		time : float
+			the time of the anchor point. Must be later than the time of all previously added points.
+		state : NumPy array of floats
+			the position of the anchor point. The dimension of the array must match the dimension of the differential equation.
+		derivative : NumPy array of floats
+			the derivative at the anchor point. The dimension of the array must match the dimension of the differential equation.
+		"""
+		
+		self.past.append((time, state, derivative))
 	
 	def generate_f_lambda(self):
 		self.DDE = python_core.dde_integrator(self.f_sym(), self.past, self.helpers)
