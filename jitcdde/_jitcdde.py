@@ -138,6 +138,9 @@ class jitcdde():
 			the derivative at the anchor point. The dimension of the array must match the dimension of the differential equation.
 		"""
 		
+		assert state.shape == (self.n,) "State has wrong shape."
+		assert derivative.shape == (self.n,) "Derivative has wrong shape."
+		
 		self.past.append((time, state, derivative))
 	
 	def generate_f_lambda(self):
