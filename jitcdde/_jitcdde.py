@@ -233,7 +233,7 @@ class jitcdde():
 		return profile + self.pws_base_increase_chance*(1-profile)
 	
 	def _adjust_step_size(self):
-		p = np.max(np.abs(self.DDE.error)/(self.atol + self.rtol*np.abs(self.DDE.past[-1][1])))
+		p = np.max(np.abs(self.DDE.error)/(self.atol + self.rtol*np.abs(self.DDE.new_y)))
 		
 		if p > self.decrease_threshold:
 			self.dt *= max(self.safety_factor*p**(-1/self.q), self.min_factor)
@@ -270,9 +270,9 @@ class jitcdde():
 						
 						# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
 						for self.count in range(1,self.pws_max_iterations+1):
-							old_new_y = self.DDE.past[-1][1]
+							old_new_y = self.DDE.new_y
 							self.DDE.get_next_step(self.dt)
-							new_y = self.DDE.past[-1][1]
+							new_y = self.DDE.new_y
 							difference = np.abs(new_y-old_new_y)
 							tolerance = self.pws_atol + np.abs(self.pws_rtol*new_y)
 							if np.all(difference <= tolerance):
@@ -293,10 +293,7 @@ class jitcdde():
 				return np.nan*np.ones(self.n)
 		
 		else:
-			result = self.DDE.get_past_state(
-				target_time,
-				(self.DDE.past[-2], self.DDE.past[-1])
-				)
+			result = self.DDE.get_recent_state(target_time)
 			self.DDE.forget(self.max_delay)
 			return result
 

@@ -73,7 +73,8 @@ class dde_integrator(object):
 		
 		return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
 	
-	def get_past_state(self, t, anchors):
+	def get_recent_state(self, t):
+		anchors = self.past[-2], self.past[-1]
 		q = (anchors[1][0]-anchors[0][0])
 		x = (t-anchors[0][0]) / q
 		a = anchors[0][1]
@@ -95,15 +96,15 @@ class dde_integrator(object):
 		k_1 = self.diff
 		k_2 = self.eval_f(self.t + 0.5 *delta_t, self.y + 0.5 *delta_t*k_1)
 		k_3 = self.eval_f(self.t + 0.75*delta_t, self.y + 0.75*delta_t*k_2)
-		new_y = self.y + delta_t * (2*k_1 + 3*k_2 + 4*k_3) / 9
+		self.new_y = self.y + delta_t * (2*k_1 + 3*k_2 + 4*k_3) / 9
 		new_t = self.t + delta_t 
-		k_4 = new_diff = self.eval_f(new_t, new_y)
+		k_4 = new_diff = self.eval_f(new_t, self.new_y)
 		self.error = (5*k_1 - 6*k_2 - 8*k_3 + 9*k_4) / 72
 		
 		if self.past[-1][0]==self.t:
-			self.past.append((new_t, new_y, new_diff))
+			self.past.append((new_t, self.new_y, new_diff))
 		else:
-			self.past[-1] = (new_t, new_y, new_diff)
+			self.past[-1] = (new_t, self.new_y, new_diff)
 	
 	def accept_step(self):
 		self.t, self.y, self.diff = self.past[-1]
