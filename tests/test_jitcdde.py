@@ -6,30 +6,42 @@ from jitcdde import provide_advanced_symbols, jitcdde, UnsuccessfulIntegration
 
 import sympy
 import numpy as np
-#from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose
 import unittest
 
-
-tau = 15
-p = 10
 t, y, current_y, past_y, anchors = provide_advanced_symbols()
-f = [0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t)]
+
+omega = np.array([0.88167179, 0.87768425])
+k = 0.25
+delay = 4.5
+
+f = [
+	omega[0] * (-y(1) - y(2)),
+	omega[0] * (y(0) + 0.165 * y(1)),
+	omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
+	omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3)),
+	omega[1] * (y(3) + 0.165 * y(4)),
+	omega[1] * (0.2 + y(5) * (y(3) - 10.0))
+	]
 
 def get_past_points():
-	data = np.loadtxt("mackey-glass_past.dat")
+	data = np.loadtxt("two_Roessler_past.dat")
 	for point in data:
-		yield (point[0], np.array([point[1]]), np.array([point[2]]))
+		yield (point[0], np.array(point[1:7]), np.array(point[7:13]))
 
-y_99_ref = 1.2538230733065612
+y_10_ref = np.loadtxt("two_Roessler_y10.dat")
+T = 10
 
 test_parameters = {
-	"max_delay": tau,
+	"max_delay": delay,
 	"raise_exception": True,
 	"rtol": 1e-7,
-	"pws_rtol": 1e-7,
-	"first_step": 20,
+	"atol": 1e-7,
+	"pws_rtol": 1e-3,
+	"pws_atol": 1e-3,
+	"first_step": 30,
 	"max_step": 100,
-	"pws_rtol": 1e-7,
+	"min_step": 1e-30,
 	}
 
 class TestIntegration(unittest.TestCase):
@@ -42,36 +54,43 @@ class TestIntegration(unittest.TestCase):
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
 		self.DDE.generate_f_lambda()
-		self.y_99 = None
+		self.y_10 = None
 	
 	def assert_consistency_with_previous(self, value):
-		if self.y_99 is None:
-			self.y_99 = value
+		if self.y_10 is None:
+			self.y_10 = value
 		else:
-			self.assertEqual(value, self.y_99)
+			self.assertEqual(value, self.y_10)
 	
 	def test_integration(self):
-		for t in range(100):
+		for t in np.linspace(0, T, 10, endpoint=True):
 			value = self.DDE.integrate(t)
-		self.assertAlmostEqual(float(value), y_99_ref)
+		assert_allclose(value, y_10_ref)
 		self.assert_consistency_with_previous(value)
 		
 	def test_integration_one_big_step(self):
-		value = self.DDE.integrate(99.0)
-		self.assertAlmostEqual(float(value), y_99_ref)
+		value = self.DDE.integrate(T)
+		assert_allclose(value, y_10_ref)
 		self.assert_consistency_with_previous(value)
 	
 	def test_tiny_steps(self):
-		for t in np.linspace(0.0, 99.0, 10000, endpoint=True):
+		for t in np.linspace(0.0, T, 10000, endpoint=True):
 			value = self.DDE.integrate(t)
-		self.assertAlmostEqual(float(value), y_99_ref)
+		assert_allclose(value, y_10_ref)
 		self.assert_consistency_with_previous(value)
 		
 	def tearDown(self):
 		self.DDE.past = []
 
 tiny_delay = 1e-30
-f_with_tiny_delay = [0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t-tiny_delay)]
+f_with_tiny_delay = [
+	omega[0] * (-y(1) - y(2)),
+	omega[0] * (y(0) + 0.165 * y(1,t-tiny_delay)),
+	omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
+	omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3,t-tiny_delay)),
+	omega[1] * (y(3) + 0.165 * y(4)),
+	omega[1] * (0.2 + y(5) * (y(3) - 10.0))
+	]
 
 class TestPastWithinStep(TestIntegration):
 	@classmethod
@@ -86,7 +105,12 @@ class TestPastWithinStepFuzzy(TestIntegration):
 		self.DDE.set_integration_parameters(pws_fuzzy_increase=True, **test_parameters)
 
 def f_generator():
-	yield 0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t)
+	yield omega[0] * (-y(1) - y(2))
+	yield omega[0] * (y(0) + 0.165 * y(1,t-tiny_delay))
+	yield omega[0] * (0.2 + y(2) * (y(0) - 10.0))
+	yield omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3))
+	yield omega[1] * (y(3) + 0.165 * y(4))
+	yield omega[1] * (0.2 + y(5) * (y(3) - 10.0))
 
 class TestGenerator(TestIntegration):
 	@classmethod
@@ -94,13 +118,21 @@ class TestGenerator(TestIntegration):
 		self.DDE = jitcdde(f_generator)
 		self.DDE.set_integration_parameters(**test_parameters)
 
-delayed_y, denominator, undelayed_term = sympy.symbols("delayed_y denominator undelayed_term")
+delayed_y, y3m10, coupling_term = sympy.symbols("delayed_y y3m10 coupling_term")
 f_alt_helpers = [
-	(denominator, (1.0 + delayed_y**p)),
-	(delayed_y, y(0,t-tau)),
-	(undelayed_term, - 0.1*y(0,t))
+	(delayed_y, y(0,t-delay)),
+	(coupling_term, k * (delayed_y - y(3))),
+	(y3m10, y(3)-10)
 	]
-f_alt = [0.25 * delayed_y / denominator + undelayed_term]
+
+f_alt = [
+	omega[0] * (-y(1) - y(2)),
+	omega[0] * (y(0) + 0.165 * y(1)),
+	omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
+	omega[1] * (-y(4) - y(5)) + coupling_term,
+	omega[1] * (y3m10 + 10 + 0.165 * y(4)),
+	omega[1] * (0.2 + y(5) * y3m10)
+	]
 
 class TestHelpers(TestIntegration):
 	@classmethod
@@ -116,33 +148,25 @@ class TestIntegrationParameters(unittest.TestCase):
 		self.DDE.generate_f_lambda()
 		
 	def test_min_step_warning(self):
-		self.DDE.set_integration_parameters(max_delay=tau,min_step=1.0)
+		self.DDE.set_integration_parameters(max_delay=delay,min_step=1.0)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
 	
 	def test_min_step_error(self):
-		self.DDE.set_integration_parameters(max_delay=tau,min_step=1.0, raise_exception=True)
+		self.DDE.set_integration_parameters(max_delay=delay,min_step=1.0, raise_exception=True)
 		with self.assertRaises(UnsuccessfulIntegration):
 			self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
 	
 	def test_rtol_warning(self):
-		self.DDE.set_integration_parameters(max_delay=tau,min_step=1e-3, rtol=1e-10, atol=0)
+		self.DDE.set_integration_parameters(max_delay=delay,min_step=1e-3, rtol=1e-10, atol=0)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
 	
 	def test_atol_warning(self):
-		self.DDE.set_integration_parameters(max_delay=tau,min_step=1e-3, rtol=0, atol=1e-10)
+		self.DDE.set_integration_parameters(max_delay=delay,min_step=1e-3, rtol=0, atol=1e-10)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
-
-class TestPWSParameters(TestIntegrationParameters):
-	def setUp(self):
-		self.DDE = jitcdde(f_with_tiny_delay)
-		for point in get_past_points():
-			self.DDE.add_past_point(*point)
-		self.DDE.generate_f_lambda()
-
 
 unittest.main(buffer=True)
 
