@@ -166,6 +166,10 @@ class jitcdde(object):
 		self.past.append((time, state, derivative))
 	
 	def generate_f_lambda(self):
+		"""
+			Prepares a purely Python-based integrator.
+		"""
+		
 		self.DDE = python_core.dde_integrator(self.f_sym(), self.past, self.helpers)
 	
 	def set_integration_parameters(self,
