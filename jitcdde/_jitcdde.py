@@ -322,6 +322,21 @@ class jitcdde(object):
 					self.last_pws = False
 	
 	def integrate(self, target_time):
+		"""
+		Tries to evolve the dynamics.
+		
+		Parameters
+		----------
+		
+		target_time : float
+			time until which the dynamics is evolved
+		
+		Returns
+		-------
+		state : NumPy array
+			the computed state of the system at `target_time`. If the integration fails and `raise_exception` is `True`, an array of NaNs is returned.
+		"""
+		
 		try:
 			while self.DDE.t < target_time:
 				self.successful = False
@@ -367,6 +382,20 @@ class jitcdde(object):
 			return result
 
 	def integrate_blindly(self, target_time, step=0.1):
+		"""
+		Evolves the dynamics with a fixed step size ignoring any accuracy concerns. If a delay is smaller than the time step, the state is extrapolated from the previous step.
+		
+		For many systems, arbitrary initial conditions inevitably lead to high integration errors due to the disagreement of state and derivative. Evolving the system for a while should solves this issue.
+		
+		Parameters
+		----------
+		target_time : float
+			time until which the dynamics is evolved
+		
+		step : float
+			aspired step size. The actual step size may be slightly adapted to make it divide the integration time.
+		"""
+		
 		total_integration_time = target_time-self.DDE.t
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
