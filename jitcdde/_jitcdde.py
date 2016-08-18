@@ -131,6 +131,9 @@ class jitcdde(object):
 	
 	n : integer
 		Length of `f_sym`. While JiTCDDE can easily determine this itself (and will, if necessary), this may take some time if `f_sym` is a generator function and `n` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
+	
+	max_delay : number
+		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
 	"""
 
 	def __init__(self, f_sym, helpers=None, n=None, max_delay=None):
