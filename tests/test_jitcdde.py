@@ -152,7 +152,7 @@ class TestIntegrationParameters(unittest.TestCase):
 		self.DDE.generate_f_lambda()
 		
 	def test_min_step_warning(self):
-		self.DDE.set_integration_parameters(min_step=1.0)
+		self.DDE.set_integration_parameters(min_step=1.0, raise_exception=False)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
 	
@@ -163,12 +163,12 @@ class TestIntegrationParameters(unittest.TestCase):
 		self.assertFalse(self.DDE.successful)
 	
 	def test_rtol_warning(self):
-		self.DDE.set_integration_parameters(min_step=1e-3, rtol=1e-10, atol=0)
+		self.DDE.set_integration_parameters(min_step=1e-3, rtol=1e-10, atol=0, raise_exception=False)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
 	
 	def test_atol_warning(self):
-		self.DDE.set_integration_parameters(min_step=1e-3, rtol=0, atol=1e-10)
+		self.DDE.set_integration_parameters(min_step=1e-3, rtol=0, atol=1e-10, raise_exception=False)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
 
