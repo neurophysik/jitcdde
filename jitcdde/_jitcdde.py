@@ -8,6 +8,7 @@ from warnings import warn
 import jitcdde._python_core as python_core
 import sympy
 import numpy as np
+from ._helpers import collect_arguments
 
 #sigmoid = lambda x: 1/(1+np.exp(-x))
 #sigmoid = lambda x: 1 if x>0 else 0
@@ -94,6 +95,23 @@ def _sort_helpers(helpers):
 def _sympify_helpers(helpers):
 	return [(helper[0], sympy.sympify(helper[1]).doit()) for helper in helpers]
 
+def _delays(delay_terms):
+	t, _, _, _, _ = provide_advanced_symbols()
+	for delay_term in delay_terms:
+		delay = t - delay_term[0]
+		if not delay.is_Number:
+			raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
+		yield float(delay)
+
+def _find_max_delay(f, helpers=[]):
+	_, _, _, _, anchors = provide_advanced_symbols()
+	delay_terms = []
+	for entry in f():
+		delay_terms.extend(collect_arguments(entry, anchors))
+	for helper in helpers:
+		delay_terms.extend(collect_arguments(helper[1], anchors))
+	return max(_delays(delay_terms))
+
 class UnsuccessfulIntegration(Exception):
 	"""
 		This exception is raised when the integrator cannot meet the accuracy and step-size requirements and the argument `raise_exception` of `set_integration_parameters` is set.
@@ -115,15 +133,16 @@ class jitcdde(object):
 		Length of `f_sym`. While JiTCDDE can easily determine this itself (and will, if necessary), this may take some time if `f_sym` is a generator function and `n` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
 	"""
 
-	def __init__(self, f_sym, helpers=None, n=None):
+	def __init__(self, f_sym, helpers=None, n=None, max_delay=None):
 		self.f_sym, self.n = _handle_input(f_sym,n)
-		self.f = None
 		self.helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		self._y = []
 		self._tmpdir = None
 		self._modulename = "jitced"
 		self.past = []
-	
+		self.max_delay = max_delay or _find_max_delay(self.f_sym, self.helpers)
+		assert self.max_delay >= 0.0, "Negative maximum delay."
+
 	def add_past_point(self, time, state, derivative):
 		"""
 		adds an anchor point from which the past of the DDE is interpolated.
@@ -147,7 +166,6 @@ class jitcdde(object):
 		self.DDE = python_core.dde_integrator(self.f_sym(), self.past, self.helpers)
 	
 	def set_integration_parameters(self,
-			max_delay,
 			atol = 0.0,
 			rtol = 1e-5,
 			first_step = 1.0,
@@ -171,7 +189,6 @@ class jitcdde(object):
 		TODO: component-wise cool shit
 		"""
 		
-		assert max_delay >= 0.0, "Negative maximum delay."
 		assert min_step <= first_step <= max_step, "Bogus step parameters."
 		assert decrease_threshold>=1.0, "decrease_threshold smaller than 1"
 		assert increase_threshold<=1.0, "increase_threshold larger than 1"
@@ -188,7 +205,6 @@ class jitcdde(object):
 		assert 2<=pws_factor, "pws_factor smaller than 2"
 		assert pws_base_increase_chance>=0, "negative pws_base_increase_chance"
 		
-		self.max_delay = max_delay
 		self.atol = atol
 		self.rtol = rtol
 		self.dt = first_step

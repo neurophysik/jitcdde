@@ -2,7 +2,12 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-from jitcdde import provide_advanced_symbols, jitcdde, UnsuccessfulIntegration
+from jitcdde import (
+	provide_advanced_symbols,
+	jitcdde,
+	UnsuccessfulIntegration,
+	_find_max_delay
+	)
 
 import sympy
 import numpy as np
@@ -33,7 +38,6 @@ y_10_ref = np.loadtxt("two_Roessler_y10.dat")
 T = 10
 
 test_parameters = {
-	"max_delay": delay,
 	"raise_exception": True,
 	"rtol": 1e-7,
 	"atol": 1e-7,
@@ -148,25 +152,42 @@ class TestIntegrationParameters(unittest.TestCase):
 		self.DDE.generate_f_lambda()
 		
 	def test_min_step_warning(self):
-		self.DDE.set_integration_parameters(max_delay=delay,min_step=1.0)
+		self.DDE.set_integration_parameters(min_step=1.0)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
 	
 	def test_min_step_error(self):
-		self.DDE.set_integration_parameters(max_delay=delay,min_step=1.0, raise_exception=True)
+		self.DDE.set_integration_parameters(min_step=1.0, raise_exception=True)
 		with self.assertRaises(UnsuccessfulIntegration):
 			self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
 	
 	def test_rtol_warning(self):
-		self.DDE.set_integration_parameters(max_delay=delay,min_step=1e-3, rtol=1e-10, atol=0)
+		self.DDE.set_integration_parameters(min_step=1e-3, rtol=1e-10, atol=0)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
 	
 	def test_atol_warning(self):
-		self.DDE.set_integration_parameters(max_delay=delay,min_step=1e-3, rtol=0, atol=1e-10)
+		self.DDE.set_integration_parameters(min_step=1e-3, rtol=0, atol=1e-10)
 		self.DDE.integrate(1000)
 		self.assertFalse(self.DDE.successful)
+
+class TestFindMaxDelay(unittest.TestCase):
+	def test_default(self):
+		self.assertEqual(_find_max_delay(f_generator), delay)
+	
+	def test_helpers(self):
+		self.assertEqual(_find_max_delay(lambda:[], f_alt_helpers), delay)
+	
+	def test_time_dependent_delay(self):
+		g = lambda: [y(0,2*t)]
+		with self.assertRaises(ValueError):
+			_find_max_delay(g)
+	
+	def test_dynamic_dependent_delay(self):
+		g = lambda: [y(0,t-y(0))]
+		with self.assertRaises(ValueError):
+			_find_max_delay(g)
 
 unittest.main(buffer=True)
 
