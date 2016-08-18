@@ -1,0 +1,2 @@
+numpydoc
+setuptools_scm
