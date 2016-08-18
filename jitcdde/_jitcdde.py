@@ -179,17 +179,64 @@ class jitcdde(object):
 			safety_factor = 0.9,
 			max_factor = 5.0,
 			min_factor = 0.2,
+			pws_factor = 3,
 			pws_atol = 0.0,
 			pws_rtol = 1e-5,
 			pws_max_iterations = 10,
-			pws_factor = 3,
 			pws_base_increase_chance = 0.1,
 			pws_fuzzy_increase = False,
-			raise_exception = False,
+			raise_exception = True,
 			):
 		
 		"""
-		TODO: component-wise cool shit
+		Sets the parameters for the step-size adaption. Arguments starting with `pws` (past within step) are only relevant if the delay is shorter than the step size.
+		
+		Parameters
+		----------
+		atol : float or NumPy array of floats
+		rtol : float or NumPy array of floats
+			The tolerance of the estimated integration error is determined as :math:`\texttt{atol} + \texttt{rtol}·|y|`. If `atol` or `rtol` is an array (of size `n`), this is done component-wise. The step-size adaption algorithm is the same as for the GSL. For details see its documentation (TODO: link).
+		
+		first_step : float
+			The step-size adaption starts with this value.
+			
+		min_step : float
+			Should the step-size have to be adapted below this value, the integration is aborted and `UnsuccessfulIntegration` is raised.
+		
+		max_step : float
+			The step size will be capped at this value.
+			
+		decrease_threshold : float
+			If the estimated error divided by the tolerance exceeds this, the step size is decreased.
+		
+		increase_threshold : float
+			If the estimated error divided by the tolerance is smaller than this, the step size is increased.
+		
+		safety_factor : float
+			To avoid frequent adaption, all freshly adapted step sizes are multiplied with this factor.
+		
+		max_factor : float
+		min_factor : float
+			The maximum and minimum factor by which the step size can be adapted in one adaption step.
+		
+		pws_factor : float
+			Factor of step-size adaptions due to a delay shorter than the time step. If dividing the step size by `pws_factor` moves the delay out of the time step, it is done. If this is not possible and the iterative algorithm does not converge within `pws_max_iterations` or converges within fewer iterations than `pws_factor`, the step size is decreased or increased, respectively, by this factor
+		
+		pws_atol : float or NumPy array of floats
+		pws_rtol : float or NumPy array of floats
+			If the difference between two successive iterations is below the tolerance determined with these factors, the iterations are considered to have converged.
+		
+		pws_max_iterations : integer
+			The maximum number of iterations before the step size is decreased.
+		
+		pws_base_increase_chance : float
+			If the normal step-size adaption calls for an increase and the step size was adapted due to the past lying within the step, there is at least this chance that the step size is increased.
+			
+		pws_fuzzy_increase : boolean
+			Whether the decision to try to increase the step size shall depend on chance. The upside of this is that it is less likely that the step size gets locked at a unnecessarily low value. The downside is that the integration is not deterministic anymore. If False, increase probabilities will be added up until they exceed 1, in which case an increase happens.
+		
+		raise_exception : boolean,
+			Whether (`UnsuccessfulIntegration`) shall be raised if the integration fails. You can deal with this by catching this exception. If `False`, there is only a warning and `self.successful` is set to `False`.
 		"""
 		
 		assert min_step <= first_step <= max_step, "Bogus step parameters."
