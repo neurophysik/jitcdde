@@ -170,7 +170,7 @@ class jitcdde(object):
 			Prepares a purely Python-based integrator.
 		"""
 		
-		self.DDE = python_core.dde_integrator(self.f_sym(), self.past, self.helpers)
+		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers)
 	
 	def set_integration_parameters(self,
 			atol = 0.0,

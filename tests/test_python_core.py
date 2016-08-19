@@ -8,6 +8,7 @@ from jitcdde._jitcdde import provide_advanced_symbols
 import sympy
 import numpy as np
 #from numpy.testing import assert_allclose
+from itertools import chain
 import unittest
 
 m = 2
@@ -40,7 +41,7 @@ past = [
 class interpolation_test(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
-		self.DDE = dde_integrator([], past)
+		self.DDE = dde_integrator(lambda: [], past)
 	
 	def test_anchors(self):
 		for s in range(len(past)-1):
@@ -60,7 +61,7 @@ class interpolation_test(unittest.TestCase):
 class get_anchors_test(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
-		self.DDE = dde_integrator([], past)
+		self.DDE = dde_integrator(lambda: [], past)
 		self.DDE.anchor_mem = np.ones(1000, dtype=int)
 	
 	def setUp(self):
@@ -95,7 +96,8 @@ tau = 15
 p = 10
 
 t, y, current_y, past_y, anchors = provide_advanced_symbols()
-f = [0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t)]
+def f():
+	yield 0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t)
 
 y0 = 0.8
 dy0 = -0.0794952762375263
@@ -130,7 +132,8 @@ class integration_test(unittest.TestCase):
 
 delayed_y = sympy.Symbol("delayed_y")
 f_alt_helpers = [(delayed_y, y(0,t-tau))]
-f_alt = [0.25 * delayed_y / (1.0 + delayed_y**p) - 0.1*y(0,t)]
+def f_alt():
+	yield 0.25 * delayed_y / (1.0 + delayed_y**p) - 0.1*y(0,t)
 
 class integration_test_with_helpers(integration_test):
 	def setUp(self):
@@ -147,7 +150,7 @@ class double_integration_test(unittest.TestCase):
 				np.hstack((entry[2],entry[2]))
 				)]
 		
-		self.DDE = dde_integrator(f+f, double_past)
+		self.DDE = dde_integrator(lambda: chain(f(),f()), double_past)
 		
 		self.assertEqual(self.DDE.y[0], y0)
 		self.assertEqual(self.DDE.diff[0], dy0)

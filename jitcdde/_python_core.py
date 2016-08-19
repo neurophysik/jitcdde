@@ -29,7 +29,7 @@ class dde_integrator(object):
 		
 		past_calls = 0
 		f_wc = []
-		for entry in f:
+		for entry in f():
 			new_entry = entry.subs(substitutions).simplify(ratio=1.0)
 			past_calls += new_entry.count(anchors)
 			f_wc.append(new_entry)
