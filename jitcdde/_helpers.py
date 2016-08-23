@@ -5,7 +5,7 @@ from sys import version_info, stderr
 import numpy as np
 from os import path
 from warnings import warn
-from itertools import chain, count
+from itertools import chain
 from sympy.core.cache import clear_cache
 
 
@@ -117,12 +117,7 @@ def check_code(code):
 		raise Exception("The above expression could not be converted to C Code.")
 	return code
 
-def render_declarations(expressions, filename):
-	with open(filename, "w") as output:
-		for expression in expressions:
-			output.write("double " + ccode(expression) + ";\n")
-
-def write_in_chunks(lines, mainfile, deffile, name, chunk_size):
+def write_in_chunks(lines, mainfile, deffile, name, chunk_size, arguments):
 	funcname = "definitions_" + name
 	
 	first_chunk = []
@@ -136,8 +131,15 @@ def write_in_chunks(lines, mainfile, deffile, name, chunk_size):
 		lines = chain(first_chunk, lines)
 		
 		while True:
-			mainfile.write(funcname + "();\n")
-			deffile.write("void " + funcname + "(void){\n")
+			mainfile.write(funcname + "(")
+			deffile.write("void " + funcname + "(")
+			if arguments:
+				mainfile.write(", ".join(argument[0] for argument in arguments))
+				deffile.write(", ".join(argument[1]+" "+argument[0] for argument in arguments))
+			else:
+				deffile.write("void")
+			mainfile.write(");\n")
+			deffile.write("){\n")
 			
 			try:
 				for i in range(chunk_size):
@@ -152,31 +154,29 @@ def write_in_chunks(lines, mainfile, deffile, name, chunk_size):
 
 def render_and_write_code(
 	expressions,
-	helpers,
-	folder,
+	tmpfile,
 	name,
-	user_functions = {},
-	chunk_size = 100):
+	functions = [],
+	chunk_size = 100,
+	arguments = []
+	):
 	
-	helperlines = (
-		check_code( ccode( helper[1], helper[0], user_functions=user_functions ) ) + "\n"
-		for helper in helpers
-		)
-	codelines = (
-		check_code( ccode ( expression, user_functions=user_functions ) ) + ";\n"
-		for expression in expressions
-		)
+	user_functions = {function:function for function in functions}
+	
+	def codelines():
+		for expression in expressions:
+			codeline = ccode(expression, user_functions=user_functions)
+			yield check_code(codeline) + ";\n"
 	
 	with \
-		open( path.join(folder,name+".c"            ), "w" ) as mainfile, \
-		open( path.join(folder,name+"_definitions.c"), "w" ) as deffile:
+		open( tmpfile(name+".c"            ), "w" ) as mainfile, \
+		open( tmpfile(name+"_definitions.c"), "w" ) as deffile:
+		
 		if chunk_size < 1:
-			for line in chain(helperlines, codelines):
+			for line in codelines():
 				mainfile.write(line)
 		else:
-			write_in_chunks(helperlines, mainfile, deffile, name+"helpers", chunk_size)
-			write_in_chunks(codelines  , mainfile, deffile, name+"code"   , chunk_size)
-
+			write_in_chunks(codelines(), mainfile, deffile, name, chunk_size, arguments)
 
 def render_template(filename, target, **kwargs):
 	folder = path.dirname(__file__)
