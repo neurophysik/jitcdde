@@ -358,12 +358,8 @@ class jitcdde(object):
 						
 						# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
 						for self.count in range(1,self.pws_max_iterations+1):
-							old_new_y = self.DDE.new_y
 							self.DDE.get_next_step(self.dt)
-							new_y = self.DDE.new_y
-							difference = np.abs(new_y-old_new_y)
-							tolerance = self.pws_atol + np.abs(self.pws_rtol*new_y)
-							if np.all(difference <= tolerance):
+							if self.DDE.check_new_y_diff(self.pws_atol, self.pws_rtol):
 								break
 						else:
 							self.dt /= self.pws_factor

@@ -46,6 +46,9 @@ class dde_integrator(object):
 		
 		self.anchor_mem = (len(past)-1)*np.ones(past_calls, dtype=int)
 	
+	def get_t(self):
+		return self.t
+	
 	def get_past_anchors(self, t):
 		s = self.anchor_mem[self.anchor_mem_index]
 		
@@ -92,7 +95,14 @@ class dde_integrator(object):
 	
 	def get_next_step(self, delta_t):
 		self.step_count += 1
+		
+		try:
+			self.old_new_y = self.new_y
+		except AttributeError:
+			pass
+		
 		self.past_within_step = False
+		
 		k_1 = self.diff
 		k_2 = self.eval_f(self.t + 0.5 *delta_t, self.y + 0.5 *delta_t*k_1)
 		k_3 = self.eval_f(self.t + 0.75*delta_t, self.y + 0.75*delta_t*k_2)
@@ -105,6 +115,14 @@ class dde_integrator(object):
 			self.past.append((new_t, self.new_y, new_diff))
 		else:
 			self.past[-1] = (new_t, self.new_y, new_diff)
+	
+	def get_p(self, atol, rtol):
+		return np.max(np.abs(self.error)/(atol + rtol*np.abs(self.new_y)))
+	
+	def check_new_y_diff(self, atol, rtol):
+		difference = np.abs(self.new_y-self.old_new_y)
+		tolerance = atol + np.abs(rtol*self.new_y)
+		return np.all(difference <= tolerance)
 	
 	def accept_step(self):
 		self.t, self.y, self.diff = self.past[-1]
@@ -119,9 +137,4 @@ class dde_integrator(object):
 			self.anchor_mem -= self.last_garbage+1
 			self.last_garbage = -1
 	
-	def get_p(self, atol, rtol):
-		return np.max(np.abs(self.error)/(atol + rtol*np.abs(self.new_y)))
-	
-	def get_t(self):
-		return self.t
 	
