@@ -121,4 +121,7 @@ class dde_integrator(object):
 	
 	def get_p(self, atol, rtol):
 		return np.max(np.abs(self.error)/(atol + rtol*np.abs(self.new_y)))
-
+	
+	def get_t(self):
+		return self.t
+	

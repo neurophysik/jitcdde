@@ -342,7 +342,7 @@ class jitcdde(object):
 		"""
 		
 		try:
-			while self.DDE.t < target_time:
+			while self.DDE.get_t() < target_time:
 				self.successful = False
 				while not self.successful:
 					self.DDE.get_next_step(self.dt)
@@ -400,7 +400,7 @@ class jitcdde(object):
 			aspired step size. The actual step size may be slightly adapted to make it divide the integration time.
 		"""
 		
-		total_integration_time = target_time-self.DDE.t
+		total_integration_time = target_time-self.DDE.get_t()
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
 		
