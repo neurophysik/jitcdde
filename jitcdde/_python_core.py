@@ -118,4 +118,7 @@ class dde_integrator(object):
 			self.past = self.past[self.last_garbage+1:]
 			self.anchor_mem -= self.last_garbage+1
 			self.last_garbage = -1
+	
+	def get_p(self, atol, rtol):
+		return np.max(np.abs(self.error)/(atol + rtol*np.abs(self.new_y)))
 

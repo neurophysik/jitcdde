@@ -197,9 +197,9 @@ class jitcdde(object):
 		
 		Parameters
 		----------
-		atol : float or NumPy array of floats
-		rtol : float or NumPy array of floats
-			The tolerance of the estimated integration error is determined as :math:`\texttt{atol} + \texttt{rtol}·|y|`. If `atol` or `rtol` is an array (of size `n`), this is done component-wise. The step-size adaption algorithm is the same as for the GSL. For details see its documentation (TODO: link).
+		atol : float
+		rtol : float
+			The tolerance of the estimated integration error is determined as :math:`\texttt{atol} + \texttt{rtol}·|y|`. The step-size adaption algorithm is the same as for the GSL. For details see its documentation (TODO: link).
 		
 		first_step : float
 			The step-size adaption starts with this value.
@@ -226,8 +226,8 @@ class jitcdde(object):
 		pws_factor : float
 			Factor of step-size adaptions due to a delay shorter than the time step. If dividing the step size by `pws_factor` moves the delay out of the time step, it is done. If this is not possible and the iterative algorithm does not converge within `pws_max_iterations` or converges within fewer iterations than `pws_factor`, the step size is decreased or increased, respectively, by this factor
 		
-		pws_atol : float or NumPy array of floats
-		pws_rtol : float or NumPy array of floats
+		pws_atol : float
+		pws_rtol : float
 			If the difference between two successive iterations is below the tolerance determined with these factors, the iterations are considered to have converged.
 		
 		pws_max_iterations : integer
@@ -249,12 +249,12 @@ class jitcdde(object):
 		assert max_factor>=1.0, "max_factor smaller than 1"
 		assert min_factor<=1.0, "min_factor larger than 1"
 		assert safety_factor<=1.0, "safety_factor larger than 1"
-		assert np.all(atol>=0.0), "negative atol"
-		assert np.all(rtol>=0.0), "negative rtol"
+		assert atol>=0.0, "negative atol"
+		assert rtol>=0.0, "negative rtol"
 		if atol==0 and rtol==0:
 			warn("atol and rtol are both 0. You probably do not want this.")
-		assert np.all(pws_atol>=0.0), "negative pws_atol"
-		assert np.all(pws_rtol>=0.0), "negative pws_rtol"
+		assert pws_atol>=0.0, "negative pws_atol"
+		assert pws_rtol>=0.0, "negative pws_rtol"
 		assert 0<pws_max_iterations, "non-positive pws_max_iterations"
 		assert 2<=pws_factor, "pws_factor smaller than 2"
 		assert pws_base_increase_chance>=0, "negative pws_base_increase_chance"
@@ -306,7 +306,7 @@ class jitcdde(object):
 		return profile + self.pws_base_increase_chance*(1-profile)
 	
 	def _adjust_step_size(self):
-		p = np.max(np.abs(self.DDE.error)/(self.atol + self.rtol*np.abs(self.DDE.new_y)))
+		p = self.DDE.get_p(self.atol, self.rtol)
 		
 		if p > self.decrease_threshold:
 			self.dt *= max(self.safety_factor*p**(-1/self.q), self.min_factor)
