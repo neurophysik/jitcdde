@@ -96,32 +96,30 @@ class dde_integrator(object):
 	def get_next_step(self, delta_t):
 		self.step_count += 1
 		
-		try:
-			self.old_new_y = self.new_y
-		except AttributeError:
-			pass
-		
 		self.past_within_step = False
 		
 		k_1 = self.diff
 		k_2 = self.eval_f(self.t + 0.5 *delta_t, self.y + 0.5 *delta_t*k_1)
 		k_3 = self.eval_f(self.t + 0.75*delta_t, self.y + 0.75*delta_t*k_2)
-		self.new_y = self.y + delta_t * (2*k_1 + 3*k_2 + 4*k_3) / 9
+		new_y = self.y + delta_t * (2*k_1 + 3*k_2 + 4*k_3) / 9
 		new_t = self.t + delta_t 
-		k_4 = new_diff = self.eval_f(new_t, self.new_y)
+		k_4 = new_diff = self.eval_f(new_t, new_y)
 		self.error = (5*k_1 - 6*k_2 - 8*k_3 + 9*k_4) / 72
 		
 		if self.past[-1][0]==self.t:
-			self.past.append((new_t, self.new_y, new_diff))
+			self.past.append((new_t, new_y, new_diff))
 		else:
-			self.past[-1] = (new_t, self.new_y, new_diff)
+			try: self.old_new_y = self.past[-1][1]
+			except AttributeError: pass
+			
+			self.past[-1] = (new_t, new_y, new_diff)
 	
 	def get_p(self, atol, rtol):
-		return np.max(np.abs(self.error)/(atol + rtol*np.abs(self.new_y)))
+		return np.max(np.abs(self.error)/(atol + rtol*np.abs(self.past[-1][1])))
 	
 	def check_new_y_diff(self, atol, rtol):
-		difference = np.abs(self.new_y-self.old_new_y)
-		tolerance = atol + np.abs(rtol*self.new_y)
+		difference = np.abs(self.past[-1][1]-self.old_new_y)
+		tolerance = atol + np.abs(rtol*self.past[-1][1])
 		return np.all(difference <= tolerance)
 	
 	def accept_step(self):
@@ -132,9 +130,8 @@ class dde_integrator(object):
 		while self.past[self.last_garbage+2][0] < threshold:
 			self.last_garbage += 1
 		
-		if self.last_garbage>=MIN_GARBAGE:
+		if self.last_garbage >= MIN_GARBAGE:
 			self.past = self.past[self.last_garbage+1:]
 			self.anchor_mem -= self.last_garbage+1
 			self.last_garbage = -1
-	
 	
