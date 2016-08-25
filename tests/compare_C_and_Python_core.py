@@ -103,7 +103,7 @@ for realisation in range(number_of_runs):
 	C = jitced.dde_integrator(past_points(), 1)
 	
 	def get_next_step():
-		r = random.uniform(1e-10,1e-5)
+		r = random.uniform(1e-5,1e-3)
 		P.get_next_step(r)
 		C.get_next_step(r)
 	
