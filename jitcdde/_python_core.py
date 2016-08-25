@@ -101,10 +101,10 @@ class dde_integrator(object):
 		k_1 = self.diff
 		k_2 = self.eval_f(self.t + 0.5 *delta_t, self.y + 0.5 *delta_t*k_1)
 		k_3 = self.eval_f(self.t + 0.75*delta_t, self.y + 0.75*delta_t*k_2)
-		new_y = self.y + delta_t * (2*k_1 + 3*k_2 + 4*k_3) / 9
+		new_y = self.y + (delta_t/9.) * (2*k_1 + 3*k_2 + 4*k_3)
 		new_t = self.t + delta_t 
 		k_4 = new_diff = self.eval_f(new_t, new_y)
-		self.error = (5*k_1 - 6*k_2 - 8*k_3 + 9*k_4) / 72
+		self.error = (5*k_1 - 6*k_2 - 8*k_3 + 9*k_4) * (1/72.)
 		
 		if self.past[-1][0]==self.t:
 			self.past.append((new_t, new_y, new_diff))
