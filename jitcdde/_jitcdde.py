@@ -218,6 +218,9 @@ class jitcdde(object):
 		if self.helpers:
 			raise NotImplementedError("Helpers for C are not implemented yet, but they will be soon.")
 		
+		if version_info[0] < 3:
+			raise NotImplementedError("C interface for Python 2 is not implemented yet, but will be soon.")
+		
 		set_dy = sympy.Function("set_dy")
 		render_and_write_code(
 			(set_dy(i,entry) for i,entry in enumerate(self.f_sym())),
