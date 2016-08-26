@@ -139,10 +139,13 @@ for realisation in range(number_of_runs):
 		q = 10**random.uniform(-10,-5)
 		compare(P.check_new_y_diff(r,q), C.check_new_y_diff(r,q))
 	
+	def past_within_step():
+		compare(P.past_within_step, C.past_within_step)
+	
 	get_next_step()
 	get_next_step()
 	
-	actions = [get_next_step, get_t, get_recent_state, get_p, accept_step, forget, check_new_y_diff]
+	actions = [get_next_step, get_t, get_recent_state, get_p, accept_step, forget, check_new_y_diff, past_within_step]
 	
 	for i in range(30):
 		try:

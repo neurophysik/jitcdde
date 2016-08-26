@@ -43,8 +43,10 @@ tau = 15
 p = 10
 
 t, y, current_y, past_y, anchors = provide_advanced_symbols()
+tiny_delay = 1e-30
 def f():
-	yield 0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t)
+	yield 0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t-tiny_delay)
+past_calls = 3
 
 def past_points():
 	return [anchor for anchor in past]
@@ -93,14 +95,14 @@ for realisation in range(number_of_runs):
 		ext_modules = [Extension(
 			modulename,
 			sources = [tmpfile(modulename + ".c")],
-			extra_compile_args = ["-g", "-UNDEBUG", "-Wno-unknown-pragmas", "-O2"]
+			extra_compile_args = ["-g", "-UNDEBUG", "-Wno-unknown-pragmas", "-O2", "-std=c11"]
 			)],
 		script_args = ["build_ext","--build-lib",tmpfile(),"--build-temp",tmpfile(),"--force",],
 		verbose = False
 		)
 	
 	jitced = find_and_load_module(modulename,tmpfile())
-	C = jitced.dde_integrator(past_points(), 2)
+	C = jitced.dde_integrator(past_points(), past_calls)
 	
 	def get_next_step():
 		r = random.uniform(1e-5,1)
@@ -132,10 +134,13 @@ for realisation in range(number_of_runs):
 		q = 10**random.uniform(-10,-5)
 		compare(P.check_new_y_diff(r,q), C.check_new_y_diff(r,q))
 	
+	def past_within_step():
+		compare(P.past_within_step, C.past_within_step)
+	
 	get_next_step()
 	get_next_step()
 	
-	actions = [get_next_step, get_t, get_recent_state, get_p, accept_step, forget, check_new_y_diff]
+	actions = [get_next_step, get_t, get_recent_state, get_p, accept_step, forget, check_new_y_diff, past_within_step]
 	
 	for i in range(30):
 		try:
