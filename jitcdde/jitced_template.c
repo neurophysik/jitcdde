@@ -177,7 +177,7 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 # define anchors(t) (get_past_anchors(self, t))
 
 
-// # include "f_definitions.c"
+# include "f_definitions.c"
 static void eval_f(
 	dde_integrator * const self,
 	double const t,
@@ -362,42 +362,24 @@ static PyMethodDef dde_integrator_methods[] = {
 
 static PyTypeObject dde_integrator_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_jitced.dde_integrator",  /* tp_name */
-	sizeof(dde_integrator),    /* tp_basicsize */
-	0,                         /* tp_itemsize */
+	"_jitced.dde_integrator",
+	sizeof(dde_integrator), 
+	0,                         // tp_itemsize 
 	(destructor) dde_integrator_dealloc,
-	0,                         /* tp_print */
-	0,                         /* tp_getattr */
-	0,                         /* tp_setattr */
-	0,                         /* tp_reserved */
-	0,                         /* tp_repr */
-	0,                         /* tp_as_number */
-	0,                         /* tp_as_sequence */
-	0,                         /* tp_as_mapping */
-	0,                         /* tp_hash  */
-	0,                         /* tp_call */
-	0,                         /* tp_str */
-	0,                         /* tp_getattro */
-	0,                         /* tp_setattro */
-	0,                         /* tp_as_buffer */
+	0,                         // tp_print 
+	0,0,0,0,0,0,0,0,0,0,0,0,   // ... 
+	0,                         // tp_as_buffer 
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-	0,                         /* tp_doc */
-	0,                         /* tp_traverse */
-	0,                         /* tp_clear */
-	0,                         /* tp_richcompare */
-	0,                         /* tp_weaklistoffset */
-	0,                         /* tp_iter */
-	0,                         /* tp_iternext */
+	0,                         // tp_doc 
+	0,0,0,0,0,                 // ... 
+	0,                         // tp_iternext 
 	dde_integrator_methods,
 	dde_integrator_members,
-	0,                         /* tp_getset */
-	0,                         /* tp_base */
-	0,                         /* tp_dict */
-	0,                         /* tp_descr_get */
-	0,                         /* tp_descr_set */
-	0,                         /* tp_dictoffset */
+	0,                         // tp_getset 
+	0,0,0,0,                   // ...
+	0,                         // tp_dictoffset 
 	(initproc) dde_integrator_init,
-	0,                         /* tp_alloc */
+	0,                         // tp_alloc 
 	PyType_GenericNew,
 };
 

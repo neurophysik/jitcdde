@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Creates instances of the Python and C core and subjects them to a series of random commands (within a reasonable margin). As both cores should behave identically, the results should not differ – except for details of the numerical implementation, which may cause the occasional deviation.
+Creates instances of the Python and C core for the same DDE and subjects them to a series of random commands (within a reasonable margin). As both cores should behave identically, the results should not differ – except for details of the numerical implementation, which may cause the occasional deviation.
 
 The argument is the number of runs.
 """

@@ -117,6 +117,9 @@ def check_code(code):
 		raise Exception("The above expression could not be converted to C Code.")
 	return code
 
+def render_declarator(name, _type, size=0):
+	return _type + " " + name + ("[%i]"%size if size else "")
+
 def write_in_chunks(lines, mainfile, deffile, name, chunk_size, arguments):
 	funcname = "definitions_" + name
 	
@@ -135,7 +138,7 @@ def write_in_chunks(lines, mainfile, deffile, name, chunk_size, arguments):
 			deffile.write("void " + funcname + "(")
 			if arguments:
 				mainfile.write(", ".join(argument[0] for argument in arguments))
-				deffile.write(", ".join(argument[1]+" "+argument[0] for argument in arguments))
+				deffile.write(", ".join(render_declarator(*argument) for argument in arguments))
 			else:
 				deffile.write("void")
 			mainfile.write(");\n")

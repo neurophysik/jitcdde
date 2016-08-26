@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Creates instances of the Python and C core and subjects them to a series of random commands (within a reasonable margin). As both cores should behave identically, the results should not differ – except for details of the numerical implementation, which may cause the occasional deviation due to the chaoticity of the Rössler oscillators used for testing.
+Creates instances of the Python and C core and subjects for the same DDE them to a series of random commands (within a reasonable margin). As both cores should behave identically, the results should not differ – except for details of the numerical implementation, which may cause the occasional deviation due to the chaoticity of the Rössler oscillators used for testing.
 
 The argument is the number of runs.
 """
@@ -49,6 +49,7 @@ def past_points():
 	data = np.loadtxt("two_Roessler_past.dat")
 	return [(point[0], np.array(point[1:7]), np.array(point[7:13])) for point in data]
 
+n = 6
 
 tmpdir = None
 def tmpfile(filename=None):
@@ -75,7 +76,13 @@ for realisation in range(number_of_runs):
 		tmpfile,
 		"f",
 		["set_dy","current_y","past_y","anchors"],
-		chunk_size = 100,
+		chunk_size = 3,
+		arguments = [
+			("self", "dde_integrator * const"),
+			("t", "double const"),
+			("y", "double", n),
+			("dY", "double", n)
+			]
 		)
 		
 	modulename = count_up(modulename)
@@ -83,7 +90,7 @@ for realisation in range(number_of_runs):
 	render_template(
 		"jitced_template.c",
 		tmpfile(modulename + ".c"),
-		n = 6,
+		n = n,
 		module_name = modulename,
 		Python_version = version_info[0],
 		)
