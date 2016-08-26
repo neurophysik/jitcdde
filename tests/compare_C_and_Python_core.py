@@ -100,7 +100,7 @@ for realisation in range(number_of_runs):
 		ext_modules = [Extension(
 			modulename,
 			sources = [tmpfile(modulename + ".c")],
-			extra_compile_args = ["-g", "-UNDEBUG", "-Wno-unknown-pragmas", "-O2"]
+			extra_compile_args = ["-g", "-UNDEBUG", "-O2", "-Wall", "-pedantic", "-Wno-unknown-pragmas"]
 			)],
 		script_args = ["build_ext","--build-lib",tmpfile(),"--build-temp",tmpfile(),"--force",],
 		verbose = False

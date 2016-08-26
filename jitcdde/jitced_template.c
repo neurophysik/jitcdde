@@ -105,6 +105,9 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 	
 	while ( (ca->time > t) && (ca->previous) )
 		ca = ca->previous;
+	
+	assert(ca->next != NULL);
+	
 	while ( (ca->next->time < t) && (ca->next->next) )
 		ca = ca->next;
 	
@@ -135,6 +138,9 @@ double get_past_value(
 
 static PyObject * get_recent_state(dde_integrator const * const self, PyObject * args)
 {
+	assert(self->last_anchor);
+	assert(self->first_anchor);
+
 	double t;
 	if (!PyArg_ParseTuple(args, "d", &t))
 	{
@@ -178,7 +184,7 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 
 
 # include "f_definitions.c"
-static void eval_f(
+static PyObject * eval_f(
 	dde_integrator * const self,
 	double const t,
 	double y[{{n}}],
@@ -187,13 +193,20 @@ static void eval_f(
 	self->current_anchor = self->anchor_mem;
 	# include "f.c"
 // 	set_dy(0, -0.1*current_y(0) + 0.25*past_y(t - 15, 0, anchors(t - 15))/(pow(past_y(t - 15, 0, anchors(t - 15)), 10) + 1.0));
+	Py_RETURN_NONE;
 }
 
-static void get_next_step(dde_integrator * const self, PyObject * args)
+static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 {
+	assert(self->last_anchor);
+	assert(self->first_anchor);
+
 	double delta_t;
 	if (!PyArg_ParseTuple(args, "d", &delta_t))
+	{
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
 	
 	self->past_within_step = 0.0;
 	# define k_1 self->current->diff
@@ -226,6 +239,10 @@ static void get_next_step(dde_integrator * const self, PyObject * args)
 		append_anchor(self, new_t, new_y, new_diff);
 	else
 		replace_last_anchor(self, new_t, new_y, new_diff);
+	
+	assert(self->first_anchor);
+	assert(self->last_anchor);
+	Py_RETURN_NONE;
 }
 
 static PyObject * get_p(dde_integrator const * const self, PyObject * args)
@@ -272,25 +289,31 @@ static PyObject * check_new_y_diff(dde_integrator const * const self, PyObject *
 	return result ? Py_True : Py_False; // TODO
 }
 
-static void accept_step(dde_integrator * const self)
+static PyObject * accept_step(dde_integrator * const self)
 {
 	self->current = self->last_anchor;
+	Py_RETURN_NONE;
 }
 
-static void forget(dde_integrator * const self, PyObject * args)
+static PyObject * forget(dde_integrator * const self, PyObject * args)
 {
 	double delay;
 	if (!PyArg_ParseTuple(args, "d", &delay))
+	{
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
 	
 	double threshold = self->current->time - delay;
+	assert(self->first_anchor != self->last_anchor);
 	while (self->first_anchor->next->time < threshold)
 		remove_first_anchor(self);
+	
+	Py_RETURN_NONE;
 }
 
 static void dde_integrator_dealloc(dde_integrator * const self)
 {
-
 	while (self->first_anchor)
 		remove_first_anchor(self);
 	free(self->anchor_mem);
@@ -298,7 +321,7 @@ static void dde_integrator_dealloc(dde_integrator * const self)
 	Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
-static void initiate_past_from_list(dde_integrator * const self, PyObject * const past)
+static int initiate_past_from_list(dde_integrator * const self, PyObject * const past)
 {
 	for (Py_ssize_t i=0; i<PyList_Size(past); i++)
 	{
@@ -306,7 +329,11 @@ static void initiate_past_from_list(dde_integrator * const self, PyObject * cons
 		double time;
 		PyArrayObject * pystate;
 		PyArrayObject * pydiff;
-		PyArg_ParseTuple(pyanchor, "dO!O!", &time, &PyArray_Type, &pystate, &PyArray_Type, &pydiff);
+		if (!PyArg_ParseTuple(pyanchor, "dO!O!", &time, &PyArray_Type, &pystate, &PyArray_Type, &pydiff))
+		{
+			PyErr_SetString(PyExc_ValueError,"Wrong input.");
+			return 0;
+		}
 		
 		double state[{{n}}];
 		for (int i=0; i<{{n}}; i++)
@@ -318,6 +345,8 @@ static void initiate_past_from_list(dde_integrator * const self, PyObject * cons
 		
 		append_anchor(self, time, state, diff);
 	}
+	
+	return 1;
 }
 
 static int dde_integrator_init(dde_integrator * self, PyObject * args)
@@ -333,10 +362,15 @@ static int dde_integrator_init(dde_integrator * self, PyObject * args)
 	self->first_anchor = NULL;
 	self->last_anchor = NULL;
 	
-	initiate_past_from_list(self, past);
+	if (!initiate_past_from_list(self, past))
+		return -1;
 	self->current = self->last_anchor;
+	assert(self->first_anchor != self->last_anchor);
+	assert(self->first_anchor != NULL);
+	assert(self->last_anchor != NULL);
 	
 	self->anchor_mem = malloc(anchor_mem_length*sizeof(anchor *));
+	assert(self->anchor_mem != NULL);
 	for (int i=0; i<anchor_mem_length; i++)
 		self->anchor_mem[i] = self->last_anchor->previous;
 	

@@ -8,7 +8,18 @@ from warnings import warn
 import jitcdde._python_core as python_core
 import sympy
 import numpy as np
-from ._helpers import collect_arguments
+from os import path as path
+from setuptools import setup, Extension
+from sys import version_info, modules
+from tempfile import mkdtemp
+from jinja2 import Environment, FileSystemLoader
+from jitcdde._helpers import (
+	ensure_suffix, count_up,
+	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
+	render_and_write_code,
+	render_template,
+	collect_arguments
+	)
 
 #sigmoid = lambda x: 1/(1+np.exp(-x))
 #sigmoid = lambda x: 1 if x>0 else 0
@@ -119,6 +130,16 @@ class UnsuccessfulIntegration(Exception):
 	
 	pass
 
+#: A list with the default extra compile arguments. Use and modify these to get the most of future versions of JiTCODE. Note that without `-Ofast`, `-ffast-math`, or `-funsafe-math-optimizations` (if supported by your compiler), you may experience a considerable speed loss since SymPy uses the `pow` function for small integer powers (`SymPy Issue 8997`_).
+DEFAULT_COMPILE_ARGS = [
+			"-std=c11",
+			#"-O3","-g0",
+			"-O0","-g","-UNDEBUG",
+			"-march=native",
+			"-mtune=native",
+			"-Wno-unknown-pragmas",
+			]
+
 class jitcdde(object):
 	"""
 	Parameters
@@ -146,6 +167,15 @@ class jitcdde(object):
 		self.max_delay = max_delay or _find_max_delay(self.f_sym, self.helpers)
 		assert self.max_delay >= 0.0, "Negative maximum delay."
 
+	def _tmpfile(self, filename=None):
+		if self._tmpdir is None:
+			self._tmpdir = mkdtemp()
+		
+		if filename is None:
+			return self._tmpdir
+		else:
+			return path.join(self._tmpdir, filename)
+	
 	def add_past_point(self, time, state, derivative):
 		"""
 		adds an anchor point from which the past of the DDE is interpolated.
@@ -171,6 +201,83 @@ class jitcdde(object):
 		"""
 		
 		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers)
+	
+	def generate_f_c(
+		self,
+		chunk_size=100,
+		verbose=False,
+		modulename=None,
+		extra_compile_args=DEFAULT_COMPILE_ARGS
+		):
+		"""
+			Generates the source for the C-based integrator, compiles, and loads it.
+		"""
+		
+		t, y, current_y, past_y, anchors = provide_advanced_symbols()
+		
+		if self.helpers:
+			raise NotImplementedError("Helpers for C are not implemented yet, but they will be soon.")
+		
+		set_dy = sympy.Function("set_dy")
+		render_and_write_code(
+			(set_dy(i,entry) for i,entry in enumerate(self.f_sym())),
+			self._tmpfile,
+			"f",
+			["set_dy","current_y","past_y","anchors"],
+			chunk_size = chunk_size,
+			arguments = [
+				("self", "dde_integrator * const"),
+				("t", "double const"),
+				("y", "double", self.n),
+				("dY", "double", self.n)
+				]
+			)
+		
+		if modulename:
+			if modulename in modules.keys():
+				raise NameError("Module name has already been used in this instance of Python.")
+			self._modulename = modulename
+		else:
+			while self._modulename in modules.keys():
+				self._modulename = count_up(self._modulename)
+		
+		sourcefile = self._tmpfile(self._modulename + ".c")
+		modulefile = self._tmpfile(self._modulename + ".so")
+		
+		if path.isfile(modulefile):
+			raise OSError("Module file already exists.")
+		
+		render_template(
+			"jitced_template.c",
+			sourcefile,
+			n = self.n,
+			module_name = self._modulename,
+			Python_version = version_info[0],
+			#has_helpers = bool(helpers),
+			)
+		
+		setup(
+			name = self._modulename,
+			ext_modules = [Extension(
+				self._modulename,
+				sources = [sourcefile],
+				extra_compile_args = extra_compile_args
+				)],
+			script_args = [
+				"build_ext",
+				"--build-lib", self._tmpfile(),
+				"--build-temp", self._tmpfile(),
+				"--force",
+				#"clean" #, "--all"
+				],
+			verbose = verbose
+			)
+		
+		past_calls = sum(entry.count(anchors) for entry in self.f_sym())
+		assert past_calls>0, "No DDE."
+		
+		jitced = find_and_load_module(self._modulename,self._tmpfile())
+		self.DDE = jitced.dde_integrator(self.past, past_calls)
 	
 	def set_integration_parameters(self,
 			atol = 0.0,
