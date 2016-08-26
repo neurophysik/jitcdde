@@ -110,7 +110,7 @@ class TestPastWithinStepFuzzy(TestIntegration):
 
 def f_generator():
 	yield omega[0] * (-y(1) - y(2))
-	yield omega[0] * (y(0) + 0.165 * y(1,t-tiny_delay))
+	yield omega[0] * (y(0) + 0.165 * y(1))
 	yield omega[0] * (0.2 + y(2) * (y(0) - 10.0))
 	yield omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3))
 	yield omega[1] * (y(3) + 0.165 * y(4))
@@ -138,11 +138,11 @@ f_alt = [
 	omega[1] * (0.2 + y(5) * y3m10)
 	]
 
-class TestHelpers(TestIntegration):
-	@classmethod
-	def setUpClass(self):
-		self.DDE = jitcdde(f_alt, f_alt_helpers)
-		self.DDE.set_integration_parameters(**test_parameters)
+#class TestHelpers(TestIntegration):
+	#@classmethod
+	#def setUpClass(self):
+		#self.DDE = jitcdde(f_alt, f_alt_helpers)
+		#self.DDE.set_integration_parameters(**test_parameters)
 
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):

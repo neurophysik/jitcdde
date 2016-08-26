@@ -16,7 +16,7 @@ dy = -0.0794952762375263
 DDE.add_past_point(-1.0, np.array([y0-dy]), np.array([dy]))
 DDE.add_past_point( 0.0, np.array([y0   ]), np.array([dy]))
 
-DDE.generate_f_lambda()
+DDE.generate_f_c()
 DDE.set_integration_parameters()
 
 dt = 1.0
