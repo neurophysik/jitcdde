@@ -286,7 +286,7 @@ static PyObject * check_new_y_diff(dde_integrator const * const self, PyObject *
 		result &= (tolerance >= difference);
 	}
 	
-	return result ? Py_True : Py_False; // TODO
+	return PyBool_FromLong(result);
 }
 
 static PyObject * accept_step(dde_integrator * const self)
