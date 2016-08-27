@@ -66,7 +66,7 @@ modulename = "jitced"
 errors = 0
 
 for realisation in range(number_of_runs):
-	print(".", end="", flush=True)
+	print(".", end="") #TODO
 	
 	P = py_dde_integrator(f, past_points())
 
@@ -100,7 +100,7 @@ for realisation in range(number_of_runs):
 		ext_modules = [Extension(
 			modulename,
 			sources = [tmpfile(modulename + ".c")],
-			extra_compile_args = ["-g", "-UNDEBUG", "-O2", "-Wall", "-pedantic", "-Wno-unknown-pragmas"]
+			extra_compile_args = ["-g", "-UNDEBUG", "-O2", "-Wall", "-pedantic", "-Wno-unknown-pragmas", "-std=c11"]
 			)],
 		script_args = ["build_ext","--build-lib",tmpfile(),"--build-temp",tmpfile(),"--force",],
 		verbose = False

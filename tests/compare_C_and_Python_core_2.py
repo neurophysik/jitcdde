@@ -67,7 +67,7 @@ modulename = "jitced"
 errors = 0
 
 for realisation in range(number_of_runs):
-	print(".", end="", flush=True)
+	print(".", end="") #TODO
 	
 	P = py_dde_integrator(f, past_points())
 
