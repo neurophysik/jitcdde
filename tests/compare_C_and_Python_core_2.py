@@ -155,4 +155,4 @@ for realisation in range(number_of_runs):
 			errors += 1
 			break
 
-print("Runs with errors %i / %i" % (errors, number_of_runs))
+print("Runs with errors: %i / %i" % (errors, number_of_runs))
