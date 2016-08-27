@@ -318,11 +318,7 @@ static void dde_integrator_dealloc(dde_integrator * const self)
 		remove_first_anchor(self);
 	free(self->anchor_mem);
 	
-	{% if Python_version==3: %}
 	Py_TYPE(self)->tp_free((PyObject *)self);
-	{% elif Python_version==2: %}
-	self->ob_type->tp_free((PyObject*)self);
-	{% endif %}
 }
 
 static int initiate_past_from_list(dde_integrator * const self, PyObject * const past)
@@ -399,12 +395,7 @@ static PyMethodDef dde_integrator_methods[] = {
 
 
 static PyTypeObject dde_integrator_type = {
-	{% if Python_version==3: %}
 	PyVarObject_HEAD_INIT(NULL, 0)
-	{% elif Python_version==2: %}
-	PyObject_HEAD_INIT(NULL)
-	0, 
-	{% endif %}
 	"_jitced.dde_integrator",
 	sizeof(dde_integrator), 
 	0,                         // tp_itemsize 
@@ -423,7 +414,7 @@ static PyTypeObject dde_integrator_type = {
 	0,                         // tp_dictoffset 
 	(initproc) dde_integrator_init,
 	0,                         // tp_alloc 
-	PyType_GenericNew,
+	0                          // tp_new
 };
 
 static PyMethodDef {{module_name}}_methods[] = {
@@ -454,6 +445,9 @@ PyMODINIT_FUNC PyInit_{{module_name}}(void)
 	
 	PyObject * module = PyModule_Create(&moduledef);
 	
+	if (module == NULL)
+		return NULL;
+	
 	Py_INCREF(&dde_integrator_type);
 	PyModule_AddObject(module, "dde_integrator", (PyObject *)&dde_integrator_type);
 	
@@ -469,6 +463,7 @@ PyMODINIT_FUNC PyInit_{{module_name}}(void)
 #endif
 PyMODINIT_FUNC init{{module_name}}(void)
 {
+	dde_integrator_type.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&dde_integrator_type) < 0)
 		return;
 	
@@ -478,7 +473,6 @@ PyMODINIT_FUNC init{{module_name}}(void)
 		return;
 	
 	Py_INCREF(&dde_integrator_type);
-	
 	PyModule_AddObject(module, "dde_integrator", (PyObject*) &dde_integrator_type);
 	
 	import_array();
