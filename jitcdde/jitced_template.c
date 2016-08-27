@@ -318,7 +318,11 @@ static void dde_integrator_dealloc(dde_integrator * const self)
 		remove_first_anchor(self);
 	free(self->anchor_mem);
 	
+	{% if Python_version==3: %}
 	Py_TYPE(self)->tp_free((PyObject *)self);
+	{% elif Python_version==2: %}
+	self->ob_type->tp_free((PyObject*)self);
+	{% endif %}
 }
 
 static int initiate_past_from_list(dde_integrator * const self, PyObject * const past)
@@ -378,7 +382,7 @@ static int dde_integrator_init(dde_integrator * self, PyObject * args)
 }
 
 static PyMemberDef dde_integrator_members[] = {
- 	{"past_within_step", T_DOUBLE, offsetof(dde_integrator, past_within_step), 0, "pws"},
+ 	{"past_within_step", T_DOUBLE, offsetof(dde_integrator, past_within_step), 0, "past_within_step"},
 	{NULL}  /* Sentinel */
 };
 
@@ -395,7 +399,12 @@ static PyMethodDef dde_integrator_methods[] = {
 
 
 static PyTypeObject dde_integrator_type = {
+	{% if Python_version==3: %}
 	PyVarObject_HEAD_INIT(NULL, 0)
+	{% elif Python_version==2: %}
+	PyObject_HEAD_INIT(NULL)
+	0, 
+	{% endif %}
 	"_jitced.dde_integrator",
 	sizeof(dde_integrator), 
 	0,                         // tp_itemsize 
@@ -418,8 +427,7 @@ static PyTypeObject dde_integrator_type = {
 };
 
 static PyMethodDef {{module_name}}_methods[] = {
-// 	{"f", py_f, METH_VARARGS, NULL},
-	{NULL, NULL, 0, NULL}
+{NULL, NULL, 0, NULL}
 };
 
 
@@ -456,9 +464,23 @@ PyMODINIT_FUNC PyInit_{{module_name}}(void)
 
 {% elif Python_version==2: %}
 
+#ifndef PyMODINIT_FUNC
+#define PyMODINIT_FUNC void
+#endif
 PyMODINIT_FUNC init{{module_name}}(void)
 {
-	Py_InitModule("{{module_name}}", {{module_name}}_methods);
+	if (PyType_Ready(&dde_integrator_type) < 0)
+		return;
+	
+	PyObject * module = Py_InitModule("{{module_name}}", {{module_name}}_methods);
+	
+	if (module == NULL)
+		return;
+	
+	Py_INCREF(&dde_integrator_type);
+	
+	PyModule_AddObject(module, "dde_integrator", (PyObject*) &dde_integrator_type);
+	
 	import_array();
 }
 
