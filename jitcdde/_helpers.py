@@ -135,11 +135,9 @@ def write_in_chunks(lines, mainfile, deffile, name, chunk_size, arguments):
 		lines = chain(first_chunk, lines)
 		
 		if sympy_version >= "1":
-			def clear_sympy_cache():
-				clear_cache()
+			clear_sympy_cache = clear_cache
 		else:
-			def clear_sympy_cache():
-				pass
+			def clear_sympy_cache(): pass
 			warn("Not clearing SymPy cache between chunks because this is buggy in this SymPy version. If excessive memory is used, this is why and you have to upgrade SymPy.")
 		
 		while True:
