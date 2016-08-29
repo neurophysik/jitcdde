@@ -202,20 +202,51 @@ class jitcdde(object):
 		
 		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers)
 	
-	def generate_f_c(
+	def generate_f_c(self, *args, **kwargs):
+		warn("Use generate_f_C instead. This function exists for backwards compatibility only and will be removed soon.")
+		self.generate_f_C(self, *args, **kwargs)
+	
+	def generate_f_C(
 		self,
+		simplify=True,
+		do_cse=False,
 		chunk_size=100,
-		verbose=False,
 		modulename=None,
+		verbose=False,
 		extra_compile_args=DEFAULT_COMPILE_ARGS
 		):
 		"""
-			Generates the source for the C-based integrator, compiles, and loads it.
+		translates the derivative to C code using SymPy’s `C-code printer <http://docs.sympy.org/dev/modules/printing.html#module-sympy.printing.ccode>`_.
+		
+		Parameters
+		----------
+		simplify : boolean
+			Whether the derivative should be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`) before translating to C code. The main reason why you could want to disable this is if your derivative is already  optimised and so large that simplifying takes a considerable amount of time.
+		
+		do_cse : boolean
+			Whether SymPy’s `common-subexpression detection <http://docs.sympy.org/dev/modules/rewriting.html#module-sympy.simplify.cse_main>`_ should be applied before translating to C code.
+			This is worthwile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input.
+		
+		chunk_size : integer
+			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. After the generation of each chunk, SymPy’s cache is cleared. See `large_systems` on why this is useful.
+			
+			If there is an obvious grouping of your :math:`f`, the group size suggests itself for `chunk_size`. For example, if you want to simulate the dynamics of three-dimensional oscillators coupled onto a 40×40 lattice and if the differential equations are grouped first by oscillator and then by lattice row, a chunk size of 120 suggests itself.
+			
+			If smaller than 1, no chunking will happen.
+		
+		extra_compile_args : list of strings
+			Arguments to be handed to the C compiler on top of what Setuptools chooses. In most situations, it’s best not to write your own list, but modify `DEFAULT_COMPILE_ARGS`, e.g., like this: `compile_C(extra_compile_args = DEFAULT_COMPILE_ARGS + ["--my-flag"])`.
+
+		verbose : boolean
+			Whether the compiler commands shall be shown. This is the same as Setuptools’ `verbose` setting.
+
+		modulename : string or `None`
+			The name used for the compiled module. If `None` or empty, the filename will be chosen by JiTCODE based on previously used filenames or default to `jitced.so`. The only reason why you may want to change this is if you want to save the module file for later use (with`save_compiled`). It is not possible to re-use a modulename for a given instance of `jitcode` (due to the limitations of Python’s import machinery).
 		"""
 		
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
-		if self.helpers:
+		if self.helpers or do_cse:
 			raise NotImplementedError("Helpers for C are not implemented yet, but they will be soon.")
 		
 		set_dy = sympy.Function("set_dy")

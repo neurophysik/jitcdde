@@ -57,7 +57,7 @@ class TestIntegration(unittest.TestCase):
 	def setUp(self):
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
-		self.DDE.generate_f_c()
+		self.DDE.generate_f_C()
 		self.y_10 = None
 	
 	def assert_consistency_with_previous(self, value):
