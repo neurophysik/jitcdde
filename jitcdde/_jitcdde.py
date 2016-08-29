@@ -249,6 +249,12 @@ class jitcdde(object):
 		if self.helpers or do_cse:
 			raise NotImplementedError("Helpers for C are not implemented yet, but they will be soon.")
 		
+		if simplify:
+			warn("Simplification not implemented yet.")
+		
+		if modulename:
+			warn("Setting the module name works, but saving and loading are not implemented yet. Your file will be located in %s." % self._tmpfile())
+		
 		set_dy = sympy.Function("set_dy")
 		render_and_write_code(
 			(set_dy(i,entry) for i,entry in enumerate(self.f_sym())),
