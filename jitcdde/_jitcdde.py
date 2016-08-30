@@ -271,7 +271,7 @@ class jitcdde(object):
 			("t", "double const"),
 			("y", "double", self.n),
 			]
-		
+		functions = ["current_y","past_y","anchors"]
 		helper_i = 0
 		anchor_i = 0
 		self.substitutions = []
@@ -302,18 +302,16 @@ class jitcdde(object):
 			
 			if helper_i:
 				arguments.append(("f_helper","double", helper_i))
+				functions.extend(["get_f_helper", "set_f_helper"])
 			if anchor_i:
 				arguments.append(("f_anchor_helper","double", anchor_i))
+				functions.extend(["get_f_anchor_helper", "set_f_anchor_helper"])
 			
 			render_and_write_code(
 				converted_helpers,
 				self._tmpfile,
 				"helpers",
-				[
-					"y",
-					"get_f_helper", "set_f_helper",
-					"get_f_anchor_helper", "set_f_anchor_helper"
-				],
+				functions,
 				chunk_size = chunk_size,
 				arguments = arguments
 				)
@@ -323,7 +321,7 @@ class jitcdde(object):
 			(set_dy(i,finalise(entry)) for i,entry in enumerate(f_sym_wc)),
 			self._tmpfile,
 			"f",
-			["set_dy","current_y","past_y","anchors"],
+			functions = functions+["set_dy"],
 			chunk_size = chunk_size,
 			arguments = arguments + [("dY", "double", self.n)]
 			)
