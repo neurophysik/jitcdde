@@ -246,18 +246,20 @@ class jitcdde(object):
 		
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
-		if self.helpers or do_cse:
-			raise NotImplementedError("Helpers for C are not implemented yet, but they will be soon.")
+		f_sym_wc = self.f_sym()
 		
 		if simplify:
-			warn("Simplification not implemented yet.")
+			f_sym_wc = (entry.simplify(ratio=1.0) for entry in f_sym_wc)
+		
+		if self.helpers or do_cse:
+			raise NotImplementedError("Helpers for C or CSE are not implemented yet, but they will be soon.")
 		
 		if modulename:
 			warn("Setting the module name works, but saving and loading are not implemented yet. Your file will be located in %s." % self._tmpfile())
 		
 		set_dy = sympy.Function("set_dy")
 		render_and_write_code(
-			(set_dy(i,entry) for i,entry in enumerate(self.f_sym())),
+			(set_dy(i,entry) for i,entry in enumerate(f_sym_wc)),
 			self._tmpfile,
 			"f",
 			["set_dy","current_y","past_y","anchors"],
