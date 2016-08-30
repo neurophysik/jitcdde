@@ -182,7 +182,15 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 # define past_y(t, i, anchor) (get_past_value(self, t, i, anchor))
 # define anchors(t) (get_past_anchors(self, t))
 
+# define get_f_helper(i) ((f_helper[i]))
+# define set_f_helper(i,value) (f_helper[i] = value)
+# define get_f_anchor_helper(i) ((f_anchor_helper[i]))
+# define set_f_anchor_helper(i,value) (f_anchor_helper[i] = value)
 
+
+{% if has_any_helpers: %}
+# include "helpers_definitions.c"
+{% endif %}
 # include "f_definitions.c"
 static PyObject * eval_f(
 	dde_integrator * const self,
@@ -191,8 +199,19 @@ static PyObject * eval_f(
 	double dY[{{n}}])
 {
 	self->current_anchor = self->anchor_mem;
+	
+	{% if number_of_helpers>0: %}
+	double f_helper[{{number_of_helpers}}];
+	{% endif %}
+	{% if number_of_anchor_helpers>0: %}
+	anchor f_anchor_helper[{{number_of_anchor_helpers}}];
+	{% endif %}
+	
+	{% if has_any_helpers>0: %}
+	# include "helpers.c"
+	{% endif %}
 	# include "f.c"
-// 	set_dy(0, -0.1*current_y(0) + 0.25*past_y(t - 15, 0, anchors(t - 15))/(pow(past_y(t - 15, 0, anchors(t - 15)), 10) + 1.0));
+	
 	Py_RETURN_NONE;
 }
 

@@ -5,6 +5,7 @@ from __future__ import print_function, absolute_import, division
 
 from inspect import isgeneratorfunction
 from warnings import warn
+from itertools import chain, count
 import jitcdde._python_core as python_core
 import sympy
 import numpy as np
@@ -209,7 +210,7 @@ class jitcdde(object):
 	def generate_f_C(
 		self,
 		simplify=True,
-		do_cse=False,
+		do_cse=True,
 		chunk_size=100,
 		modulename=None,
 		verbose=False,
@@ -247,29 +248,84 @@ class jitcdde(object):
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
 		f_sym_wc = self.f_sym()
+		helpers_wc = self.helpers
 		
 		if simplify:
 			f_sym_wc = (entry.simplify(ratio=1.0) for entry in f_sym_wc)
 		
-		if self.helpers or do_cse:
-			raise NotImplementedError("Helpers for C or CSE are not implemented yet, but they will be soon.")
+		if do_cse:
+			additional_helper = sympy.Function("additional_helper")
+			
+			_cse = sympy.cse(
+					sympy.Matrix(list(f_sym_wc)),
+					symbols = (additional_helper(i) for i in count())
+				)
+			helpers_wc.extend(_cse[0])
+			f_sym_wc = _cse[1][0]
 		
 		if modulename:
 			warn("Setting the module name works, but saving and loading are not implemented yet. Your file will be located in %s." % self._tmpfile())
 		
+		arguments = [
+			("self", "dde_integrator * const"),
+			("t", "double const"),
+			("y", "double", self.n),
+			]
+		
+		helper_i = 0
+		anchor_i = 0
+		self.substitutions = []
+		converted_helpers = []
+		self.past_calls = 0
+		
+		def finalise(expression):
+			expression = expression.subs(self.substitutions)
+			self.past_calls += expression.count(anchors)
+			return expression
+		
+		if helpers_wc:
+			get_helper = sympy.Function("get_f_helper")
+			set_helper = sympy.Function("set_f_helper")
+			
+			get_anchor = sympy.Function("get_f_anchor_helper")
+			set_anchor = sympy.Function("set_f_anchor_helper")
+			
+			for helper in helpers_wc:
+				if helper[1].__class__ == anchors:
+					converted_helpers.append(set_anchor(anchor_i, finalise(helper[1])))
+					self.substitutions.append((helper[0], get_anchor(anchor_i)))
+					anchor_i += 1
+				else:
+					converted_helpers.append(set_helper(helper_i, finalise(helper[1])))
+					self.substitutions.append((helper[0], get_helper(helper_i)))
+					helper_i += 1
+			
+			if helper_i:
+				arguments.append(("f_helper","double", helper_i))
+			if anchor_i:
+				arguments.append(("f_anchor_helper","double", anchor_i))
+			
+			render_and_write_code(
+				converted_helpers,
+				self._tmpfile,
+				"helpers",
+				[
+					"y",
+					"get_f_helper", "set_f_helper",
+					"get_f_anchor_helper", "set_f_anchor_helper"
+				],
+				chunk_size = chunk_size,
+				arguments = arguments
+				)
+		
 		set_dy = sympy.Function("set_dy")
 		render_and_write_code(
-			(set_dy(i,entry) for i,entry in enumerate(f_sym_wc)),
+			(set_dy(i,finalise(entry)) for i,entry in enumerate(f_sym_wc)),
 			self._tmpfile,
 			"f",
 			["set_dy","current_y","past_y","anchors"],
 			chunk_size = chunk_size,
-			arguments = [
-				("self", "dde_integrator * const"),
-				("t", "double const"),
-				("y", "double", self.n),
-				("dY", "double", self.n)
-				]
+			arguments = arguments + [("dY", "double", self.n)]
 			)
 		
 		if modulename:
@@ -292,7 +348,9 @@ class jitcdde(object):
 			n = self.n,
 			module_name = self._modulename,
 			Python_version = version_info[0],
-			#has_helpers = bool(helpers),
+			number_of_helpers = helper_i,
+			number_of_anchor_helpers = anchor_i,
+			has_any_helpers = anchor_i or helper_i
 			)
 		
 		setup(
@@ -312,11 +370,10 @@ class jitcdde(object):
 			verbose = verbose
 			)
 		
-		past_calls = sum(entry.count(anchors) for entry in self.f_sym())
-		assert past_calls>0, "No DDE."
+		assert self.past_calls>0, "No DDE."
 		
 		jitced = find_and_load_module(self._modulename,self._tmpfile())
-		self.DDE = jitced.dde_integrator(self.past, past_calls)
+		self.DDE = jitced.dde_integrator(self.past, self.past_calls)
 	
 	def set_integration_parameters(self,
 			atol = 0.0,

@@ -138,18 +138,18 @@ f_alt = [
 	omega[1] * (0.2 + y(5) * y3m10)
 	]
 
-#class TestHelpers(TestIntegration):
-	#@classmethod
-	#def setUpClass(self):
-		#self.DDE = jitcdde(f_alt, f_alt_helpers)
-		#self.DDE.set_integration_parameters(**test_parameters)
+class TestHelpers(TestIntegration):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = jitcdde(f_alt, f_alt_helpers)
+		self.DDE.set_integration_parameters(**test_parameters)
 
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
 		self.DDE = jitcdde(f)
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
-		self.DDE.generate_f_lambda()
+		self.DDE.generate_f_C(chunk_size=3)
 		
 	def test_min_step_warning(self):
 		self.DDE.set_integration_parameters(min_step=1.0, raise_exception=False)
