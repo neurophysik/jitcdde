@@ -304,7 +304,7 @@ class jitcdde(object):
 				arguments.append(("f_helper","double", helper_i))
 				functions.extend(["get_f_helper", "set_f_helper"])
 			if anchor_i:
-				arguments.append(("f_anchor_helper","double", anchor_i))
+				arguments.append(("f_anchor_helper","anchor", anchor_i))
 				functions.extend(["get_f_anchor_helper", "set_f_anchor_helper"])
 			
 			render_and_write_code(
