@@ -1,5 +1,5 @@
 from . import _helpers
-from ._jitcdde import jitcdde, provide_advanced_symbols, UnsuccessfulIntegration, _find_max_delay
+from ._jitcdde import jitcdde, provide_advanced_symbols, provide_basic_symbols, UnsuccessfulIntegration, _find_max_delay
 
 try:
     from . import version
