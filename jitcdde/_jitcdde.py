@@ -122,7 +122,12 @@ def _find_max_delay(f, helpers=[]):
 		delay_terms.extend(collect_arguments(entry, anchors))
 	for helper in helpers:
 		delay_terms.extend(collect_arguments(helper[1], anchors))
-	return max(_delays(delay_terms))
+	delays = list(_delays(delay_terms))
+	
+	if delays:
+		return max(delays)
+	else:
+		return 0
 
 class UnsuccessfulIntegration(Exception):
 	"""
@@ -245,6 +250,8 @@ class jitcdde(object):
 			The name used for the compiled module. If `None` or empty, the filename will be chosen by JiTCDDE based on previously used filenames or default to `jitced.so`. The only reason why you may want to change this is if you want to save the module file for later use (with`save_compiled`). It is not possible to re-use a modulename for a given instance of Python (due to the limitations of Python’s import machinery).
 		"""
 		
+		assert len(self.past)>1, "You need to add the past first."
+		
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
 		f_sym_wc = self.f_sym()
@@ -340,6 +347,9 @@ class jitcdde(object):
 		if path.isfile(modulefile):
 			raise OSError("Module file already exists.")
 		
+		if not self.past_calls:
+			warn("Differential equation does not inclued a delay term.")
+		
 		render_template(
 			"jitced_template.c",
 			sourcefile,
@@ -348,7 +358,8 @@ class jitcdde(object):
 			Python_version = version_info[0],
 			number_of_helpers = helper_i,
 			number_of_anchor_helpers = anchor_i,
-			has_any_helpers = anchor_i or helper_i
+			has_any_helpers = anchor_i or helper_i,
+			anchor_mem_length = self.past_calls
 			)
 		
 		setup(
@@ -368,10 +379,8 @@ class jitcdde(object):
 			verbose = verbose
 			)
 		
-		assert self.past_calls>0, "No DDE."
-		
 		jitced = find_and_load_module(self._modulename,self._tmpfile())
-		self.DDE = jitced.dde_integrator(self.past, self.past_calls)
+		self.DDE = jitced.dde_integrator(self.past)
 	
 	def set_integration_parameters(self,
 			atol = 0.0,
