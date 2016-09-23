@@ -16,7 +16,7 @@ setup(
 	author_email = 'gansmann@uni-bonn.de',
 	#url = 'http://github.com/neurophysik/jitcdde',
 	packages = ['jitcdde'],
-	#package_data = {'jitcode': ['jitced_template.c']},
+	package_data = {'jitcdde': ['jitced_template.c']},
 	#include_package_data = True,
 	install_requires = requirements,
 	#setup_requires = ['setuptools_scm'],
