@@ -525,8 +525,10 @@ class jitcdde(object):
 			self.successful = True
 			self.DDE.accept_step()
 			if p < self.increase_threshold:
+				factor = self.safety_factor*p**(-1/(self.q+1)) if p else self.max_factor
+				
 				new_dt = min(
-					self.dt*min(self.safety_factor*p**(-1/(self.q+1)), self.max_factor),
+					self.dt*min(factor, self.max_factor),
 					self.max_step
 					)
 				
