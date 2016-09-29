@@ -367,7 +367,7 @@ class jitcdde(object):
 			ext_modules = [Extension(
 				self._modulename,
 				sources = [sourcefile],
-				extra_compile_args = extra_compile_args
+				extra_compile_args = ["-I" + np.get_include()] + extra_compile_args
 				)],
 			script_args = [
 				"build_ext",
