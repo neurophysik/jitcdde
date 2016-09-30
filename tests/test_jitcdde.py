@@ -54,11 +54,14 @@ class TestIntegration(unittest.TestCase):
 		self.DDE = jitcdde(f)
 		self.DDE.set_integration_parameters(**test_parameters)
 	
+	def generator(self):
+		self.DDE.generate_f_C()
+	
 	def setUp(self):
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
-		self.DDE.generate_f_C()
 		self.y_10 = None
+		self.generator()
 	
 	def assert_consistency_with_previous(self, value):
 		if self.y_10 is None:
@@ -86,6 +89,14 @@ class TestIntegration(unittest.TestCase):
 	def tearDown(self):
 		self.DDE.past = []
 
+class TestIntegrationLambda(TestIntegration):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+class TestIntegrationChunks(TestIntegration):
+	def generator(self):
+		self.DDE.generate_f_C(chunk_size=1)
+
 tiny_delay = 1e-30
 f_with_tiny_delay = [
 	omega[0] * (-y(1) - y(2)),
@@ -108,6 +119,15 @@ class TestPastWithinStepFuzzy(TestIntegration):
 		self.DDE = jitcdde(f)
 		self.DDE.set_integration_parameters(pws_fuzzy_increase=True, **test_parameters)
 
+class TestPastWithinStepLambda(TestPastWithinStep):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+class TestPastWithinStepFuzzyLambda(TestPastWithinStepFuzzy):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+
 def f_generator():
 	yield omega[0] * (-y(1) - y(2))
 	yield omega[0] * (y(0) + 0.165 * y(1))
@@ -121,6 +141,14 @@ class TestGenerator(TestIntegration):
 	def setUpClass(self):
 		self.DDE = jitcdde(f_generator)
 		self.DDE.set_integration_parameters(**test_parameters)
+
+class TestGeneratorPython(TestGenerator):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+class TestGeneratorChunking(TestGenerator):
+	def generator(self):
+		self.DDE.generate_f_C(chunk_size=1)
 
 delayed_y, y3m10, coupling_term = sympy.symbols("delayed_y y3m10 coupling_term")
 f_alt_helpers = [
@@ -144,12 +172,20 @@ class TestHelpers(TestIntegration):
 		self.DDE = jitcdde(f_alt, f_alt_helpers)
 		self.DDE.set_integration_parameters(**test_parameters)
 
+class TestHelpersPython(TestHelpers):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+class TestHelpersChunking(TestHelpers):
+	def generator(self):
+		self.DDE.generate_f_C(chunk_size=1)
+
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
 		self.DDE = jitcdde(f)
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
-		self.DDE.generate_f_C(chunk_size=3)
+		self.DDE.generate_f_C()
 		
 	def test_min_step_warning(self):
 		self.DDE.set_integration_parameters(min_step=1.0, raise_exception=False)
