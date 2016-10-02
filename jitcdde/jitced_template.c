@@ -339,7 +339,15 @@ static PyObject * forget(dde_integrator * const self, PyObject * args)
 		);
 	assert(self->first_anchor != self->last_anchor);
 	while (self->first_anchor->next->time < threshold)
+	{
+		{% if anchor_mem_length: %}
+		# if DEBUG
+		for (int i=0; i<{{anchor_mem_length}}; i++)
+			assert(self->anchor_mem[i] != self->first_anchor)
+		# endif
+		{% endif %}
 		remove_first_anchor(self);
+	}
 	
 	assert(self->first_anchor != self->last_anchor);
 	
