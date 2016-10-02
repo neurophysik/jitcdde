@@ -47,11 +47,14 @@ f = [
 	]
 
 class basic_test(unittest.TestCase):
+	@classmethod
+	def setUpClass(self):
+		self.ODE = jitcdde(f)
+	
 	def setUp(self):
-		self.ODE = jitcdde(f, max_delay=10.0)
 		self.ODE.add_past_point(-1.0, y0, f_of_y0)
 		self.ODE.add_past_point( 0.0, y0, f_of_y0)
-		self.ODE.set_integration_parameters()
+		self.ODE.set_integration_parameters(first_step=0.01)
 	
 	def test_C(self):
 		self.ODE.generate_f_C()
@@ -59,7 +62,34 @@ class basic_test(unittest.TestCase):
 	def test_Python(self):
 		self.ODE.generate_f_lambda()
 	
+	def integrate(self):
+		pass
+	
 	def tearDown(self):
+		self.integrate()
 		assert_allclose( self.ODE.integrate(1.0), y1, rtol=1e-5 )
+
+class blind_integration(basic_test):
+	def integrate(self):
+		self.ODE.integrate_blindly(0.98,0.01)
+
+tiny_delay = 1e-15
+f_with_tiny_delay = [
+	y(0,t-tiny_delay) * ( a-y(0) ) * ( y(0)-1.0 ) - y(1) + k * (y(2) - y(0)),
+	b1*y(0) - c*y(1),
+	y(2) * ( a-y(2) ) * ( y(2)-1.0 ) - y(3) + k * (y(0) - y(2)),
+	b2*y(2) - c*y(3)
+	]
+
+class tiny_delay(basic_test):
+	@classmethod
+	def setUpClass(self):
+		self.ODE = jitcdde(f_with_tiny_delay)
+
+class blind_integration_and_tiny_delay(tiny_delay):
+	def integrate(self):
+		self.ODE.integrate_blindly(0.98,0.01)
+
+
 
 unittest.main(buffer=True)

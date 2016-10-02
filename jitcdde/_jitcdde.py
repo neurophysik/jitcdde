@@ -616,4 +616,6 @@ class jitcdde(object):
 		for _ in range(number):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
-			self.DDE.forget(self.max_delay)
+			# The +dt in the following line ensures that the saved start for searching is not forgotten in case of very short delays.
+			self.DDE.forget(self.max_delay+dt)
+		
