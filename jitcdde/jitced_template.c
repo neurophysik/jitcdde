@@ -40,6 +40,7 @@ typedef struct
 	double past_within_step;
 	double old_new_y[{{n}}];
 	double error[{{n}}];
+	double last_actual_step_start;
 } dde_integrator;
 
 void append_anchor(
@@ -226,13 +227,15 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 {
 	assert(self->last_anchor);
 	assert(self->first_anchor);
-
+	
 	double delta_t;
 	if (!PyArg_ParseTuple(args, "d", &delta_t))
 	{
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
 		return NULL;
 	}
+	
+	self->last_actual_step_start = self->current->time;
 	
 	self->past_within_step = 0.0;
 	# define k_1 self->current->diff
@@ -330,10 +333,15 @@ static PyObject * forget(dde_integrator * const self, PyObject * args)
 		return NULL;
 	}
 	
-	double threshold = self->current->time - delay;
+	double threshold = fmin(
+		self->current->time - delay,
+		self->last_actual_step_start
+		);
 	assert(self->first_anchor != self->last_anchor);
 	while (self->first_anchor->next->time < threshold)
 		remove_first_anchor(self);
+	
+	assert(self->first_anchor != self->last_anchor);
 	
 	Py_RETURN_NONE;
 }
@@ -395,6 +403,7 @@ static int dde_integrator_init(dde_integrator * self, PyObject * args)
 	assert(self->first_anchor != self->last_anchor);
 	assert(self->first_anchor != NULL);
 	assert(self->last_anchor != NULL);
+	self->last_actual_step_start = self->first_anchor->time;
 	
 	{% if anchor_mem_length: %}
 	self->anchor_mem = malloc({{anchor_mem_length}}*sizeof(anchor *));
