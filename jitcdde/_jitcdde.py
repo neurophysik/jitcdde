@@ -139,8 +139,8 @@ class UnsuccessfulIntegration(Exception):
 #: A list with the default extra compile arguments. Use and modify these to get the most of future versions of JiTCODE. Note that without `-Ofast`, `-ffast-math`, or `-funsafe-math-optimizations` (if supported by your compiler), you may experience a considerable speed loss since SymPy uses the `pow` function for small integer powers (`SymPy Issue 8997`_).
 DEFAULT_COMPILE_ARGS = [
 			"-std=c11",
-			#"-Ofast","-g0",
-			"-O0","-g","-UNDEBUG",
+			"-Ofast","-g0",
+			#"-O0","-g","-UNDEBUG",
 			"-march=native",
 			"-mtune=native",
 			"-Wno-unknown-pragmas",

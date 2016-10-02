@@ -5,12 +5,15 @@ from jitcdde import (
 	provide_basic_symbols,
 	jitcdde,
 	UnsuccessfulIntegration,
-	_find_max_delay
+	_find_max_delay,
+	DEFAULT_COMPILE_ARGS
 	)
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
 from sympy import symbols
+
+compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
 
 # control values:
 
@@ -57,7 +60,7 @@ class basic_test(unittest.TestCase):
 		self.ODE.set_integration_parameters(first_step=0.01)
 	
 	def test_C(self):
-		self.ODE.generate_f_C()
+		self.ODE.generate_f_C(extra_compile_args=compile_args)
 	
 	def test_Python(self):
 		self.ODE.generate_f_lambda()

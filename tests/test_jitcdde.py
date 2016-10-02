@@ -6,13 +6,16 @@ from jitcdde import (
 	provide_advanced_symbols,
 	jitcdde,
 	UnsuccessfulIntegration,
-	_find_max_delay
+	_find_max_delay,
+	DEFAULT_COMPILE_ARGS
 	)
 
 import sympy
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
+
+compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
 
 t, y, current_y, past_y, anchors = provide_advanced_symbols()
 
@@ -55,7 +58,7 @@ class TestIntegration(unittest.TestCase):
 		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def generator(self):
-		self.DDE.generate_f_C()
+		self.DDE.generate_f_C(extra_compile_args=compile_args)
 	
 	def setUp(self):
 		for point in get_past_points():
@@ -95,7 +98,7 @@ class TestIntegrationLambda(TestIntegration):
 
 class TestIntegrationChunks(TestIntegration):
 	def generator(self):
-		self.DDE.generate_f_C(chunk_size=1)
+		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
 tiny_delay = 1e-30
 f_with_tiny_delay = [
@@ -148,7 +151,7 @@ class TestGeneratorPython(TestGenerator):
 
 class TestGeneratorChunking(TestGenerator):
 	def generator(self):
-		self.DDE.generate_f_C(chunk_size=1)
+		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
 delayed_y, y3m10, coupling_term = sympy.symbols("delayed_y y3m10 coupling_term")
 f_alt_helpers = [
@@ -178,14 +181,14 @@ class TestHelpersPython(TestHelpers):
 
 class TestHelpersChunking(TestHelpers):
 	def generator(self):
-		self.DDE.generate_f_C(chunk_size=1)
+		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
 		self.DDE = jitcdde(f)
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
-		self.DDE.generate_f_C()
+		self.DDE.generate_f_C(extra_compile_args=compile_args)
 		
 	def test_min_step_warning(self):
 		self.DDE.set_integration_parameters(min_step=1.0, raise_exception=False)
