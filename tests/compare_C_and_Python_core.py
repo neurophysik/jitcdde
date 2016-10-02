@@ -93,6 +93,10 @@ for realisation in range(number_of_runs):
 		n = n,
 		module_name = modulename,
 		Python_version = version_info[0],
+		has_any_helpers = False,
+		number_of_helpers = 0,
+		number_of_anchor_helpers = 0,
+		anchor_mem_length = 1,
 		)
 
 	setup(
@@ -107,7 +111,7 @@ for realisation in range(number_of_runs):
 		)
 	
 	jitced = find_and_load_module(modulename,tmpfile())
-	C = jitced.dde_integrator(past_points(), 1)
+	C = jitced.dde_integrator(past_points())
 	
 	def get_next_step():
 		r = random.uniform(1e-5,1e-3)
