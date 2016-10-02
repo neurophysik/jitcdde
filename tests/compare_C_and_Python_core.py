@@ -66,7 +66,8 @@ modulename = "jitced"
 errors = 0
 
 for realisation in range(number_of_runs):
-	print(".", end="") #TODO
+	print(".", end="")
+	stdout.flush()
 	
 	P = py_dde_integrator(f, past_points())
 
@@ -152,8 +153,8 @@ for realisation in range(number_of_runs):
 	actions = [get_next_step, get_t, get_recent_state, get_p, accept_step, forget, check_new_y_diff, past_within_step]
 	
 	for i in range(30):
+		action = random.sample(actions,1)[0]
 		try:
-			action = random.sample(actions,1)[0]
 			action()
 		except AssertionError as error:
 			print("--------------------")

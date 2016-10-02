@@ -22,7 +22,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import random
 from setuptools import setup, Extension
-from sys import version_info, modules, argv
+from sys import version_info, modules, argv, stdout
 from os import path as path
 from tempfile import mkdtemp
 from jinja2 import Environment, FileSystemLoader
@@ -67,7 +67,8 @@ modulename = "jitced"
 errors = 0
 
 for realisation in range(number_of_runs):
-	print(".", end="") #TODO
+	print(".", end="")
+	stdout.flush()
 	
 	P = py_dde_integrator(f, past_points())
 
@@ -147,8 +148,8 @@ for realisation in range(number_of_runs):
 	actions = [get_next_step, get_t, get_recent_state, get_p, accept_step, forget, check_new_y_diff, past_within_step]
 	
 	for i in range(30):
+		action = random.sample(actions,1)[0]
 		try:
-			action = random.sample(actions,1)[0]
 			action()
 		except AssertionError as error:
 			print("--------------------")
