@@ -19,7 +19,8 @@ from jitcdde._helpers import (
 	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
 	render_and_write_code,
 	render_template,
-	collect_arguments
+	collect_arguments,
+	random_direction
 	)
 
 #sigmoid = lambda x: 1/(1+np.exp(-x))
@@ -112,17 +113,13 @@ def _delays(f, helpers=[]):
 	delay_terms = set().union(*(collect_arguments(entry, anchors) for entry in f()))
 	delay_terms.update(*(collect_arguments(helper[1], anchors) for helper in helpers))
 	
-	return map(lambda delay_term: t-delay_term[0], delay_terms)
+	return [0]+list(map(lambda delay_term: t-delay_term[0], delay_terms))
 
-def _find_max_delay(f, helpers=[]):
-	delays = _delays(f, helpers)
-	
-	if not delays:
-		return 0
-	elif any(not delay.is_Number for delay in delays):
-		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
-	else:
+def _find_max_delay(delays):
+	if all(sympy.sympify(delay).is_Number for delay in delays):
 		return max(delays)
+	else:
+		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
 
 class UnsuccessfulIntegration(Exception):
 	"""
@@ -164,7 +161,7 @@ class jitcdde(object):
 		self._tmpdir = None
 		self._modulename = "jitced"
 		self.past = []
-		self.max_delay = max_delay or _find_max_delay(self.f_sym, self.helpers)
+		self.max_delay = max_delay or _find_max_delay(_delays((self.f_sym, self.helpers)))
 		assert self.max_delay >= 0.0, "Negative maximum delay."
 
 	def _tmpfile(self, filename=None):
@@ -648,19 +645,23 @@ class jitcdde_lyap(jitcdde):
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	"""
 	
-	def __init__(self, f_sym, helpers=None, n=None, max_delay=None, n_lyap=1, delays=None):
+	def __init__(self, f_sym, helpers=[], n=None, max_delay=None, n_lyap=1, delays=None):
 		f_basic, n = _handle_input(f_sym,n)
 		self.n_basic = n
 		
-		act_delays = [0] + list(delays or _delays(f_basic, helpers))
+		if delays:
+			act_delays = delays + ([] if (0 in delays) else [0])
+		else:
+			act_delays = _delays(f_basic, helpers)
+		max_delay = max_delay or _find_max_delay(act_delays)
 		
 		assert n_lyap>=0, "n_lyap negative"
 		self._n_lyap = n_lyap
 		
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		
-		_,y = provide_basic_symbols()
-
+		t,y = provide_basic_symbols()
+		
 		def f_lyap():
 			#Replace with yield from, once Python 2 is dead:
 			for entry in f_basic():
@@ -669,11 +670,11 @@ class jitcdde_lyap(jitcdde):
 			for i in range(self._n_lyap):
 				jacs = [_jac(f_basic, helpers, delay, n) for delay in act_delays]
 				
-				for _ in range(n_basic):
+				for _ in range(self.n_basic):
 					expression = 0
 					for delay,jac in zip(act_delays,jacs):
 						for k,entry in enumerate(jac.next()):
-							expression += entry * y(k+(i+1)*n, delay)
+							expression += entry * y(k+(i+1)*n, t-delay)
 					
 					yield sympy.simplify(expression, ratio=1.0)
 		
@@ -687,11 +688,11 @@ class jitcdde_lyap(jitcdde):
 	def add_past_point(self, time, state, derivative):
 		new_state = [state]
 		new_derivative = [derivative]
-		for _ in range(self.n_lyap):
+		for _ in range(self._n_lyap):
 			new_state.append(random_direction(self.n_basic))
 			new_derivative.append(random_direction(self.n_basic))
 		
-		super(jitcdde_lyap, self).add_past_point(time, hstack(new_state), hstack(new_derivative))
+		super(jitcdde_lyap, self).add_past_point(time, np.hstack(new_state), np.hstack(new_derivative))
 	
 	
 	def integrate(self, target_time):
@@ -714,5 +715,5 @@ class jitcdde_lyap(jitcdde):
 		
 		lyaps = log(norms) / delta_t
 		
-		return hstack((result, lyaps))
+		return np.hstack((result, lyaps))
 	
