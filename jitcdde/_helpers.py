@@ -220,3 +220,10 @@ def collect_arguments(expression, function):
 	else:
 		return set().union(*(collect_arguments(arg, function) for arg in expression.args))
 
+# Numerical tools
+# ---------------
+
+def random_direction(n):
+	vector = np.random.normal(0,1,n)
+	return vector/np.linalg.norm(vector)
+

@@ -613,4 +613,106 @@ class jitcdde(object):
 			self.DDE.forget(self.max_delay)
 
 
+def _jac(f, helpers, delay, n):
+	t,y = provide_basic_symbols()
+	
+	dependent_helpers = [[] for i in range(n)]
+	for i in range(n):
+		for helper in helpers:
+			derivative = sympy.diff(helper[1], y(i,t-delay))
+			for other_helper in dependent_helpers[i]:
+				derivative += sympy.diff(helper[1],other_helper[0]) * other_helper[1]
+			if derivative:
+				dependent_helpers[i].append( (helper[0], derivative) )
+	
+	def line(f_entry):
+		for j in range(n):
+			entry = sympy.diff( f_entry, y(j,t-delay) )
+			for helper in dependent_helpers[j]:
+				entry += sympy.diff(f_entry,helper[0]) * helper[1]
+			yield entry
+	
+	for f_entry in f():
+		yield line(f_entry)
 
+
+class jitcdde_lyap(jitcdde):
+	"""the handling is the same as that for `jitcdde` except for:
+	
+	Parameters
+	----------
+	n_lyap : integer
+		Number of Lyapunov exponents to calculate.
+		
+	delays : iterable of SymPy expressions
+		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
+	"""
+	
+	def __init__(self, f_sym, helpers=None, n=None, max_delay=None, n_lyap=1, delays=None):
+		f_basic, n = _handle_input(f_sym,n)
+		self.n_basic = n
+		
+		act_delays = [0] + list(delays or _delays(f_basic, helpers))
+		
+		assert n_lyap>=0, "n_lyap negative"
+		self._n_lyap = n_lyap
+		
+		helpers = _sort_helpers(_sympify_helpers(helpers or []))
+		
+		_,y = provide_basic_symbols()
+
+		def f_lyap():
+			#Replace with yield from, once Python 2 is dead:
+			for entry in f_basic():
+				yield entry
+			
+			for i in range(self._n_lyap):
+				jacs = [_jac(f_basic, helpers, delay, n) for delay in act_delays]
+				
+				for _ in range(n_basic):
+					expression = 0
+					for delay,jac in zip(act_delays,jacs):
+						for k,entry in enumerate(jac.next()):
+							expression += entry * y(k+(i+1)*n, delay)
+					
+					yield sympy.simplify(expression, ratio=1.0)
+		
+		super(jitcdde_lyap, self).__init__(
+			f_lyap,
+			helpers = helpers,
+			n = self._n_lyap*(n+1),
+			max_delay = max_delay
+			)
+	
+	def add_past_point(self, time, state, derivative):
+		new_state = [state]
+		new_derivative = [derivative]
+		for _ in range(self.n_lyap):
+			new_state.append(random_direction(self.n_basic))
+			new_derivative.append(random_direction(self.n_basic))
+		
+		super(jitcdde_lyap, self).add_past_point(time, hstack(new_state), hstack(new_derivative))
+	
+	
+	def integrate(self, target_time):
+		"""
+		Like JiTCDDE’s `integrate`, except for orthonormalising the separation functions and:
+		
+		Returns
+		-------
+		y : one-dimensional NumPy array
+			The first `len(f_sym)` entries are the state of the system.
+			The remaining entries are the “local” Lyapunov exponents as estimated from the growth or shrinking of the tangent vectors during the integration time of this very `integrate` command.
+		"""
+		# TODO formula and citation like for JiTCODE?
+		
+		old_t = self.DDE.get_t()
+		result = super(jitcdde_lyap, self).integrate(target_time)[:self.n_basic]
+		delta_t = self.DDE.get_t()-old_t
+		
+		norms = self.DDE.orthonormalise(self._n_lyap, self.max_delay)
+		
+		lyaps = log(norms) / delta_t
+		
+		return hstack((result, lyaps))
+	

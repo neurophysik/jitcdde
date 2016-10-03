@@ -184,8 +184,7 @@ class dde_integrator(object):
 		
 		return np.einsum("ik,ij,jk", vector, partial_sp_matrix, vector)*q
 	
-	def norm(self, delay, start, stop):
-		indizes = range(start, stop)
+	def norm(self, delay, indizes):
 		threshold = self.t - delay
 		
 		i = 0
@@ -196,7 +195,7 @@ class dde_integrator(object):
 		norm_sq = norm_sq_partial((past[i],past[i+1]), indizes, threshold)
 		
 		# full norms of all others
-		for i in range(i, len(past)-1):
+		for i in range(i+1, len(past)-1):
 			norm_sq += norm_sq_interval((past[i],past[i+1]), indizes)
 		
 		return np.sqrt(norm_sq)
@@ -256,9 +255,7 @@ class dde_integrator(object):
 		
 		return np.einsum("ik,ij,jk", vector_1, partial_sp_matrix, vector_2)*q
 	
-	def scalar_product(self, delay, start_1, stop_1, start_2, stop_2):
-		indizes_1 = range(start_1, stop_1)
-		indizes_2 = range(start_2, stop_2)
+	def scalar_product(self, delay, indizes_1, indizes_2):
 		threshold = self.t - delay
 		
 		i = 0
@@ -268,9 +265,37 @@ class dde_integrator(object):
 		# partial scalar product of first relevant interval
 		sp = scalar_product_partial((past[i],past[i+1]), indizes_1, indizes_2, threshold)
 		
-		# full norms of all others
-		for i in range(i, len(past)-1):
+		# full scalar product of all others
+		for i in range(i+1, len(past)-1):
 			sp += scalar_product_interval((past[i],past[i+1]), indizes_1, indizes_2)
 		
 		return sp
-
+	
+	def scale_past(self, factor, indizes):
+		for anchor in past:
+			anchor[1][indizes] *= factor
+			anchor[2][indizes] *= factor
+	
+	def subtract_from_past(self, indizes_1, indizes_2, factor):
+		for anchor in past:
+			anchor[1][indizes_1] -= factor*anchor[1][indizes_2]
+			anchor[2][indizes_1] -= factor*anchor[2][indizes_2]
+	
+	def orthonormalise(self, n_lyap, delay):
+		"""
+		Orthonormalise separation functions (with Gram-Schmidt) and return their norms after orthogonalisation (but before normalisation).
+		"""
+		
+		vectors = np.split(np.arange(self.n, dtype=int), n_lyap+1)[1:]
+		
+		norms = []
+		for i,vector in enumerate(vectors):
+			for j in range(i):
+				sp = self.scalar_product(delay, vector, vectors[j])
+				self.subtract_from_past(vector, vectors[j], sp)
+			norm = self.norm(delay, vector)
+			self.scale_past(1./norm, vector)
+			norms.append(norm)
+		
+		return np.array(norms)
+	
