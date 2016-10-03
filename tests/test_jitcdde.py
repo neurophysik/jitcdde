@@ -6,7 +6,7 @@ from jitcdde import (
 	provide_advanced_symbols,
 	jitcdde,
 	UnsuccessfulIntegration,
-	_find_max_delay,
+	_find_max_delay, _delays,
 	DEFAULT_COMPILE_ARGS
 	)
 
@@ -213,20 +213,20 @@ class TestIntegrationParameters(unittest.TestCase):
 
 class TestFindMaxDelay(unittest.TestCase):
 	def test_default(self):
-		self.assertEqual(_find_max_delay(f_generator), delay)
+		self.assertEqual(_find_max_delay(_delays(f_generator)), delay)
 	
 	def test_helpers(self):
-		self.assertEqual(_find_max_delay(lambda:[], f_alt_helpers), delay)
+		self.assertEqual(_find_max_delay(_delays(lambda:[], f_alt_helpers)), delay)
 	
 	def test_time_dependent_delay(self):
 		g = lambda: [y(0,2*t)]
 		with self.assertRaises(ValueError):
-			_find_max_delay(g)
+			_find_max_delay(_delays(g))
 	
 	def test_dynamic_dependent_delay(self):
 		g = lambda: [y(0,t-y(0))]
 		with self.assertRaises(ValueError):
-			_find_max_delay(g)
+			_find_max_delay(_delays(g))
 
 unittest.main(buffer=True)
 

@@ -162,7 +162,7 @@ class jitcdde(object):
 		self._tmpdir = None
 		self._modulename = "jitced"
 		self.past = []
-		self.max_delay = max_delay or _find_max_delay(_delays((self.f_sym, self.helpers)))
+		self.max_delay = max_delay or _find_max_delay(_delays(self.f_sym, self.helpers))
 		assert self.max_delay >= 0.0, "Negative maximum delay."
 		assert isinstance(self.max_delay, Number), "max_delay is not a Python number."
 
