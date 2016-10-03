@@ -11,6 +11,8 @@ from itertools import count
 
 MIN_GARBAGE = 100
 
+sumsq = lambda x: np.sum(x**2)
+
 class dde_integrator(object):
 	def __init__(self,
 				f,
@@ -135,3 +137,140 @@ class dde_integrator(object):
 			self.anchor_mem -= self.last_garbage+1
 			self.last_garbage = -1
 	
+	# ------------------------------------
+	
+	sp_matrix = np.array([
+		[156,  22,  54, -13],
+		[ 22,   4,  13,  -3],
+		[ 54,  13, 156, -22],
+		[-13,  -3, -22,   4]
+		])/420
+	
+	
+	def norm_sq_interval(anchors, indizes):
+		q = (anchors[1][0]-anchors[0][0])
+		vector = np.vstack([
+		anchors[0][1][indizes],     # a
+		anchors[0][2][indizes] * q, # b
+		anchors[1][1][indizes],     # c
+		anchors[1][2][indizes] * q, # d
+		])
+		
+		return np.einsum("ik,ij,jk", vector, sp_matrix, vector)*q
+	
+	def norm_sq_partial(anchors, indizes, start):
+		q = (anchors[1][0]-anchors[0][0])
+		z = (start-anchors[1][0]) / q
+		a = anchors[0][1][indizes]
+		b = anchors[0][2][indizes] * q
+		c = anchors[1][1][indizes]
+		d = anchors[1][2][indizes] * q
+		
+		h_1 = - 120*z**7 - 350*z**6 - 252*z**5
+		h_2 = -  60*z**7 - 140*z**6 -  84*z**5
+		h_3 = - 120*z**7 - 420*z**6 - 378*z**5
+		h_4 =            -  70*z**6 - 168*z**5 - 105*z**4
+		h_6 = - 105*z**4 - 140*z**3
+		h_7 = - 210*z**4 - 420*z**3
+		h_5 = 2*h_2 + 3*h_4
+		h_8 = - h_5 + h_7 - h_6 - 210*z**2
+		
+		partial_sp_matrix = sympy.Matrix([
+			[  2*h_3   , h_1    , h_7-2*h_3        , h_5              ],
+			[    h_1   , h_2    , h_6-h_1          , h_2+h_4          ],
+			[ h_7-2*h_3, h_6-h_1, 2*h_3-2*h_7-420*z, h_8              ],
+			[   h_5    , h_2+h_4, h_8              , -h_1+h_2+h_5+h_6 ]
+		])/420
+		
+		return np.einsum("ik,ij,jk", vector, partial_sp_matrix, vector)*q
+	
+	def norm(self, delay, start, stop):
+		indizes = range(start, stop)
+		threshold = self.t - delay
+		
+		i = 0
+		while self.past[i+1][0] < threshold:
+			i += 1
+		
+		# partial norm of first relevant interval
+		norm_sq = norm_sq_partial((past[i],past[i+1]), indizes, threshold)
+		
+		# full norms of all others
+		for i in range(i, len(past)-1):
+			norm_sq += norm_sq_interval((past[i],past[i+1]), indizes)
+		
+		return np.sqrt(norm_sq)
+	
+	def scalar_product_interval(anchors, indizes_1, indizes_2):
+		q = (anchors[1][0]-anchors[0][0])
+		
+		vector_1 = np.vstack([
+			anchors[0][1][indizes_1],     # a_1
+			anchors[0][2][indizes_1] * q, # b_1
+			anchors[1][1][indizes_1],     # c_1
+			anchors[1][2][indizes_1] * q, # d_1
+		])
+		
+		vector_2 = np.vstack([
+			anchors[0][1][indizes_2],     # a_2
+			anchors[0][2][indizes_2] * q, # b_2
+			anchors[1][1][indizes_2],     # c_2
+			anchors[1][2][indizes_2] * q, # d_2
+		])
+		
+		return np.einsum("ik,ij,jk", vector_1, sp_matrix, vector_2)*q
+	
+	def scalar_product_partial(anchors, indizes_1, indizes_2, start):
+		q = (anchors[1][0]-anchors[0][0])
+		z = (start-anchors[1][0]) / q
+		
+		vector_1 = np.vstack([
+			anchors[0][1][indizes_1],     # a_1
+			anchors[0][2][indizes_1] * q, # b_1
+			anchors[1][1][indizes_1],     # c_1
+			anchors[1][2][indizes_1] * q, # d_1
+		])
+		
+		vector_2 = np.vstack([
+			anchors[0][1][indizes_2],     # a_2
+			anchors[0][2][indizes_2] * q, # b_2
+			anchors[1][1][indizes_2],     # c_2
+			anchors[1][2][indizes_2] * q, # d_2
+		])
+		
+		h_1 = - 120*z**7 - 350*z**6 - 252*z**5
+		h_2 = -  60*z**7 - 140*z**6 -  84*z**5
+		h_3 = - 120*z**7 - 420*z**6 - 378*z**5
+		h_4 =            -  70*z**6 - 168*z**5 - 105*z**4
+		h_6 = - 105*z**4 - 140*z**3
+		h_7 = - 210*z**4 - 420*z**3
+		h_5 = 2*h_2 + 3*h_4
+		h_8 = - h_5 + h_7 - h_6 - 210*z**2
+		
+		partial_sp_matrix = sympy.Matrix([
+			[  2*h_3   , h_1    , h_7-2*h_3        , h_5              ],
+			[    h_1   , h_2    , h_6-h_1          , h_2+h_4          ],
+			[ h_7-2*h_3, h_6-h_1, 2*h_3-2*h_7-420*z, h_8              ],
+			[   h_5    , h_2+h_4, h_8              , -h_1+h_2+h_5+h_6 ]
+		])/420
+		
+		return np.einsum("ik,ij,jk", vector_1, partial_sp_matrix, vector_2)*q
+	
+	def scalar_product(self, delay, start_1, stop_1, start_2, stop_2):
+		indizes_1 = range(start_1, stop_1)
+		indizes_2 = range(start_2, stop_2)
+		threshold = self.t - delay
+		
+		i = 0
+		while self.past[i+1][0] < threshold:
+			i += 1
+		
+		# partial scalar product of first relevant interval
+		sp = scalar_product_partial((past[i],past[i+1]), indizes_1, indizes_2, threshold)
+		
+		# full norms of all others
+		for i in range(i, len(past)-1):
+			sp += scalar_product_interval((past[i],past[i+1]), indizes_1, indizes_2)
+		
+		return sp
+
