@@ -22,6 +22,7 @@ from jitcdde._helpers import (
 	collect_arguments,
 	random_direction
 	)
+from numbers import Number
 
 #sigmoid = lambda x: 1/(1+np.exp(-x))
 #sigmoid = lambda x: 1 if x>0 else 0
@@ -117,7 +118,7 @@ def _delays(f, helpers=[]):
 
 def _find_max_delay(delays):
 	if all(sympy.sympify(delay).is_Number for delay in delays):
-		return max(delays)
+		return float(max(delays))
 	else:
 		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
 
@@ -163,6 +164,7 @@ class jitcdde(object):
 		self.past = []
 		self.max_delay = max_delay or _find_max_delay(_delays((self.f_sym, self.helpers)))
 		assert self.max_delay >= 0.0, "Negative maximum delay."
+		assert isinstance(self.max_delay, Number), "max_delay is not a Python number."
 
 	def _tmpfile(self, filename=None):
 		if self._tmpdir is None:
@@ -713,7 +715,7 @@ class jitcdde_lyap(jitcdde):
 		
 		norms = self.DDE.orthonormalise(self._n_lyap, self.max_delay)
 		
-		lyaps = log(norms) / delta_t
+		lyaps = np.log(norms) / delta_t
 		
 		return np.hstack((result, lyaps))
 	
