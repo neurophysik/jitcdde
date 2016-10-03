@@ -675,7 +675,7 @@ class jitcdde_lyap(jitcdde):
 				for _ in range(self.n_basic):
 					expression = 0
 					for delay,jac in zip(act_delays,jacs):
-						for k,entry in enumerate(jac.next()):
+						for k,entry in enumerate(next(jac)):
 							expression += entry * y(k+(i+1)*n, t-delay)
 					
 					yield sympy.simplify(expression, ratio=1.0)
@@ -683,7 +683,7 @@ class jitcdde_lyap(jitcdde):
 		super(jitcdde_lyap, self).__init__(
 			f_lyap,
 			helpers = helpers,
-			n = self._n_lyap*(n+1),
+			n = self.n_basic*(self._n_lyap+1),
 			max_delay = max_delay
 			)
 	
@@ -719,3 +719,15 @@ class jitcdde_lyap(jitcdde):
 		
 		return np.hstack((result, lyaps))
 	
+	def integrate_blindly(self, target_time, step=0.1):
+		total_integration_time = target_time-self.DDE.get_t()
+		number = int(round(total_integration_time/step))
+		dt = total_integration_time/number
+		
+		assert(number*dt == total_integration_time)
+		for _ in range(number):
+			self.DDE.get_next_step(dt)
+			self.DDE.accept_step()
+			self.DDE.forget(self.max_delay)
+			self.DDE.orthonormalise(self._n_lyap, self.max_delay)
+
