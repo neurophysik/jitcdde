@@ -216,7 +216,7 @@ def collect_arguments(expression, function):
 	"""
 	
 	if expression.__class__ == function:
-		return [expression.args]
+		return {expression.args}
 	else:
-		return sum((collect_arguments(arg, function) for arg in expression.args), [])
+		return set().union(*(collect_arguments(arg, function) for arg in expression.args))
 

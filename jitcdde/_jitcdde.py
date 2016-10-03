@@ -107,27 +107,22 @@ def _sort_helpers(helpers):
 def _sympify_helpers(helpers):
 	return [(helper[0], sympy.sympify(helper[1]).doit()) for helper in helpers]
 
-def _delays(delay_terms):
-	t, _, _, _, _ = provide_advanced_symbols()
-	for delay_term in delay_terms:
-		delay = t - delay_term[0]
-		if not delay.is_Number:
-			raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
-		yield float(delay)
+def _delays(f, helpers=[]):
+	t, _, _, _, anchors = provide_advanced_symbols()
+	delay_terms = set().union(*(collect_arguments(entry, anchors) for entry in f()))
+	delay_terms.update(*(collect_arguments(helper[1], anchors) for helper in helpers))
+	
+	return map(lambda delay_term: t-delay_term[0], delay_terms)
 
 def _find_max_delay(f, helpers=[]):
-	_, _, _, _, anchors = provide_advanced_symbols()
-	delay_terms = []
-	for entry in f():
-		delay_terms.extend(collect_arguments(entry, anchors))
-	for helper in helpers:
-		delay_terms.extend(collect_arguments(helper[1], anchors))
-	delays = list(_delays(delay_terms))
+	delays = _delays(f, helpers)
 	
-	if delays:
-		return max(delays)
-	else:
+	if not delays:
 		return 0
+	elif any(not delay.is_Number for delay in delays):
+		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
+	else:
+		return max(delays)
 
 class UnsuccessfulIntegration(Exception):
 	"""
@@ -166,7 +161,6 @@ class jitcdde(object):
 	def __init__(self, f_sym, helpers=None, n=None, max_delay=None):
 		self.f_sym, self.n = _handle_input(f_sym,n)
 		self.helpers = _sort_helpers(_sympify_helpers(helpers or []))
-		self._y = []
 		self._tmpdir = None
 		self._modulename = "jitced"
 		self.past = []
@@ -617,4 +611,6 @@ class jitcdde(object):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
 			self.DDE.forget(self.max_delay)
-		
+
+
+
