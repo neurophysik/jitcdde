@@ -202,8 +202,7 @@ class jitcdde(object):
 		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers)
 	
 	def generate_f_c(self, *args, **kwargs):
-		warn("Use generate_f_C instead. This function exists for backwards compatibility only and will be removed soon.")
-		self.generate_f_C(self, *args, **kwargs)
+		raise DeprecationWarning("You are very likely seeing this message because you ignored a warning. You should not do this. Warnings exist for a reason. Well, now it’s an exception. Use generate_f_C instead of generate_f_c.")
 	
 	def generate_f_C(
 		self,
