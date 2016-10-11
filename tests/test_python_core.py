@@ -13,6 +13,8 @@ import unittest
 
 m = 4
 
+assert(m>=4)
+
 coeff = np.random.random((m,4))
 poly = [lambda x, j=j: sum(coeff[j]*(x**np.arange(4))) for j in range(m)]
 diff = [lambda x, j=j: sum(np.arange(1,4)*coeff[j,1:]*(x**np.arange(3))) for j in range(m)]
@@ -112,7 +114,7 @@ class metrics_test(unittest.TestCase):
 			for j in range(m):
 				bf_norm_sq += self.DDE.get_past_value(t, j, anchors)**2*factor
 		
-		norm = self.DDE.norm(delay, range(m))
+		norm = self.DDE.norm(delay, np.array(range(m)))
 		
 		self.assertAlmostEqual(norm, np.sqrt(bf_norm_sq),4)
 		
