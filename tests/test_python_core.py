@@ -11,9 +11,9 @@ import numpy as np
 from itertools import chain
 import unittest
 
-m = 2
+m = 4
 
-coeff = np.random.random((2,4))
+coeff = np.random.random((m,4))
 poly = [lambda x, j=j: sum(coeff[j]*(x**np.arange(4))) for j in range(m)]
 diff = [lambda x, j=j: sum(np.arange(1,4)*coeff[j,1:]*(x**np.arange(3))) for j in range(m)]
 
@@ -33,8 +33,8 @@ past = [
 		),
 		(
 			2.0,
-			np.array([ 1.0, -1.0]),
-			np.array([ 1.0,  4.5])
+			np.random.random(m),
+			np.random.random(m)
 		),
 	]
 
@@ -94,7 +94,7 @@ class get_anchors_test(unittest.TestCase):
 class metrics_test(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
-		self.DDE = dde_integrator(lambda: [], past)
+		self.DDE = dde_integrator(lambda: [], past[:])
 		self.DDE.anchor_mem = np.ones(1000, dtype=int)
 		
 	def test_compare_norm_with_brute_force(self):
@@ -130,10 +130,14 @@ class metrics_test(unittest.TestCase):
 			anchors = self.DDE.get_past_anchors(t)
 			bf_sp_sq += (
 				  self.DDE.get_past_value(t, 0, anchors)
-				* self.DDE.get_past_value(t, 1, anchors)
+				* self.DDE.get_past_value(t, 2, anchors)
+				* factor)
+			bf_sp_sq += (
+				  self.DDE.get_past_value(t, 1, anchors)
+				* self.DDE.get_past_value(t, 3, anchors)
 				* factor)
 		
-		sp = self.DDE.scalar_product(delay, 0, 1)
+		sp = self.DDE.scalar_product(delay, [0,1], [2,3])
 		
 		self.assertAlmostEqual(sp, bf_sp_sq, 4)
 
