@@ -20,6 +20,22 @@ sp_matrix = np.array([
 	[-13,  -3, -22,   4]
 	])/420
 
+def partial_sp_matrix(z):
+	h_1 = - 120*z**7 - 350*z**6 - 252*z**5
+	h_2 = -  60*z**7 - 140*z**6 -  84*z**5
+	h_3 = - 120*z**7 - 420*z**6 - 378*z**5
+	h_4 =            -  70*z**6 - 168*z**5 - 105*z**4
+	h_6 = - 105*z**4 - 140*z**3
+	h_7 = - 210*z**4 - 420*z**3
+	h_5 = 2*h_2 + 3*h_4
+	h_8 = - h_5 + h_7 - h_6 - 210*z**2
+	
+	return np.array([
+		[  2*h_3   , h_1    , h_7-2*h_3        , h_5              ],
+		[    h_1   , h_2    , h_6-h_1          , h_2+h_4          ],
+		[ h_7-2*h_3, h_6-h_1, 2*h_3-2*h_7-420*z, h_8              ],
+		[   h_5    , h_2+h_4, h_8              , -h_1+h_2+h_5+h_6 ]
+	])/420
 
 def norm_sq_interval(anchors, indizes):
 	q = (anchors[1][0]-anchors[0][0])
@@ -30,7 +46,11 @@ def norm_sq_interval(anchors, indizes):
 	anchors[1][2][indizes] * q, # d
 	])
 	
-	return np.einsum("ik,ij,jk", vector, sp_matrix, vector)*q
+	return np.einsum(
+		vector, [0,2],
+		sp_matrix, [0,1],
+		vector, [1,2]
+		)*q
 
 def norm_sq_partial(anchors, indizes, start):
 	q = (anchors[1][0]-anchors[0][0])
@@ -42,23 +62,11 @@ def norm_sq_partial(anchors, indizes, start):
 		anchors[1][2][indizes] * q, # d
 	])
 	
-	h_1 = - 120*z**7 - 350*z**6 - 252*z**5
-	h_2 = -  60*z**7 - 140*z**6 -  84*z**5
-	h_3 = - 120*z**7 - 420*z**6 - 378*z**5
-	h_4 =            -  70*z**6 - 168*z**5 - 105*z**4
-	h_6 = - 105*z**4 - 140*z**3
-	h_7 = - 210*z**4 - 420*z**3
-	h_5 = 2*h_2 + 3*h_4
-	h_8 = - h_5 + h_7 - h_6 - 210*z**2
-	
-	partial_sp_matrix = np.array([
-		[  2*h_3   , h_1    , h_7-2*h_3        , h_5              ],
-		[    h_1   , h_2    , h_6-h_1          , h_2+h_4          ],
-		[ h_7-2*h_3, h_6-h_1, 2*h_3-2*h_7-420*z, h_8              ],
-		[   h_5    , h_2+h_4, h_8              , -h_1+h_2+h_5+h_6 ]
-	])/420
-	
-	return np.einsum("ik,ij,jk", vector, partial_sp_matrix, vector)*q
+	return np.einsum(
+		vector, [0,2],
+		partial_sp_matrix(z), [0,1],
+		vector, [1,2]
+		)*q
 
 def scalar_product_interval(anchors, indizes_1, indizes_2):
 	q = (anchors[1][0]-anchors[0][0])
@@ -77,7 +85,11 @@ def scalar_product_interval(anchors, indizes_1, indizes_2):
 		anchors[1][2][indizes_2] * q, # d_2
 	])
 	
-	return np.einsum("ik,ij,jk", vector_1, sp_matrix, vector_2)*q
+	return np.einsum(
+		vector_1, [0,2],
+		sp_matrix, [0,1],
+		vector_2, [1,2]
+		)*q
 
 def scalar_product_partial(anchors, indizes_1, indizes_2, start):
 	q = (anchors[1][0]-anchors[0][0])
@@ -97,23 +109,11 @@ def scalar_product_partial(anchors, indizes_1, indizes_2, start):
 		anchors[1][2][indizes_2] * q, # d_2
 	])
 	
-	h_1 = - 120*z**7 - 350*z**6 - 252*z**5
-	h_2 = -  60*z**7 - 140*z**6 -  84*z**5
-	h_3 = - 120*z**7 - 420*z**6 - 378*z**5
-	h_4 =            -  70*z**6 - 168*z**5 - 105*z**4
-	h_6 = - 105*z**4 - 140*z**3
-	h_7 = - 210*z**4 - 420*z**3
-	h_5 = 2*h_2 + 3*h_4
-	h_8 = - h_5 + h_7 - h_6 - 210*z**2
-	
-	partial_sp_matrix = np.array([
-		[  2*h_3   , h_1    , h_7-2*h_3        , h_5              ],
-		[    h_1   , h_2    , h_6-h_1          , h_2+h_4          ],
-		[ h_7-2*h_3, h_6-h_1, 2*h_3-2*h_7-420*z, h_8              ],
-		[   h_5    , h_2+h_4, h_8              , -h_1+h_2+h_5+h_6 ]
-	])/420
-	
-	return np.einsum("ik,ij,jk", vector_1, partial_sp_matrix, vector_2)*q
+	return np.einsum(
+		vector_1, [0,2],
+		partial_sp_matrix(z), [0,1],
+		vector_2, [1,2]
+		)*q
 
 class dde_integrator(object):
 	def __init__(self,
