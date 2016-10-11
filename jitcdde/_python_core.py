@@ -9,7 +9,7 @@ import sympy
 import numpy as np
 from itertools import count
 
-MIN_GARBAGE = 100
+MIN_GARBAGE = 10
 
 sumsq = lambda x: np.sum(x**2)
 
@@ -141,10 +141,14 @@ class dde_integrator(object):
 		F = self.F = sympy.lambdify(
 			[t]+[Yentry for Yentry in Y],
 			f_wc,
-			{
-				anchors.__name__: self.get_past_anchors,
-				past_y .__name__: self.get_past_value
-			})
+			[
+				{
+					anchors.__name__: self.get_past_anchors,
+					past_y .__name__: self.get_past_value
+				},
+				"math"
+			]
+			)
 		
 		self.f = lambda T,ypsilon: np.array(F(T,*ypsilon)).flatten()
 		
