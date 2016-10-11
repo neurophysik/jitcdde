@@ -91,6 +91,52 @@ class get_anchors_test(unittest.TestCase):
 		self.assertEqual(anchors[1], past[-1])
 		self.assertTrue(self.DDE.past_within_step)
 
+class metrics_test(unittest.TestCase):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = dde_integrator(lambda: [], past)
+		self.DDE.anchor_mem = np.ones(1000, dtype=int)
+		
+	def test_compare_norm_with_brute_force(self):
+		delay = np.random.uniform(0.0,2.0)
+		end = past[-1][0]
+		start = end - delay
+		
+		# Very blunt numerical integration
+		N = 100000
+		factor = (end-start)/N
+		bf_norm_sq = 0
+		for t in np.linspace(start,end,N):
+			self.DDE.anchor_mem_index = 0
+			anchors = self.DDE.get_past_anchors(t)
+			for j in range(m):
+				bf_norm_sq += self.DDE.get_past_value(t, j, anchors)**2*factor
+		
+		norm = self.DDE.norm(delay, range(m))
+		
+		self.assertAlmostEqual(norm, np.sqrt(bf_norm_sq),4)
+		
+	def test_compare_sp_with_brute_force(self):
+		delay = np.random.uniform(0.0,2.0)
+		end = past[-1][0]
+		start = end - delay
+		
+		# Very blunt numerical integration
+		N = 100000
+		factor = (end-start)/N
+		bf_sp_sq = 0
+		for t in np.linspace(start,end,N):
+			self.DDE.anchor_mem_index = 0
+			anchors = self.DDE.get_past_anchors(t)
+			bf_sp_sq += (
+				  self.DDE.get_past_value(t, 0, anchors)
+				* self.DDE.get_past_value(t, 1, anchors)
+				* factor)
+		
+		sp = self.DDE.scalar_product(delay, 0, 1)
+		
+		self.assertAlmostEqual(sp, bf_sp_sq, 4)
+
 
 tau = 15
 p = 10
@@ -172,6 +218,7 @@ class double_integration_test(unittest.TestCase):
 		self.assertAlmostEqual(self.DDE.y[0], expected_y)
 		self.assertAlmostEqual(self.DDE.y[1], expected_y)
 		self.assertEqual(self.DDE.t, 1.0)
+
 
 
 unittest.main(buffer=True)
