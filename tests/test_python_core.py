@@ -140,6 +140,18 @@ class metrics_test(unittest.TestCase):
 		sp = self.DDE.scalar_product(delay, [0,1], [2,3])
 		
 		self.assertAlmostEqual(sp, bf_sp_sq, 4)
+	
+	def test_orthonormalisation(self):
+		delay = np.random.uniform(0.0,2.0)
+		norms = self.DDE.orthonormalise(m-1, delay)
+		
+		for j in range(1,m):
+			self.assertAlmostEqual(self.DDE.norm(delay, j), 1.0)
+			
+			for k in range(j,m):
+				control = 1.0 if k==j else 0.0
+				sp = self.DDE.scalar_product(delay, j, k)
+				self.assertAlmostEqual(sp, control)
 
 
 tau = 15
