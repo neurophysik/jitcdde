@@ -718,6 +718,18 @@ class jitcdde_lyap(jitcdde):
 		
 		return np.hstack((result, lyaps))
 	
+	def set_integration_parameters(self, **kwargs):
+		if self._n_lyap > 2:
+			required_max_step = self.max_delay/(np.ceil(self._n_lyap/2)-1)
+			if "max_step" in kwargs.keys():
+				if kwargs["max_step"] > required_max_step:
+					kwargs["max_step"] = required_max_step
+					warnings.warn("Decreased max_step to %f to ensure sufficient dimensionality for Lyapunov exponents." % required_max_step)
+			else:
+				kwargs["max_step"] = required_max_step
+		
+		super(jitcdde_lyap, self).set_integration_parameters(**kwargs)
+	
 	def integrate_blindly(self, target_time, step=0.1):
 		total_integration_time = target_time-self.DDE.get_t()
 		number = int(round(total_integration_time/step))
