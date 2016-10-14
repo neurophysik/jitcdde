@@ -724,7 +724,7 @@ class jitcdde_lyap(jitcdde):
 			if "max_step" in kwargs.keys():
 				if kwargs["max_step"] > required_max_step:
 					kwargs["max_step"] = required_max_step
-					warnings.warn("Decreased max_step to %f to ensure sufficient dimensionality for Lyapunov exponents." % required_max_step)
+					warn("Decreased max_step to %f to ensure sufficient dimensionality for Lyapunov exponents." % required_max_step)
 			else:
 				kwargs["max_step"] = required_max_step
 		
