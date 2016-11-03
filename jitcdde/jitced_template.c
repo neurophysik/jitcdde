@@ -639,11 +639,11 @@ static PyObject * orthonormalise(dde_integrator const * const self, PyObject * a
 	{
 		for (unsigned int j=0; j<i; j++)
 		{
-			double sp = scalar_product(self, (i+1)*n_lyap, (j+1)*n_lyap);
-			subtract_from_past(self, (i+1)*n_lyap, (j+1)*n_lyap, sp);
+			double sp = scalar_product(self, (i+1)*{{n_basic}}, (j+1)*{{n_basic}});
+			subtract_from_past(self, (i+1)*{{n_basic}}, (j+1)*{{n_basic}}, sp);
 		}
-		double norm = sqrt(norm_sq(self, (i+1)*n_lyap));
-		scale_past(self, (i+1)*n_lyap, 1./norm);
+		double norm = sqrt(norm_sq(self, (i+1)*{{n_basic}}));
+		scale_past(self, (i+1)*{{n_basic}}, 1./norm);
 		* (double *) PyArray_GETPTR1(norms, i) = norm;
 	}
 	
