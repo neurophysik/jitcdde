@@ -598,6 +598,11 @@ class jitcdde(object):
 		
 		step : float
 			aspired step size. The actual step size may be slightly adapted to make it divide the integration time.
+		
+		Returns
+		-------
+		state : NumPy array
+			the computed state of the system at `target_time`.
 		"""
 		
 		total_integration_time = target_time-self.DDE.get_t()
@@ -609,6 +614,8 @@ class jitcdde(object):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
 			self.DDE.forget(self.max_delay)
+		
+		return self.DDE.get_current_state()
 
 
 def _jac(f, helpers, delay, n):

@@ -121,6 +121,9 @@ for realisation in range(number_of_runs):
 		time = P.get_t()+random.uniform(-0.1, 0.1)
 		compare(P.get_recent_state(time), C.get_recent_state(time))
 	
+	def get_current_state():
+		compare(P.get_current_state(), C.get_current_state())
+	
 	def get_p():
 		r = 10**random.uniform(-10,-5)
 		q = 10**random.uniform(-10,-5)
@@ -145,7 +148,7 @@ for realisation in range(number_of_runs):
 	get_next_step()
 	get_next_step()
 	
-	actions = [get_next_step, get_t, get_recent_state, get_p, accept_step, forget, check_new_y_diff, past_within_step]
+	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_p, accept_step, forget, check_new_y_diff, past_within_step]
 	
 	for i in range(30):
 		action = random.sample(actions,1)[0]

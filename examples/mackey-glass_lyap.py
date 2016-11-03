@@ -8,9 +8,9 @@ p = 10
 
 t, y, current_y, past_y, anchors = provide_advanced_symbols()
 
-f = [0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0)]
+f = [0.25 * y(0,t-tau) / (1 + y(0,t-tau)**p) - 0.1*y(0)]
 
-n_lyap = 1
+n_lyap = 6
 DDE = jitcdde_lyap(f, n_lyap=n_lyap)
 
 y0 = 0.8
