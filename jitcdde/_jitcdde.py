@@ -741,18 +741,23 @@ class jitcdde_lyap(jitcdde):
 	
 	def integrate_blindly(self, target_time, step=0.1):
 		"""
-		Like `jitcdde`’s `integrate`, except for orthonormalising the separation functions after each step. Note that this only returns the state of the integration and no estimate of the Lyapunov exponents.
+		Like `jitcdde`’s `integrate_blindly`, except for orthonormalising the separation functions after each step and an output is analogous to `jitcdde_lyap`’s `integrate`.
 		"""
 		
 		total_integration_time = target_time-self.DDE.get_t()
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
-		
 		assert(number*dt == total_integration_time)
+		
+		accumulated_norms = np.ones(self._n_lyap)
+		
 		for _ in range(number):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
 			self.DDE.forget(self.max_delay)
-			self.DDE.orthonormalise(self._n_lyap, self.max_delay)
+			norms = self.DDE.orthonormalise(self._n_lyap, self.max_delay)
+			accumulated_norms *= norms
 		
-		return self.DDE.get_current_state()[:self.n_basic]
+		lyaps = np.log(accumulated_norms) / total_integration_time
+		
+		return np.hstack((self.DDE.get_current_state()[:self.n_basic], lyaps))
