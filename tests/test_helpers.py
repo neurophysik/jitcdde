@@ -13,7 +13,7 @@ class TestCollectArguments(unittest.TestCase):
 		expression = 3**f(42) + 23 - f(43,44) + f(45+a)*sympy.sin( g(f(46,47,48)+17) - g(4) )
 		
 		self.assertEqual(
-			set(collect_arguments(expression, f)),
+			collect_arguments(expression, f),
 			{
 				(sympy.Integer(42),),
 				(sympy.Integer(43), sympy.Integer(44)),

@@ -598,6 +598,11 @@ class jitcdde(object):
 		
 		step : float
 			aspired step size. The actual step size may be slightly adapted to make it divide the integration time.
+		
+		Returns
+		-------
+		state : NumPy array
+			the computed state of the system at `target_time`.
 		"""
 		
 		total_integration_time = target_time-self.DDE.get_t()
@@ -609,6 +614,8 @@ class jitcdde(object):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
 			self.DDE.forget(self.max_delay)
+		
+		return self.DDE.get_current_state()
 
 
 def _jac(f, helpers, delay, n):
@@ -698,7 +705,7 @@ class jitcdde_lyap(jitcdde):
 	
 	def integrate(self, target_time):
 		"""
-		Like JiTCDDE’s `integrate`, except for orthonormalising the separation functions and:
+		Like `jitcdde`’s `integrate`, except for orthonormalising the separation functions and:
 		
 		Returns
 		-------
@@ -731,6 +738,10 @@ class jitcdde_lyap(jitcdde):
 		super(jitcdde_lyap, self).set_integration_parameters(**kwargs)
 	
 	def integrate_blindly(self, target_time, step=0.1):
+		"""
+		Like `jitcdde`’s `integrate`, except for orthonormalising the separation functions after each step. Note that this only returns the state of the integration and no estimate of the Lyapunov exponents.
+		"""
+		
 		total_integration_time = target_time-self.DDE.get_t()
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
@@ -741,4 +752,5 @@ class jitcdde_lyap(jitcdde):
 			self.DDE.accept_step()
 			self.DDE.forget(self.max_delay)
 			self.DDE.orthonormalise(self._n_lyap, self.max_delay)
-
+		
+		return self.DDE.get_recent_state()[:self.n_basic]

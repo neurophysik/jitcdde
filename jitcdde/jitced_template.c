@@ -182,6 +182,24 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 	# pragma GCC diagnostic pop
 }
 
+static PyObject * get_current_state(dde_integrator const * const self)
+{
+	assert(self->last_anchor);
+	
+	npy_intp dims[1] = {dimension};
+	# pragma GCC diagnostic push
+	# pragma GCC diagnostic ignored "-pedantic"
+	PyArrayObject * result = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
+	# pragma GCC diagnostic pop
+	
+	for (int index=0; index<{{n}}; index++)
+		* (double *) PyArray_GETPTR1(result, index) = self->last_anchor->state[index];
+	
+	# pragma GCC diagnostic push
+	# pragma GCC diagnostic ignored "-pedantic"
+	return (PyObject *) result;
+	# pragma GCC diagnostic pop
+}
 
 # define set_dy(i, value) (dY[i] = value)
 # define current_y(i) (y[i])
@@ -431,6 +449,7 @@ static PyMemberDef dde_integrator_members[] = {
 static PyMethodDef dde_integrator_methods[] = {
 	{"get_t", (PyCFunction) get_t, METH_NOARGS, NULL},
 	{"get_recent_state", (PyCFunction) get_recent_state, METH_VARARGS, NULL},
+	{"get_current_state", (PyCFunction) get_current_state, METH_NOARGS, NULL},
 	{"get_next_step", (PyCFunction) get_next_step, METH_VARARGS, NULL},
 	{"get_p", (PyCFunction) get_p, METH_VARARGS, NULL},
 	{"check_new_y_diff", (PyCFunction) check_new_y_diff, METH_VARARGS, NULL},
