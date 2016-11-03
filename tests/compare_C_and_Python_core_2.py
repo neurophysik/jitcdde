@@ -93,6 +93,7 @@ for realisation in range(number_of_runs):
 		number_of_helpers = 0,
 		number_of_anchor_helpers = 0,
 		anchor_mem_length = past_calls,
+		n_basic = 1
 		)
 
 	setup(
