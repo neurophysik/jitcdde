@@ -19,8 +19,10 @@ from jitcdde._helpers import (
 	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
 	render_and_write_code,
 	render_template,
-	collect_arguments
+	collect_arguments,
+	random_direction
 	)
+from numbers import Number
 
 #sigmoid = lambda x: 1/(1+np.exp(-x))
 #sigmoid = lambda x: 1 if x>0 else 0
@@ -107,22 +109,18 @@ def _sort_helpers(helpers):
 def _sympify_helpers(helpers):
 	return [(helper[0], sympy.sympify(helper[1]).doit()) for helper in helpers]
 
-def _delays(delay_terms):
-	t, _, _, _, _ = provide_advanced_symbols()
-	for delay_term in delay_terms:
-		delay = t - delay_term[0]
-		if not delay.is_Number:
-			raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
-		yield float(delay)
+def _delays(f, helpers=[]):
+	t, _, _, _, anchors = provide_advanced_symbols()
+	delay_terms = set().union(*(collect_arguments(entry, anchors) for entry in f()))
+	delay_terms.update(*(collect_arguments(helper[1], anchors) for helper in helpers))
+	
+	return [0]+list(map(lambda delay_term: t-delay_term[0], delay_terms))
 
-def _find_max_delay(f, helpers=[]):
-	_, _, _, _, anchors = provide_advanced_symbols()
-	delay_terms = []
-	for entry in f():
-		delay_terms.extend(collect_arguments(entry, anchors))
-	for helper in helpers:
-		delay_terms.extend(collect_arguments(helper[1], anchors))
-	return max(_delays(delay_terms))
+def _find_max_delay(delays):
+	if all(sympy.sympify(delay).is_Number for delay in delays):
+		return float(max(delays))
+	else:
+		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
 
 class UnsuccessfulIntegration(Exception):
 	"""
@@ -161,12 +159,12 @@ class jitcdde(object):
 	def __init__(self, f_sym, helpers=None, n=None, max_delay=None):
 		self.f_sym, self.n = _handle_input(f_sym,n)
 		self.helpers = _sort_helpers(_sympify_helpers(helpers or []))
-		self._y = []
 		self._tmpdir = None
 		self._modulename = "jitced"
 		self.past = []
-		self.max_delay = max_delay or _find_max_delay(self.f_sym, self.helpers)
+		self.max_delay = max_delay or _find_max_delay(_delays(self.f_sym, self.helpers))
 		assert self.max_delay >= 0.0, "Negative maximum delay."
+		assert isinstance(self.max_delay, Number), "max_delay is not a Python number."
 
 	def _tmpfile(self, filename=None):
 		if self._tmpdir is None:
@@ -204,8 +202,7 @@ class jitcdde(object):
 		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers)
 	
 	def generate_f_c(self, *args, **kwargs):
-		warn("Use generate_f_C instead. This function exists for backwards compatibility only and will be removed soon.")
-		self.generate_f_C(self, *args, **kwargs)
+		raise DeprecationWarning("You are very likely seeing this message because you ignored a warning. You should not do this. Warnings exist for a reason. Well, now it’s an exception. Use generate_f_C instead of generate_f_c.")
 	
 	def generate_f_C(
 		self,
@@ -244,6 +241,8 @@ class jitcdde(object):
 		modulename : string or `None`
 			The name used for the compiled module. If `None` or empty, the filename will be chosen by JiTCDDE based on previously used filenames or default to `jitced.so`. The only reason why you may want to change this is if you want to save the module file for later use (with`save_compiled`). It is not possible to re-use a modulename for a given instance of Python (due to the limitations of Python’s import machinery).
 		"""
+		
+		assert len(self.past)>1, "You need to add the past first."
 		
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
@@ -304,7 +303,7 @@ class jitcdde(object):
 				arguments.append(("f_helper","double", helper_i))
 				functions.extend(["get_f_helper", "set_f_helper"])
 			if anchor_i:
-				arguments.append(("f_anchor_helper","double", anchor_i))
+				arguments.append(("f_anchor_helper","anchor", anchor_i))
 				functions.extend(["get_f_anchor_helper", "set_f_anchor_helper"])
 			
 			render_and_write_code(
@@ -340,6 +339,9 @@ class jitcdde(object):
 		if path.isfile(modulefile):
 			raise OSError("Module file already exists.")
 		
+		if not self.past_calls:
+			warn("Differential equation does not inclued a delay term.")
+		
 		render_template(
 			"jitced_template.c",
 			sourcefile,
@@ -348,7 +350,8 @@ class jitcdde(object):
 			Python_version = version_info[0],
 			number_of_helpers = helper_i,
 			number_of_anchor_helpers = anchor_i,
-			has_any_helpers = anchor_i or helper_i
+			has_any_helpers = anchor_i or helper_i,
+			anchor_mem_length = self.past_calls
 			)
 		
 		setup(
@@ -356,7 +359,7 @@ class jitcdde(object):
 			ext_modules = [Extension(
 				self._modulename,
 				sources = [sourcefile],
-				extra_compile_args = extra_compile_args
+				extra_compile_args = ["-lm", "-I" + np.get_include()] + extra_compile_args
 				)],
 			script_args = [
 				"build_ext",
@@ -368,10 +371,8 @@ class jitcdde(object):
 			verbose = verbose
 			)
 		
-		assert self.past_calls>0, "No DDE."
-		
 		jitced = find_and_load_module(self._modulename,self._tmpfile())
-		self.DDE = jitced.dde_integrator(self.past, self.past_calls)
+		self.DDE = jitced.dde_integrator(self.past)
 	
 	def set_integration_parameters(self,
 			atol = 0.0,
@@ -516,8 +517,10 @@ class jitcdde(object):
 			self.successful = True
 			self.DDE.accept_step()
 			if p < self.increase_threshold:
+				factor = self.safety_factor*p**(-1/(self.q+1)) if p else self.max_factor
+				
 				new_dt = min(
-					self.dt*min(self.safety_factor*p**(-1/(self.q+1)), self.max_factor),
+					self.dt*min(factor, self.max_factor),
 					self.max_step
 					)
 				
@@ -606,3 +609,136 @@ class jitcdde(object):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
 			self.DDE.forget(self.max_delay)
+
+
+def _jac(f, helpers, delay, n):
+	t,y = provide_basic_symbols()
+	
+	dependent_helpers = [[] for i in range(n)]
+	for i in range(n):
+		for helper in helpers:
+			derivative = sympy.diff(helper[1], y(i,t-delay))
+			for other_helper in dependent_helpers[i]:
+				derivative += sympy.diff(helper[1],other_helper[0]) * other_helper[1]
+			if derivative:
+				dependent_helpers[i].append( (helper[0], derivative) )
+	
+	def line(f_entry):
+		for j in range(n):
+			entry = sympy.diff( f_entry, y(j,t-delay) )
+			for helper in dependent_helpers[j]:
+				entry += sympy.diff(f_entry,helper[0]) * helper[1]
+			yield entry
+	
+	for f_entry in f():
+		yield line(f_entry)
+
+
+class jitcdde_lyap(jitcdde):
+	"""the handling is the same as that for `jitcdde` except for:
+	
+	Parameters
+	----------
+	n_lyap : integer
+		Number of Lyapunov exponents to calculate.
+		
+	delays : iterable of SymPy expressions
+		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
+	"""
+	
+	def __init__(self, f_sym, helpers=[], n=None, max_delay=None, n_lyap=1, delays=None):
+		f_basic, n = _handle_input(f_sym,n)
+		self.n_basic = n
+		
+		if delays:
+			act_delays = delays + ([] if (0 in delays) else [0])
+		else:
+			act_delays = _delays(f_basic, helpers)
+		max_delay = max_delay or _find_max_delay(act_delays)
+		
+		assert n_lyap>=0, "n_lyap negative"
+		self._n_lyap = n_lyap
+		
+		helpers = _sort_helpers(_sympify_helpers(helpers or []))
+		
+		t,y = provide_basic_symbols()
+		
+		def f_lyap():
+			#Replace with yield from, once Python 2 is dead:
+			for entry in f_basic():
+				yield entry
+			
+			for i in range(self._n_lyap):
+				jacs = [_jac(f_basic, helpers, delay, n) for delay in act_delays]
+				
+				for _ in range(self.n_basic):
+					expression = 0
+					for delay,jac in zip(act_delays,jacs):
+						for k,entry in enumerate(next(jac)):
+							expression += entry * y(k+(i+1)*n, t-delay)
+					
+					yield sympy.simplify(expression, ratio=1.0)
+		
+		super(jitcdde_lyap, self).__init__(
+			f_lyap,
+			helpers = helpers,
+			n = self.n_basic*(self._n_lyap+1),
+			max_delay = max_delay
+			)
+	
+	def add_past_point(self, time, state, derivative):
+		new_state = [state]
+		new_derivative = [derivative]
+		for _ in range(self._n_lyap):
+			new_state.append(random_direction(self.n_basic))
+			new_derivative.append(random_direction(self.n_basic))
+		
+		super(jitcdde_lyap, self).add_past_point(time, np.hstack(new_state), np.hstack(new_derivative))
+	
+	
+	def integrate(self, target_time):
+		"""
+		Like JiTCDDE’s `integrate`, except for orthonormalising the separation functions and:
+		
+		Returns
+		-------
+		y : one-dimensional NumPy array
+			The first `len(f_sym)` entries are the state of the system.
+			The remaining entries are the “local” Lyapunov exponents as estimated from the growth or shrinking of the tangent vectors during the integration time of this very `integrate` command.
+		"""
+		# TODO formula and citation like for JiTCODE?
+		
+		old_t = self.DDE.get_t()
+		result = super(jitcdde_lyap, self).integrate(target_time)[:self.n_basic]
+		delta_t = self.DDE.get_t()-old_t
+		
+		norms = self.DDE.orthonormalise(self._n_lyap, self.max_delay)
+		
+		lyaps = np.log(norms) / delta_t
+		
+		return np.hstack((result, lyaps))
+	
+	def set_integration_parameters(self, **kwargs):
+		if self._n_lyap > 2:
+			required_max_step = self.max_delay/(np.ceil(self._n_lyap/2)-1)
+			if "max_step" in kwargs.keys():
+				if kwargs["max_step"] > required_max_step:
+					kwargs["max_step"] = required_max_step
+					warn("Decreased max_step to %f to ensure sufficient dimensionality for Lyapunov exponents." % required_max_step)
+			else:
+				kwargs["max_step"] = required_max_step
+		
+		super(jitcdde_lyap, self).set_integration_parameters(**kwargs)
+	
+	def integrate_blindly(self, target_time, step=0.1):
+		total_integration_time = target_time-self.DDE.get_t()
+		number = int(round(total_integration_time/step))
+		dt = total_integration_time/number
+		
+		assert(number*dt == total_integration_time)
+		for _ in range(number):
+			self.DDE.get_next_step(dt)
+			self.DDE.accept_step()
+			self.DDE.forget(self.max_delay)
+			self.DDE.orthonormalise(self._n_lyap, self.max_delay)
+

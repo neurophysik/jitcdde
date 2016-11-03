@@ -33,11 +33,14 @@ typedef struct
 	anchor * current;
 	anchor * first_anchor;
 	anchor * last_anchor;
+	{% if anchor_mem_length: %}
 	anchor ** anchor_mem;
 	anchor ** current_anchor;
+	{% endif %}
 	double past_within_step;
 	double old_new_y[{{n}}];
 	double error[{{n}}];
+	double last_actual_step_start;
 } dde_integrator;
 
 void append_anchor(
@@ -99,6 +102,7 @@ static PyObject * get_t(dde_integrator const * const self)
 	return PyFloat_FromDouble(self->current->time);
 }
 
+{% if anchor_mem_length: %}
 anchor get_past_anchors(dde_integrator * const self, double const t)
 {
 	anchor * ca = *(self->current_anchor);
@@ -118,6 +122,8 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 	self->current_anchor++;
 	return *ca;
 }
+{% endif %}
+
 
 double get_past_value(
 	dde_integrator const * const self,
@@ -198,7 +204,9 @@ static PyObject * eval_f(
 	double y[{{n}}],
 	double dY[{{n}}])
 {
-	self->current_anchor = self->anchor_mem;
+	{% if anchor_mem_length: %}
+		self->current_anchor = self->anchor_mem;
+	{% endif %}
 	
 	{% if number_of_helpers>0: %}
 	double f_helper[{{number_of_helpers}}];
@@ -219,13 +227,15 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 {
 	assert(self->last_anchor);
 	assert(self->first_anchor);
-
+	
 	double delta_t;
 	if (!PyArg_ParseTuple(args, "d", &delta_t))
 	{
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
 		return NULL;
 	}
+	
+	self->last_actual_step_start = self->current->time;
 	
 	self->past_within_step = 0.0;
 	# define k_1 self->current->diff
@@ -323,10 +333,23 @@ static PyObject * forget(dde_integrator * const self, PyObject * args)
 		return NULL;
 	}
 	
-	double threshold = self->current->time - delay;
+	double threshold = fmin(
+		self->current->time - delay,
+		self->last_actual_step_start
+		);
 	assert(self->first_anchor != self->last_anchor);
 	while (self->first_anchor->next->time < threshold)
+	{
+		{% if anchor_mem_length: %}
+		# ifndef NDEBUG
+		for (int i=0; i<{{anchor_mem_length}}; i++)
+			assert(self->anchor_mem[i] != self->first_anchor);
+		# endif
+		{% endif %}
 		remove_first_anchor(self);
+	}
+	
+	assert(self->first_anchor != self->last_anchor);
 	
 	Py_RETURN_NONE;
 }
@@ -335,7 +358,9 @@ static void dde_integrator_dealloc(dde_integrator * const self)
 {
 	while (self->first_anchor)
 		remove_first_anchor(self);
+	{% if anchor_mem_length: %}
 	free(self->anchor_mem);
+	{% endif %}
 	
 	Py_TYPE(self)->tp_free((PyObject *)self);
 }
@@ -370,9 +395,8 @@ static int initiate_past_from_list(dde_integrator * const self, PyObject * const
 
 static int dde_integrator_init(dde_integrator * self, PyObject * args)
 {
-	unsigned int anchor_mem_length;
 	PyObject * past;
-	if (!PyArg_ParseTuple(args, "O!I", &PyList_Type, &past, &anchor_mem_length))
+	if (!PyArg_ParseTuple(args, "O!", &PyList_Type, &past))
 	{
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
 		return -1;
@@ -387,11 +411,14 @@ static int dde_integrator_init(dde_integrator * self, PyObject * args)
 	assert(self->first_anchor != self->last_anchor);
 	assert(self->first_anchor != NULL);
 	assert(self->last_anchor != NULL);
+	self->last_actual_step_start = self->first_anchor->time;
 	
-	self->anchor_mem = malloc(anchor_mem_length*sizeof(anchor *));
+	{% if anchor_mem_length: %}
+	self->anchor_mem = malloc({{anchor_mem_length}}*sizeof(anchor *));
 	assert(self->anchor_mem != NULL);
-	for (int i=0; i<anchor_mem_length; i++)
+	for (int i=0; i<{{anchor_mem_length}}; i++)
 		self->anchor_mem[i] = self->last_anchor->previous;
+	{% endif %}
 	
 	return 0;
 }

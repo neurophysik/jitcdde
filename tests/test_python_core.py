@@ -11,9 +11,11 @@ import numpy as np
 from itertools import chain
 import unittest
 
-m = 2
+m = 4
 
-coeff = np.random.random((2,4))
+assert(m>=4)
+
+coeff = np.random.random((m,4))
 poly = [lambda x, j=j: sum(coeff[j]*(x**np.arange(4))) for j in range(m)]
 diff = [lambda x, j=j: sum(np.arange(1,4)*coeff[j,1:]*(x**np.arange(3))) for j in range(m)]
 
@@ -33,8 +35,8 @@ past = [
 		),
 		(
 			2.0,
-			np.array([ 1.0, -1.0]),
-			np.array([ 1.0,  4.5])
+			np.random.random(m),
+			np.random.random(m)
 		),
 	]
 
@@ -90,6 +92,68 @@ class get_anchors_test(unittest.TestCase):
 		self.assertEqual(anchors[0], past[-2])
 		self.assertEqual(anchors[1], past[-1])
 		self.assertTrue(self.DDE.past_within_step)
+
+class metrics_test(unittest.TestCase):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = dde_integrator(lambda: [], past[:])
+		self.DDE.anchor_mem = np.ones(1000, dtype=int)
+		
+	def test_compare_norm_with_brute_force(self):
+		delay = np.random.uniform(0.0,2.0)
+		end = past[-1][0]
+		start = end - delay
+		
+		# Very blunt numerical integration
+		N = 100000
+		factor = (end-start)/N
+		bf_norm_sq = 0
+		for t in np.linspace(start,end,N):
+			self.DDE.anchor_mem_index = 0
+			anchors = self.DDE.get_past_anchors(t)
+			for j in range(m):
+				bf_norm_sq += self.DDE.get_past_value(t, j, anchors)**2*factor
+		
+		norm = self.DDE.norm(delay, np.array(range(m)))
+		
+		self.assertAlmostEqual(norm, np.sqrt(bf_norm_sq),4)
+		
+	def test_compare_sp_with_brute_force(self):
+		delay = np.random.uniform(0.0,2.0)
+		end = past[-1][0]
+		start = end - delay
+		
+		# Very blunt numerical integration
+		N = 100000
+		factor = (end-start)/N
+		bf_sp_sq = 0
+		for t in np.linspace(start,end,N):
+			self.DDE.anchor_mem_index = 0
+			anchors = self.DDE.get_past_anchors(t)
+			bf_sp_sq += (
+				  self.DDE.get_past_value(t, 0, anchors)
+				* self.DDE.get_past_value(t, 2, anchors)
+				* factor)
+			bf_sp_sq += (
+				  self.DDE.get_past_value(t, 1, anchors)
+				* self.DDE.get_past_value(t, 3, anchors)
+				* factor)
+		
+		sp = self.DDE.scalar_product(delay, [0,1], [2,3])
+		
+		self.assertAlmostEqual(sp, bf_sp_sq, 4)
+	
+	def test_orthonormalisation(self):
+		delay = np.random.uniform(0.0,2.0)
+		norms = self.DDE.orthonormalise(m-1, delay)
+		
+		for j in range(1,m):
+			self.assertAlmostEqual(self.DDE.norm(delay, j), 1.0)
+			
+			for k in range(j,m):
+				control = 1.0 if k==j else 0.0
+				sp = self.DDE.scalar_product(delay, j, k)
+				self.assertAlmostEqual(sp, control)
 
 
 tau = 15
@@ -172,6 +236,7 @@ class double_integration_test(unittest.TestCase):
 		self.assertAlmostEqual(self.DDE.y[0], expected_y)
 		self.assertAlmostEqual(self.DDE.y[1], expected_y)
 		self.assertEqual(self.DDE.t, 1.0)
+
 
 
 unittest.main(buffer=True)

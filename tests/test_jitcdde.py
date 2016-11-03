@@ -6,13 +6,16 @@ from jitcdde import (
 	provide_advanced_symbols,
 	jitcdde,
 	UnsuccessfulIntegration,
-	_find_max_delay
+	_find_max_delay, _delays,
+	DEFAULT_COMPILE_ARGS
 	)
 
 import sympy
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
+
+compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
 
 t, y, current_y, past_y, anchors = provide_advanced_symbols()
 
@@ -54,11 +57,14 @@ class TestIntegration(unittest.TestCase):
 		self.DDE = jitcdde(f)
 		self.DDE.set_integration_parameters(**test_parameters)
 	
+	def generator(self):
+		self.DDE.generate_f_C(extra_compile_args=compile_args)
+	
 	def setUp(self):
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
-		self.DDE.generate_f_C()
 		self.y_10 = None
+		self.generator()
 	
 	def assert_consistency_with_previous(self, value):
 		if self.y_10 is None:
@@ -86,6 +92,14 @@ class TestIntegration(unittest.TestCase):
 	def tearDown(self):
 		self.DDE.past = []
 
+class TestIntegrationLambda(TestIntegration):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+class TestIntegrationChunks(TestIntegration):
+	def generator(self):
+		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
+
 tiny_delay = 1e-30
 f_with_tiny_delay = [
 	omega[0] * (-y(1) - y(2)),
@@ -108,6 +122,15 @@ class TestPastWithinStepFuzzy(TestIntegration):
 		self.DDE = jitcdde(f)
 		self.DDE.set_integration_parameters(pws_fuzzy_increase=True, **test_parameters)
 
+class TestPastWithinStepLambda(TestPastWithinStep):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+class TestPastWithinStepFuzzyLambda(TestPastWithinStepFuzzy):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+
 def f_generator():
 	yield omega[0] * (-y(1) - y(2))
 	yield omega[0] * (y(0) + 0.165 * y(1))
@@ -121,6 +144,14 @@ class TestGenerator(TestIntegration):
 	def setUpClass(self):
 		self.DDE = jitcdde(f_generator)
 		self.DDE.set_integration_parameters(**test_parameters)
+
+class TestGeneratorPython(TestGenerator):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+class TestGeneratorChunking(TestGenerator):
+	def generator(self):
+		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
 delayed_y, y3m10, coupling_term = sympy.symbols("delayed_y y3m10 coupling_term")
 f_alt_helpers = [
@@ -144,12 +175,20 @@ class TestHelpers(TestIntegration):
 		self.DDE = jitcdde(f_alt, f_alt_helpers)
 		self.DDE.set_integration_parameters(**test_parameters)
 
+class TestHelpersPython(TestHelpers):
+	def generator(self):
+		self.DDE.generate_f_lambda()
+
+class TestHelpersChunking(TestHelpers):
+	def generator(self):
+		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
+
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
 		self.DDE = jitcdde(f)
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
-		self.DDE.generate_f_C(chunk_size=3)
+		self.DDE.generate_f_C(extra_compile_args=compile_args)
 		
 	def test_min_step_warning(self):
 		self.DDE.set_integration_parameters(min_step=1.0, raise_exception=False)
@@ -174,20 +213,20 @@ class TestIntegrationParameters(unittest.TestCase):
 
 class TestFindMaxDelay(unittest.TestCase):
 	def test_default(self):
-		self.assertEqual(_find_max_delay(f_generator), delay)
+		self.assertEqual(_find_max_delay(_delays(f_generator)), delay)
 	
 	def test_helpers(self):
-		self.assertEqual(_find_max_delay(lambda:[], f_alt_helpers), delay)
+		self.assertEqual(_find_max_delay(_delays(lambda:[], f_alt_helpers)), delay)
 	
 	def test_time_dependent_delay(self):
 		g = lambda: [y(0,2*t)]
 		with self.assertRaises(ValueError):
-			_find_max_delay(g)
+			_find_max_delay(_delays(g))
 	
 	def test_dynamic_dependent_delay(self):
 		g = lambda: [y(0,t-y(0))]
 		with self.assertRaises(ValueError):
-			_find_max_delay(g)
+			_find_max_delay(_delays(g))
 
 unittest.main(buffer=True)
 

@@ -22,7 +22,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import random
 from setuptools import setup, Extension
-from sys import version_info, modules, argv
+from sys import version_info, modules, argv, stdout
 from os import path as path
 from tempfile import mkdtemp
 from jinja2 import Environment, FileSystemLoader
@@ -66,7 +66,8 @@ modulename = "jitced"
 errors = 0
 
 for realisation in range(number_of_runs):
-	print(".", end="") #TODO
+	print(".", end="")
+	stdout.flush()
 	
 	P = py_dde_integrator(f, past_points())
 
@@ -93,6 +94,10 @@ for realisation in range(number_of_runs):
 		n = n,
 		module_name = modulename,
 		Python_version = version_info[0],
+		has_any_helpers = False,
+		number_of_helpers = 0,
+		number_of_anchor_helpers = 0,
+		anchor_mem_length = 1,
 		)
 
 	setup(
@@ -107,7 +112,7 @@ for realisation in range(number_of_runs):
 		)
 	
 	jitced = find_and_load_module(modulename,tmpfile())
-	C = jitced.dde_integrator(past_points(), 1)
+	C = jitced.dde_integrator(past_points())
 	
 	def get_next_step():
 		r = random.uniform(1e-5,1e-3)
@@ -148,8 +153,8 @@ for realisation in range(number_of_runs):
 	actions = [get_next_step, get_t, get_recent_state, get_p, accept_step, forget, check_new_y_diff, past_within_step]
 	
 	for i in range(30):
+		action = random.sample(actions,1)[0]
 		try:
-			action = random.sample(actions,1)[0]
 			action()
 		except AssertionError as error:
 			print("--------------------")
