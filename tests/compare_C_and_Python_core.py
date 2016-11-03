@@ -98,6 +98,7 @@ for realisation in range(number_of_runs):
 		number_of_helpers = 0,
 		number_of_anchor_helpers = 0,
 		anchor_mem_length = 1,
+		n_basic = 2
 		)
 
 	setup(
@@ -150,10 +151,14 @@ for realisation in range(number_of_runs):
 	def past_within_step():
 		compare(P.past_within_step, C.past_within_step)
 	
+	def orthonormalise():
+		d = np.random.uniform(0.1*delay, delay)
+		compare(P.orthonormalise(2, d), C.orthonormalise(2, d))
+	
 	get_next_step()
 	get_next_step()
 	
-	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_p, accept_step, forget, check_new_y_diff, past_within_step]
+	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_p, accept_step, forget, check_new_y_diff, past_within_step, orthonormalise]
 	
 	for i in range(30):
 		action = random.sample(actions,1)[0]

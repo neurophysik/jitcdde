@@ -155,17 +155,17 @@ class jitcdde(object):
 	max_delay : number
 		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
 	"""
-
+	
 	def __init__(self, f_sym, helpers=None, n=None, max_delay=None):
 		self.f_sym, self.n = _handle_input(f_sym,n)
+		self.n_basic = self.n
 		self.helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		self._tmpdir = None
 		self._modulename = "jitced"
 		self.past = []
 		self.max_delay = max_delay or _find_max_delay(_delays(self.f_sym, self.helpers))
 		assert self.max_delay >= 0.0, "Negative maximum delay."
-		assert isinstance(self.max_delay, Number), "max_delay is not a Python number."
-
+	
 	def _tmpfile(self, filename=None):
 		if self._tmpdir is None:
 			self._tmpdir = mkdtemp()
@@ -351,7 +351,8 @@ class jitcdde(object):
 			number_of_helpers = helper_i,
 			number_of_anchor_helpers = anchor_i,
 			has_any_helpers = anchor_i or helper_i,
-			anchor_mem_length = self.past_calls
+			anchor_mem_length = self.past_calls,
+			n_basic = self.n_basic
 			)
 		
 		setup(
@@ -655,7 +656,6 @@ class jitcdde_lyap(jitcdde):
 	
 	def __init__(self, f_sym, helpers=[], n=None, max_delay=None, n_lyap=1, delays=None):
 		f_basic, n = _handle_input(f_sym,n)
-		self.n_basic = n
 		
 		if delays:
 			act_delays = delays + ([] if (0 in delays) else [0])
@@ -678,7 +678,7 @@ class jitcdde_lyap(jitcdde):
 			for i in range(self._n_lyap):
 				jacs = [_jac(f_basic, helpers, delay, n) for delay in act_delays]
 				
-				for _ in range(self.n_basic):
+				for _ in range(n):
 					expression = 0
 					for delay,jac in zip(act_delays,jacs):
 						for k,entry in enumerate(next(jac)):
@@ -689,9 +689,11 @@ class jitcdde_lyap(jitcdde):
 		super(jitcdde_lyap, self).__init__(
 			f_lyap,
 			helpers = helpers,
-			n = self.n_basic*(self._n_lyap+1),
+			n = n*(self._n_lyap+1),
 			max_delay = max_delay
 			)
+		
+		self.n_basic = n
 	
 	def add_past_point(self, time, state, derivative):
 		new_state = [state]
@@ -753,4 +755,4 @@ class jitcdde_lyap(jitcdde):
 			self.DDE.forget(self.max_delay)
 			self.DDE.orthonormalise(self._n_lyap, self.max_delay)
 		
-		return self.DDE.get_recent_state()[:self.n_basic]
+		return self.DDE.get_current_state()[:self.n_basic]

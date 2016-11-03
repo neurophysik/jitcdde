@@ -24,9 +24,9 @@ def partial_sp_matrix(z):
 	h_1 = - 120*z**7 - 350*z**6 - 252*z**5
 	h_2 = -  60*z**7 - 140*z**6 -  84*z**5
 	h_3 = - 120*z**7 - 420*z**6 - 378*z**5
-	h_4 =            -  70*z**6 - 168*z**5 - 105*z**4
-	h_6 = - 105*z**4 - 140*z**3
-	h_7 = - 210*z**4 - 420*z**3
+	h_4 = -  70*z**6 - 168*z**5 - 105*z**4
+	h_6 =            - 105*z**4 - 140*z**3
+	h_7 =            - 210*z**4 - 420*z**3
 	h_5 = 2*h_2 + 3*h_4
 	h_8 = - h_5 + h_7 - h_6 - 210*z**2
 	
@@ -114,6 +114,8 @@ def scalar_product_partial(anchors, indizes_1, indizes_2, start):
 		partial_sp_matrix(z), [0,1],
 		vector_2, [1,2]
 		)*q
+	
+	return result
 
 class dde_integrator(object):
 	def __init__(self,
@@ -284,7 +286,7 @@ class dde_integrator(object):
 		
 		return sp
 	
-	def scale_past(self, factor, indizes):
+	def scale_past(self, indizes, factor):
 		for anchor in self.past:
 			anchor[1][indizes] *= factor
 			anchor[2][indizes] *= factor
@@ -307,7 +309,7 @@ class dde_integrator(object):
 				sp = self.scalar_product(delay, vector, vectors[j])
 				self.subtract_from_past(vector, vectors[j], sp)
 			norm = self.norm(delay, vector)
-			self.scale_past(1./norm, vector)
+			self.scale_past(vector, 1./norm)
 			norms.append(norm)
 		
 		return np.array(norms)

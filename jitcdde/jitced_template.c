@@ -16,8 +16,6 @@
 
 # define TYPE_INDEX NPY_DOUBLE
 
-unsigned int const dimension={{n}};
-
 typedef struct anchor
 {
 	double time;
@@ -25,6 +23,9 @@ typedef struct anchor
 	double diff[{{n}}];
 	struct anchor * next;
 	struct anchor * previous;
+	{% if n_basic != n: %}
+	double sp_matrix[4][4];
+	{% endif %}
 } anchor;
 
 typedef struct
@@ -128,16 +129,16 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 double get_past_value(
 	dde_integrator const * const self,
 	double const t,
-	int unsigned const index,
+	unsigned int const index,
 	anchor const v)
 {
-	anchor w = *(v.next);
-	double q = w.time-v.time;
-	double x = (t - v.time)/q;
-	double a = v.state[index];
-	double b = v.diff[index] * q;
-	double c = w.state[index];
-	double d = w.diff[index] * q;
+	anchor const w = *(v.next);
+	double const q = w.time-v.time;
+	double const x = (t - v.time)/q;
+	double const a = v.state[index];
+	double const b = v.diff[index] * q;
+	double const c = w.state[index];
+	double const d = w.diff[index] * q;
 	
 	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x*x) + c;
 }
@@ -154,23 +155,23 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 		return NULL;
 	}
 	
-	npy_intp dims[1] = {dimension};
+	npy_intp dims[1] = { {{n}} };
 	# pragma GCC diagnostic push
 	# pragma GCC diagnostic ignored "-pedantic"
 	PyArrayObject * result = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
 	# pragma GCC diagnostic pop
 	
-	anchor w = *(self->last_anchor);
-	anchor v = *(w.previous);
-	double q = w.time-v.time;
-	double x = (t - v.time)/q;
+	anchor const w = *(self->last_anchor);
+	anchor const v = *(w.previous);
+	double const q = w.time-v.time;
+	double const x = (t - v.time)/q;
 	
 	for (int index=0; index<{{n}}; index++)
 	{
-		double a = v.state[index];
-		double b = v.diff[index] * q;
-		double c = w.state[index];
-		double d = w.diff[index] * q;
+		double const a = v.state[index];
+		double const b = v.diff[index] * q;
+		double const c = w.state[index];
+		double const d = w.diff[index] * q;
 	
 		* (double *) PyArray_GETPTR1(result, index) = 
 				(1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x*x) + c;
@@ -186,7 +187,7 @@ static PyObject * get_current_state(dde_integrator const * const self)
 {
 	assert(self->last_anchor);
 	
-	npy_intp dims[1] = {dimension};
+	npy_intp dims[1] = { {{n}} };
 	# pragma GCC diagnostic push
 	# pragma GCC diagnostic ignored "-pedantic"
 	PyArrayObject * result = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
@@ -441,6 +442,221 @@ static int dde_integrator_init(dde_integrator * self, PyObject * args)
 	return 0;
 }
 
+// Functions for Lyapunov exponents
+{% if n_basic != n: %}
+
+void calculate_sp_matrix(
+	dde_integrator const * const self,
+	anchor * v
+)
+{
+	anchor const * const w = v->next;
+	double const q = w->time - v->time;
+	
+	double cq = q/420.;
+	double cqq = cq*q;
+	double cqqq = cqq*q;
+	memcpy(v->sp_matrix, (double[4][4]){  
+		{ 156*cq  ,22*cqq  , 54*cq  ,-13*cqq  },
+		{  22*cqq , 4*cqqq , 13*cqq , -3*cqqq },
+		{  54*cq  ,13*cqq  ,156*cq  ,-22*cqq  },
+		{ -13*cqq ,-3*cqqq ,-22*cqq ,  4*cqqq }
+	}, sizeof(double[4][4]));
+}
+
+void calculate_partial_sp_matrix(
+	dde_integrator const * const self,
+	anchor * v,
+	double const threshold
+)
+{
+	anchor const * const w = v->next;
+	double const q = w->time - v->time;
+	double const z = (threshold - w->time) / q;
+	
+	double cq = q/420.;
+	double cqq = cq*q;
+	double cqqq = cqq*q;
+	
+	double z3 = z*z*z;
+	double z4 = z*z3;
+	double z5 = z*z4;
+	
+	double const h_1 = (- 120*z*z - 350*z - 252) * z5 * cqq ;
+	double const h_2 = (-  60*z*z - 140*z -  84) * z5 * cqqq;
+	double const h_3 = (- 120*z*z - 420*z - 378) * z5 * cq  ;
+	double const h_4 = (-  70*z*z - 168*z - 105) * z4 * cqqq;
+	double const h_6 = (          - 105*z - 140) * z3 * cqq ;
+	double const h_7 = (          - 210*z - 420) * z3 * cq  ;
+	double const h_5 = (2*h_2 + 3*h_4)/q;
+	double const h_8 = - h_5 + h_7*q - h_6 - 0.5*(z*q)*(z*q);
+	
+	memcpy(v->sp_matrix, (double[4][4]){  
+		{  2*h_3   , h_1    , h_7-2*h_3      , h_5                },
+		{    h_1   , h_2    , h_6-h_1        , h_2+h_4            },
+		{ h_7-2*h_3, h_6-h_1, 2*h_3-2*h_7-z*q, h_8                },
+		{   h_5    , h_2+h_4, h_8            , h_2+(h_5+h_6-h_1)*q}
+	}, sizeof(double[4][4]));
+}
+
+void calculate_sp_matrices(dde_integrator const * const self, double const delay)
+{
+	double const threshold = self->current->time - delay;
+	
+	anchor * ca = self->first_anchor;
+	for (; ca->next->time<threshold; ca=ca->next)
+		for (int i=0; i<4; i++)
+			for (int j=0; j<4; j++)
+				ca->sp_matrix[i][j] = 0.0;
+	
+	calculate_partial_sp_matrix(self, ca, threshold);
+	ca = ca->next;
+	
+	for(; ca->next; ca=ca->next)
+		calculate_sp_matrix(self, ca);
+}
+
+double norm_sq_interval(anchor const v, unsigned int const begin)
+{
+	anchor const w = *(v.next);
+	double const * const vector[4] = {
+				&(v.state[begin]), // a
+				&(v.diff [begin]), // b/q
+				&(w.state[begin]), // c
+				&(w.diff [begin])  // d/q
+			};
+	
+	double sum = 0;
+	
+	for (unsigned int i=0; i<4; i++)
+		for (unsigned int j=0; j<4; j++)
+			for (unsigned int index=0; index<{{n_basic}}; index++)
+				sum += v.sp_matrix[i][j] * vector[i][index] * vector[j][index];
+	
+	return sum;
+}
+
+double norm_sq(dde_integrator const * const self, unsigned int const begin)
+{
+	double sum = 0;
+	for (anchor * ca = self->first_anchor; ca->next; ca = ca->next)
+		sum += norm_sq_interval(*ca, begin);
+	
+	return sum;
+}
+
+double scalar_product_interval(
+	anchor const v,
+	unsigned int const begin_1,
+	unsigned int const begin_2)
+{
+	anchor const w = *(v.next);
+	double const * const vector_1[4] = {
+				&(v.state[begin_1]), // a_1
+				&(v.diff [begin_1]), // b_1/q
+				&(w.state[begin_1]), // c_1
+				&(w.diff [begin_1])  // d_1/q
+			};
+	
+	double const * const vector_2[4] = {
+				&(v.state[begin_2]), // a_2
+				&(v.diff [begin_2]), // b_2/q
+				&(w.state[begin_2]), // c_2
+				&(w.diff [begin_2])  // d_2/q
+			};
+	
+	double sum = 0;
+	
+	for (unsigned int i=0; i<4; i++)
+		for (unsigned int j=0; j<4; j++)
+			for (unsigned int index=0; index<{{n_basic}}; index++)
+				sum += v.sp_matrix[i][j] * vector_1[i][index] * vector_2[j][index];
+	
+	return sum;
+}
+
+double scalar_product(
+	dde_integrator const * const self,
+	unsigned int const begin_1,
+	unsigned int const begin_2)
+{
+	double sum = 0;
+	for (anchor * ca = self->first_anchor; ca->next; ca = ca->next)
+		sum += scalar_product_interval(*ca, begin_1, begin_2);
+	
+	return sum;
+}
+
+void scale_past(
+	dde_integrator const * const self,
+	unsigned int const begin,
+	double const factor)
+{
+	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
+		for (unsigned int i=0; i<{{n_basic}}; i++)
+		{
+			ca->state[begin+i] *= factor;
+			ca->diff [begin+i] *= factor;
+		}
+}
+
+void subtract_from_past(
+	dde_integrator const * const self,
+	unsigned int const begin_1,
+	unsigned int const begin_2,
+	double const factor)
+{
+	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
+		for (unsigned int i=0; i<{{n_basic}}; i++)
+		{
+			ca->state[begin_1+i] -= factor*ca->state[begin_2+i];
+			ca->diff [begin_1+i] -= factor*ca->diff [begin_2+i];
+		}
+}
+
+static PyObject * orthonormalise(dde_integrator const * const self, PyObject * args)
+{
+	assert(self->last_anchor);
+	assert(self->first_anchor);
+	
+	unsigned int n_lyap;
+	double delay;
+	if (!PyArg_ParseTuple(args, "Id", &n_lyap, &delay))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
+	
+	calculate_sp_matrices(self, delay);
+	
+	npy_intp dims[1] = { n_lyap };
+	# pragma GCC diagnostic push
+	# pragma GCC diagnostic ignored "-pedantic"
+	PyArrayObject * norms = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
+	# pragma GCC diagnostic pop
+	
+	for (unsigned int i=0; i<n_lyap; i++)
+	{
+		for (unsigned int j=0; j<i; j++)
+		{
+			double sp = scalar_product(self, (i+1)*n_lyap, (j+1)*n_lyap);
+			subtract_from_past(self, (i+1)*n_lyap, (j+1)*n_lyap, sp);
+		}
+		double norm = sqrt(norm_sq(self, (i+1)*n_lyap));
+		scale_past(self, (i+1)*n_lyap, 1./norm);
+		* (double *) PyArray_GETPTR1(norms, i) = norm;
+	}
+	
+	# pragma GCC diagnostic push
+	# pragma GCC diagnostic ignored "-pedantic"
+	return (PyObject *) norms;
+	# pragma GCC diagnostic pop
+}
+
+{% endif %}
+
+// ======================================================
+
 static PyMemberDef dde_integrator_members[] = {
  	{"past_within_step", T_DOUBLE, offsetof(dde_integrator, past_within_step), 0, "past_within_step"},
 	{NULL}  /* Sentinel */
@@ -455,6 +671,9 @@ static PyMethodDef dde_integrator_methods[] = {
 	{"check_new_y_diff", (PyCFunction) check_new_y_diff, METH_VARARGS, NULL},
 	{"accept_step", (PyCFunction) accept_step, METH_NOARGS, NULL},
 	{"forget", (PyCFunction) forget, METH_VARARGS, NULL},
+	{% if n_basic != n: %}
+	{"orthonormalise", (PyCFunction) orthonormalise, METH_VARARGS, NULL},
+	{% endif %}
 	{NULL, NULL, 0, NULL}
 };
 
