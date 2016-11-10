@@ -24,6 +24,8 @@ from jitcdde._helpers import (
 	)
 from numbers import Number
 
+_default_min_step = 1e-10
+
 #sigmoid = lambda x: 1/(1+np.exp(-x))
 #sigmoid = lambda x: 1 if x>0 else 0
 sigmoid = lambda x: (np.tanh(x)+1)/2
@@ -379,7 +381,7 @@ class jitcdde(object):
 			atol = 0.0,
 			rtol = 1e-5,
 			first_step = 1.0,
-			min_step = 1e-10,
+			min_step = _default_min_step,
 			max_step = 10.0,
 			decrease_threshold = 1.1,
 			increase_threshold = 0.5,
@@ -742,6 +744,9 @@ class jitcdde_lyap(jitcdde):
 					warn("Decreased max_step to %f to ensure sufficient dimensionality for Lyapunov exponents." % required_max_step)
 			else:
 				kwargs["max_step"] = required_max_step
+			
+			if not "min_step" in kwargs.keys():
+				kwargs["min_step"] = _default_min_step
 			
 			if kwargs["min_step"] > required_max_step:
 				warn("Given the number of desired Lyapunov exponents and the maximum delay in the system, the highest possible step size is lower than the default min_step or the min_step set by you. This is almost certainly a very bad thing. Nonetheless I will lower min_step accordingly.")
