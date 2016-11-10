@@ -722,6 +722,8 @@ class jitcdde_lyap(jitcdde):
 		y : one-dimensional NumPy array
 			The first `len(f_sym)` entries are the state of the system.
 			The remaining entries are the “local” Lyapunov exponents as estimated from the growth or shrinking of the tangent vectors during the integration time of this very `integrate` command.
+		
+		It is essential that you choose `target_time` properly such that orthonormalisation neither happens too often nor too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
 		"""
 		# TODO formula and citation like for JiTCODE?
 		
