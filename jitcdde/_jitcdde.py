@@ -758,15 +758,15 @@ class jitcdde_lyap(jitcdde):
 		dt = total_integration_time/number
 		assert(number*dt == total_integration_time)
 		
-		accumulated_norms = np.ones(self._n_lyap)
+		instantaneous_lyaps = []
 		
 		for _ in range(number):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
 			self.DDE.forget(self.max_delay)
 			norms = self.DDE.orthonormalise(self._n_lyap, self.max_delay)
-			accumulated_norms *= norms
+			instantaneous_lyaps.append(np.log(norms)/dt)
 		
-		lyaps = np.log(accumulated_norms) / total_integration_time
+		lyaps = np.average(instantaneous_lyaps, axis=0)
 		
 		return np.hstack((self.DDE.get_current_state()[:self.n_basic], lyaps))
