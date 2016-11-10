@@ -33,7 +33,7 @@ data = np.vstack(data)
 
 np.savetxt("timeseries.dat", data)
 
-n = 1
+n = len(f)
 for i in range(n_lyap):
 	lyap = np.average(data[400:,n+i])
 	stderr = sem(data[400:,n+i])
