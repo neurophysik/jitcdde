@@ -233,7 +233,7 @@ class jitcdde(object):
 			If smaller than 1, no chunking will happen.
 		
 		extra_compile_args : list of strings
-			Arguments to be handed to the C compiler on top of what Setuptools chooses. In most situations, it’s best not to write your own list, but modify `DEFAULT_COMPILE_ARGS`, e.g., like this: `compile_C(extra_compile_args = DEFAULT_COMPILE_ARGS + ["--my-flag"])`.
+			Arguments to be handed to the C compiler on top of what Setuptools chooses. In most situations, it’s best not to write your own list, but modify `DEFAULT_COMPILE_ARGS`, e.g., like this: `compile_C(extra_compile_args = DEFAULT_COMPILE_ARGS + ["--my-flag"])`. However, if your compiler cannot handle one of the DEFAULT_COMPILE_ARGS, you best write your own arguments.
 
 		verbose : boolean
 			Whether the compiler commands shall be shown. This is the same as Setuptools’ `verbose` setting.
@@ -446,7 +446,13 @@ class jitcdde(object):
 			Whether (`UnsuccessfulIntegration`) shall be raised if the integration fails. You can deal with this by catching this exception. If `False`, there is only a warning and `self.successful` is set to `False`.
 		"""
 		
-		assert min_step <= first_step <= max_step, "Bogus step parameters."
+		if first_step > max_step:
+			first_step = max_step
+			warn("Decreasing first_step to match max_step")
+		if min_step > first_step:
+			min_step = first_step
+			warn("Decreasing min_step to match first_step")
+		
 		assert decrease_threshold>=1.0, "decrease_threshold smaller than 1"
 		assert increase_threshold<=1.0, "increase_threshold larger than 1"
 		assert max_factor>=1.0, "max_factor smaller than 1"
@@ -728,15 +734,18 @@ class jitcdde_lyap(jitcdde):
 		return np.hstack((result, lyaps))
 	
 	def set_integration_parameters(self, **kwargs):
-		if self._n_lyap > 2:
-			required_max_step = self.max_delay/(np.ceil(self._n_lyap/2)-1)
+		if self._n_lyap/self.n_basic > 2:
+			required_max_step = self.max_delay/(np.ceil(self._n_lyap/self.n_basic/2)-1)
 			if "max_step" in kwargs.keys():
 				if kwargs["max_step"] > required_max_step:
 					kwargs["max_step"] = required_max_step
 					warn("Decreased max_step to %f to ensure sufficient dimensionality for Lyapunov exponents." % required_max_step)
 			else:
 				kwargs["max_step"] = required_max_step
-		
+			
+			if kwargs["min_step"] > required_max_step:
+				warn("Given the number of desired Lyapunov exponents and the maximum delay in the system, the highest possible step size is lower than the default min_step or the min_step set by you. This is almost certainly a very bad thing. Nonetheless I will lower min_step accordingly.")
+			
 		super(jitcdde_lyap, self).set_integration_parameters(**kwargs)
 	
 	def integrate_blindly(self, target_time, step=0.1):
