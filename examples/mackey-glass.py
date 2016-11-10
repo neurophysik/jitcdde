@@ -16,16 +16,17 @@ dy = -0.0794952762375263
 DDE.add_past_point(-1.0, np.array([y0-dy]), np.array([dy]))
 DDE.add_past_point( 0.0, np.array([y0   ]), np.array([dy]))
 
-DDE.generate_f_C()
+DDE.generate_f_lambda()
 DDE.set_integration_parameters()
 
-dt = 1.0
+pre_T = 100
+dt = 10.0
 
-values = np.vstack(DDE.integrate(t) for t in np.arange(dt,1000,dt))
+DDE.integrate_blindly(pre_T)
+data = []
+for t in np.arange(pre_T+dt,10000,dt):
+	print(t)
+	data.append( DDE.integrate(t) )
+data = np.vstack(data)
 
-delay = tau/dt
-np.savetxt(
-	"timeseries.dat",
-	np.hstack((values[delay:], values[:-delay]))
-	)
-
+np.savetxt("timeseries.dat", data)
