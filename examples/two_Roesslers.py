@@ -32,7 +32,7 @@ DDE.integrate_blindly(pre_T)
 
 dt = 0.1
 with open("two_roesslers.dat", "w") as ausgabe:
-	for t in np.arange(pre_T+dt,pre_T+1000,dt):
-		print(t, DDE.dt)
-		state = DDE.integrate(t)
+	for T in np.arange(pre_T+dt,pre_T+1000,dt):
+		print(T)
+		state = DDE.integrate(T)
 		ausgabe.write((6*"%f\t"+"\n")%tuple(state))

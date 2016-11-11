@@ -26,9 +26,9 @@ dt = 10.0
 
 DDE.integrate_blindly(pre_T)
 data = []
-for t in np.arange(pre_T+dt,10000,dt):
-	print(t)
-	data.append( DDE.integrate(t) )
+for T in np.arange(pre_T+dt,10000,dt):
+	print(T)
+	data.append( DDE.integrate(T) )
 data = np.vstack(data)
 
 np.savetxt("timeseries.dat", data)
