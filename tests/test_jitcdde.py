@@ -20,14 +20,13 @@ compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
 t, y, current_y, past_y, anchors = provide_advanced_symbols()
 
 omega = np.array([0.88167179, 0.87768425])
-k = 0.25
 delay = 4.5
 
 f = [
 	omega[0] * (-y(1) - y(2)),
 	omega[0] * (y(0) + 0.165 * y(1)),
 	omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
-	omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3)),
+	omega[1] * (-y(4) - y(5)) + 0.25 * (y(0,t-delay) - y(3)),
 	omega[1] * (y(3) + 0.165 * y(4)),
 	omega[1] * (0.2 + y(5) * (y(3) - 10.0))
 	]
@@ -50,6 +49,7 @@ test_parameters = {
 	"max_step": 100,
 	"min_step": 1e-30,
 	}
+
 
 class TestIntegration(unittest.TestCase):
 	@classmethod
@@ -100,12 +100,13 @@ class TestIntegrationChunks(TestIntegration):
 	def generator(self):
 		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
+
 tiny_delay = 1e-30
 f_with_tiny_delay = [
 	omega[0] * (-y(1) - y(2)),
 	omega[0] * (y(0) + 0.165 * y(1,t-tiny_delay)),
 	omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
-	omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3,t-tiny_delay)),
+	omega[1] * (-y(4) - y(5)) + 0.25 * (y(0,t-delay) - y(3,t-tiny_delay)),
 	omega[1] * (y(3) + 0.165 * y(4)),
 	omega[1] * (0.2 + y(5) * (y(3) - 10.0))
 	]
@@ -135,7 +136,7 @@ def f_generator():
 	yield omega[0] * (-y(1) - y(2))
 	yield omega[0] * (y(0) + 0.165 * y(1))
 	yield omega[0] * (0.2 + y(2) * (y(0) - 10.0))
-	yield omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3))
+	yield omega[1] * (-y(4) - y(5)) + 0.25  * (y(0,t-delay) - y(3))
 	yield omega[1] * (y(3) + 0.165 * y(4))
 	yield omega[1] * (0.2 + y(5) * (y(3) - 10.0))
 
@@ -153,10 +154,11 @@ class TestGeneratorChunking(TestGenerator):
 	def generator(self):
 		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
+
 delayed_y, y3m10, coupling_term = sympy.symbols("delayed_y y3m10 coupling_term")
 f_alt_helpers = [
 	(delayed_y, y(0,t-delay)),
-	(coupling_term, k * (delayed_y - y(3))),
+	(coupling_term, 0.25 * (delayed_y - y(3))),
 	(y3m10, y(3)-10)
 	]
 
@@ -182,6 +184,27 @@ class TestHelpersPython(TestHelpers):
 class TestHelpersChunking(TestHelpers):
 	def generator(self):
 		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
+
+
+a,b,c,k = sympy.symbols("a b c k")
+f_params = [
+	omega[0] * (-y(1) - y(2)),
+	omega[0] * (y(0) + a * y(1)),
+	omega[0] * (b + y(2) * (y(0) - c)),
+	omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3)),
+	omega[1] * (y(3) + a * y(4)),
+	omega[1] * (b + y(5) * (y(3) - c))
+	]
+
+class TestParametersPython(TestIntegration):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = jitcdde(f_params, parameter_names=[a,b,c,k])
+		self.DDE.set_integration_parameters(**test_parameters)
+	
+	def generator(self):
+		self.DDE.generate_f_lambda()
+		self.DDE.set_parameters(0.165, 0.2, 10.0, 0.25)
 
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):

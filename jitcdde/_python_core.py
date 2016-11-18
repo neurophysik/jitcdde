@@ -7,7 +7,7 @@ import jitcdde._jitcdde
 
 import sympy
 import numpy as np
-from itertools import count
+from itertools import count, chain
 
 MIN_GARBAGE = 10
 
@@ -121,13 +121,16 @@ class dde_integrator(object):
 	def __init__(self,
 				f,
 				past,
-				helpers = []
+				helpers = [],
+				parameter_names = []
 			):
 		self.past = past
 		self.t, self.y, self.diff = self.past[-1]
 		self.n = len(self.y)
 		self.step_count = 0 # For benchmarking purposes.
 		self.last_garbage = -1
+		
+		self.parameters = []
 		
 		t, y, current_y, past_y, anchors = jitcdde._jitcdde.provide_advanced_symbols()
 		Y = sympy.symarray("Y", self.n)
@@ -141,7 +144,7 @@ class dde_integrator(object):
 			f_wc.append(new_entry)
 		
 		F = self.F = sympy.lambdify(
-			[t]+[Yentry for Yentry in Y],
+			[t]+[Yentry for Yentry in Y]+parameter_names,
 			f_wc,
 			[
 				{
@@ -152,9 +155,12 @@ class dde_integrator(object):
 			]
 			)
 		
-		self.f = lambda T,ypsilon: np.array(F(T,*ypsilon)).flatten()
+		self.f = lambda T,ypsilon: np.array(F(T,*chain(ypsilon,self.parameters))).flatten()
 		
 		self.anchor_mem = (len(past)-1)*np.ones(past_calls, dtype=int)
+	
+	def set_parameters(self, *parameters):
+		self.parameters = parameters
 	
 	def get_t(self):
 		return self.t

@@ -158,12 +158,13 @@ class jitcdde(object):
 		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
 	"""
 	
-	def __init__(self, f_sym, helpers=None, n=None, max_delay=None):
+	def __init__(self, f_sym, helpers=None, n=None, max_delay=None, parameter_names=[]):
 		self.f_sym, self.n = _handle_input(f_sym,n)
 		self.n_basic = self.n
 		self.helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		self._tmpdir = None
 		self._modulename = "jitced"
+		self.parameter_names = parameter_names
 		self.past = []
 		self.max_delay = max_delay or _find_max_delay(_delays(self.f_sym, self.helpers))
 		assert self.max_delay >= 0.0, "Negative maximum delay."
@@ -201,7 +202,7 @@ class jitcdde(object):
 			Prepares a purely Python-based integrator.
 		"""
 		
-		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers)
+		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers, self.parameter_names)
 	
 	def generate_f_c(self, *args, **kwargs):
 		raise DeprecationWarning("You are very likely seeing this message because you ignored a warning. You should not do this. Warnings exist for a reason. Well, now it’s an exception. Use generate_f_C instead of generate_f_c.")
@@ -376,6 +377,9 @@ class jitcdde(object):
 		
 		jitced = find_and_load_module(self._modulename,self._tmpfile())
 		self.DDE = jitced.dde_integrator(self.past)
+	
+	def set_parameters(self, *parameters):
+		self.DDE.set_parameters(*parameters)
 	
 	def set_integration_parameters(self,
 			atol = 0.0,
@@ -662,7 +666,7 @@ class jitcdde_lyap(jitcdde):
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	"""
 	
-	def __init__(self, f_sym, helpers=[], n=None, max_delay=None, n_lyap=1, delays=None):
+	def __init__(self, f_sym, helpers=[], n=None, max_delay=None, parameter_names=[], n_lyap=1, delays=None):
 		f_basic, n = _handle_input(f_sym,n)
 		
 		if delays:
@@ -698,7 +702,8 @@ class jitcdde_lyap(jitcdde):
 			f_lyap,
 			helpers = helpers,
 			n = n*(self._n_lyap+1),
-			max_delay = max_delay
+			max_delay = max_delay,
+			parameter_names = parameter_names
 			)
 		
 		self.n_basic = n
