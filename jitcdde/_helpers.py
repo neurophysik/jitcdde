@@ -87,8 +87,6 @@ elif version_info >= (3,3):
 			return spec.loader.load_module()
 		
 	else:
-		warn("Import routines for Python 3.5 and higher are untested.")
-		
 		from importlib.util import module_from_spec
 		
 		def find_and_load_module(modulename, folder=""):
