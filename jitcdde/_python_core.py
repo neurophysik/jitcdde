@@ -320,3 +320,51 @@ class dde_integrator(object):
 		
 		return np.array(norms)
 	
+	def remove_projection(self, delay, sep_func, dummy, vector):
+		"""
+		Remove projections of separation function to vector
+		"""
+		
+		for anchor in self.past:
+			# Setup dummy
+			anchor[1][dummy] = vector[0]
+			anchor[2][dummy] = vector[1]
+			
+			sp = self.scalar_product(delay, sep_func, dummy)
+			dummy_norm = self.norm(delay, dummy)
+			self.subtract_from_past(sep_func, dummy, sp/dummy_norm**2)
+			
+			# Clean dummy
+			anchor[1][dummy] = 0
+			anchor[2][dummy] = 0
+	
+	def remove_projections(self, delay, vectors):
+		"""
+		Remove projections of separation function to vectors and return norm after normalisation.
+		"""
+		
+		sep_func = np.split(np.arange(self.n, dtype=int), 2)[1]
+		
+		# Extend past with dummy components for orthogonalising
+		n_basic = len(sep_func)
+		for anchor in self.past:
+			anchor[1].resize(self.n+n_basic, refcheck=False)
+			anchor[2].resize(self.n+n_basic, refcheck=False)
+		dummy = np.arange(self.n, self.n+n_basic)
+		
+		# Orthogonalise
+		for vector in vectors:
+			self.remove_projection(delay, sep_func, dummy, vector)
+		
+		# Remove dummy components
+		for anchor in self.past:
+			anchor[1].resize(self.n, refcheck=False)
+			anchor[2].resize(self.n, refcheck=False)
+		
+		# Normalise separation function
+		norm = self.norm(delay, sep_func)
+		self.scale_past(sep_func, 1./norm)
+		return norm
+	
+	
+	

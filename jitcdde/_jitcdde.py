@@ -655,7 +655,7 @@ def _jac(f, helpers, delay, n):
 
 
 class jitcdde_lyap(jitcdde):
-	"""the handling is the same as that for `jitcdde` except for:
+	"""Calculates the Lyapunov exponents of the dynamics. The handling is the same as that for `jitcdde` except for:
 	
 	Parameters
 	----------
@@ -782,3 +782,105 @@ class jitcdde_lyap(jitcdde):
 		lyaps = np.average(instantaneous_lyaps, axis=0)
 		
 		return np.hstack((self.DDE.get_current_state()[:self.n_basic], lyaps))
+
+class jitcdde_lyap_tangential(jitcdde):
+	"""Calculates the largest Lyapunov exponent tangential to a predefined plane. The handling is the same as that for `jitcdde` except for:
+	
+	Parameters
+	----------
+	vectors : iterable of pair of vectors
+		A basis of the plane orthogonal to which the orthonormalisation shall happen. The first vector in each pair is component coresponding to the the state, the second vector corresponds to the derivative.
+	
+	delays : iterable of SymPy expressions
+		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
+	"""
+	
+	def __init__(self, f_sym, vectors, helpers=[], n=None, max_delay=None, parameter_names=[], delays=None):
+		f_basic, n = _handle_input(f_sym,n)
+		
+		if delays:
+			act_delays = delays + ([] if (0 in delays) else [0])
+		else:
+			act_delays = _delays(f_basic, helpers)
+		max_delay = max_delay or _find_max_delay(act_delays)
+		
+		helpers = _sort_helpers(_sympify_helpers(helpers or []))
+		
+		t,y = provide_basic_symbols()
+		
+		def f_lyap():
+			#Replace with yield from, once Python 2 is dead:
+			for entry in f_basic():
+				yield entry
+			
+			jacs = [_jac(f_basic, helpers, delay, n) for delay in act_delays]
+			
+			for _ in range(n):
+				expression = 0
+				for delay,jac in zip(act_delays,jacs):
+					for k,entry in enumerate(next(jac)):
+						expression += entry * y(k+n, t-delay)
+				
+				yield sympy.simplify(expression, ratio=1.0)
+		
+		super(jitcdde_lyap_tangential, self).__init__(
+			f_lyap,
+			helpers = helpers,
+			n = n*2,
+			max_delay = max_delay,
+			parameter_names = parameter_names
+			)
+		
+		self.n_basic = n
+		self.vectors = vectors
+	
+	def add_past_point(self, time, state, derivative):
+		super(jitcdde_lyap_tangential, self).add_past_point(
+			time,
+			np.append(state, random_direction(self.n_basic)),
+			np.append(derivative, random_direction(self.n_basic))
+			)
+	
+	def integrate(self, target_time):
+		"""
+		Like `jitcdde`’s `integrate`, except for orthonormalising the separation functions and:
+		
+		Returns
+		-------
+		y : one-dimensional NumPy array
+			The first `len(f_sym)` entries are the state of the system.
+			The the last entry is “local” largest Lyapunov exponent as estimated from the growth or shrinking of the separation function during the integration time of this very `integrate` command.
+		
+		It is essential that you choose `target_time` properly such that orthonormalisation neither happens too often nor too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
+		"""
+		
+		old_t = self.DDE.get_t()
+		result = super(jitcdde_lyap_tangential, self).integrate(target_time)[:self.n_basic]
+		delta_t = self.DDE.get_t()-old_t
+		
+		norm = self.DDE.remove_projections(self.max_delay, self.vectors)
+		lyap = np.log(norm) / delta_t
+		return np.append(result, lyap)
+	
+	def integrate_blindly(self, target_time, step=0.1):
+		"""
+		Like `jitcdde`’s `integrate_blindly`, except for orthonormalising the separation functions after each step and an output is analogous to `jitcdde_lyap`’s `integrate`.
+		"""
+		
+		total_integration_time = target_time-self.DDE.get_t()
+		number = int(round(total_integration_time/step))
+		dt = total_integration_time/number
+		assert(number*dt == total_integration_time)
+		
+		instantaneous_lyaps = []
+		
+		for _ in range(number):
+			self.DDE.get_next_step(dt)
+			self.DDE.accept_step()
+			self.DDE.forget(self.max_delay)
+			norm = self.DDE.remove_projections(self.max_delay, self.vectors)
+			instantaneous_lyaps.append(np.log(norm)/dt)
+		
+		lyap = np.average(instantaneous_lyaps)
+		
+		return np.append(self.DDE.get_current_state()[:self.n_basic], lyap)
