@@ -7,7 +7,7 @@ from jitcdde._jitcdde import provide_advanced_symbols
 
 import sympy
 import numpy as np
-#from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose
 from itertools import chain
 import unittest
 
@@ -269,11 +269,34 @@ class remove_projection_test(unittest.TestCase):
 		vectors[0][0][0] = 1
 		vectors[1][1][0] = 1
 		delay = past[-1][0]-past[0][0]
-
+		
 		self.DDE.remove_projections(delay, vectors)
 		for anchor in self.DDE.past:
 			self.assertAlmostEqual(anchor[1][2], 0.0)
 			self.assertAlmostEqual(anchor[2][2], 0.0)
+	
+	def test_double_removal(self):
+		self.DDE = dde_integrator(lambda: [], past)
+		vectors = [
+			(np.random.random(m//2),np.random.random(m//2)),
+			(np.random.random(m//2),np.random.random(m//2))
+			]
+		delay = past[-1][0]-past[0][0]
+		
+		self.DDE.remove_projections(delay, vectors)
+		past_copy = [(anchor[0], np.copy(anchor[1]), np.copy(anchor[2])) for anchor in self.DDE.past]
+		for anchor_A, anchor_B in zip(past_copy, self.DDE.past):
+			assert_allclose(anchor_A[1], anchor_B[1])
+			assert_allclose(anchor_A[2], anchor_B[2])
+		
+		norm = self.DDE.remove_projections(delay, vectors)
+		self.assertAlmostEqual(norm, 1.0)
+		
+		for anchor_A, anchor_B in zip(past_copy, self.DDE.past):
+			assert_allclose(anchor_A[1], anchor_B[1])
+			assert_allclose(anchor_A[2], anchor_B[2])
+		
+		
 
 
 unittest.main(buffer=True)
