@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
+from __future__ import print_function, division
 from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial
 from jitcdde._jitcdde import provide_advanced_symbols
 
@@ -259,21 +259,21 @@ class double_integration_test(unittest.TestCase):
 		self.assertEqual(self.DDE.t, 1.0)
 
 
-#class remove_projection_test(unittest.TestCase):
-	#def test_remove_first_component(self):
-		#self.DDE = dde_integrator(lambda: [], past)
-		#vectors = [
-			#(np.zeros(m/2),np.zeros(m/2)),
-			#(np.zeros(m/2),np.zeros(m/2))
-			#]
-		#vectors[0][0][0] = 1
-		#vectors[1][1][0] = 1
-		#delay = past[-1][0]-past[0][0]
-		#print(delay)
-		#self.DDE.remove_projections(delay, vectors)
-		#for anchor in self.DDE.past:
-			#self.assertAlmostEqual(anchor[1][2], 0.0)
-			#self.assertAlmostEqual(anchor[2][2], 0.0)
+class remove_projection_test(unittest.TestCase):
+	def test_remove_first_component(self):
+		self.DDE = dde_integrator(lambda: [], past)
+		vectors = [
+			(np.zeros(m//2),np.zeros(m//2)),
+			(np.zeros(m//2),np.zeros(m//2))
+			]
+		vectors[0][0][0] = 1
+		vectors[1][1][0] = 1
+		delay = past[-1][0]-past[0][0]
+
+		self.DDE.remove_projections(delay, vectors)
+		for anchor in self.DDE.past:
+			self.assertAlmostEqual(anchor[1][2], 0.0)
+			self.assertAlmostEqual(anchor[2][2], 0.0)
 
 
 unittest.main(buffer=True)
