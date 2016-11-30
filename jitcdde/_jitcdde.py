@@ -195,7 +195,7 @@ class jitcdde(object):
 		assert state.shape == (self.n,), "State has wrong shape."
 		assert derivative.shape == (self.n,), "Derivative has wrong shape."
 		
-		self.past.append((time, state, derivative))
+		self.past.append((time, np.copy(state), np.copy(derivative)))
 	
 	def generate_f_lambda(self):
 		"""
@@ -619,6 +619,7 @@ class jitcdde(object):
 		"""
 		
 		total_integration_time = target_time-self.DDE.get_t()
+		assert total_integration_time>=step, "Step size larger than total integration time."
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
 		
@@ -766,6 +767,7 @@ class jitcdde_lyap(jitcdde):
 		"""
 		
 		total_integration_time = target_time-self.DDE.get_t()
+		assert total_integration_time>=step, "Step size larger than total integration time."
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
 		assert(number*dt == total_integration_time)
@@ -868,6 +870,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		"""
 		
 		total_integration_time = target_time-self.DDE.get_t()
+		assert total_integration_time>=step, "Step size larger than total integration time."
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
 		assert(number*dt == total_integration_time)
