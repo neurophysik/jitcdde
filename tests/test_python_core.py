@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-from jitcdde._python_core import dde_integrator
+from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial
 from jitcdde._jitcdde import provide_advanced_symbols
 
 import sympy
@@ -154,7 +154,28 @@ class metrics_test(unittest.TestCase):
 				control = 1.0 if k==j else 0.0
 				sp = self.DDE.scalar_product(delay, j, k)
 				self.assertAlmostEqual(sp, control)
-
+	
+	def test_untrue_partials_norms(self):
+		for i in range(len(self.DDE.past)-1):
+			anchors = (self.DDE.past[i], self.DDE.past[i+1])
+			start = np.random.randint(0,m-1)
+			length = np.random.randint(1,m-start)
+			indizes = list(range(start, start+length))
+			norm = norm_sq_interval(anchors, indizes)
+			partial_norm = norm_sq_partial(anchors, indizes, anchors[0][0])
+			self.assertAlmostEqual(norm, partial_norm)
+	
+	def test_untrue_partials_sp(self):
+		for i in range(len(self.DDE.past)-1):
+			anchors = (self.DDE.past[i], self.DDE.past[i+1])
+			start_1 = np.random.randint(0,m-1)
+			start_2 = np.random.randint(0,m-1)
+			length = np.random.randint(1,m-max(start_1, start_2))
+			indizes_1 = list(range(start_1, start_1+length))
+			indizes_2 = list(range(start_2, start_2+length))
+			sp = scalar_product_interval(anchors, indizes_1, indizes_2)
+			psp = scalar_product_partial(anchors, indizes_1, indizes_2, anchors[0][0])
+			self.assertAlmostEqual(sp, psp)
 
 tau = 15
 p = 10
@@ -237,6 +258,22 @@ class double_integration_test(unittest.TestCase):
 		self.assertAlmostEqual(self.DDE.y[1], expected_y)
 		self.assertEqual(self.DDE.t, 1.0)
 
+
+#class remove_projection_test(unittest.TestCase):
+	#def test_remove_first_component(self):
+		#self.DDE = dde_integrator(lambda: [], past)
+		#vectors = [
+			#(np.zeros(m/2),np.zeros(m/2)),
+			#(np.zeros(m/2),np.zeros(m/2))
+			#]
+		#vectors[0][0][0] = 1
+		#vectors[1][1][0] = 1
+		#delay = past[-1][0]-past[0][0]
+		#print(delay)
+		#self.DDE.remove_projections(delay, vectors)
+		#for anchor in self.DDE.past:
+			#self.assertAlmostEqual(anchor[1][2], 0.0)
+			#self.assertAlmostEqual(anchor[2][2], 0.0)
 
 
 unittest.main(buffer=True)
