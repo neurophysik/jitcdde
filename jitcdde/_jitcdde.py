@@ -787,7 +787,7 @@ class jitcdde_lyap(jitcdde):
 		
 		lyaps = np.average(instantaneous_lyaps, axis=0)
 		
-		return np.hstack((self.DDE.get_current_state()[:self.n_basic], lyaps))
+		return np.hstack((self.DDE.get_current_state()[:self.n_basic], lyaps, total_integration_time))
 
 class jitcdde_lyap_tangential(jitcdde):
 	"""Calculates the largest Lyapunov exponent tangential to a predefined plane. The handling is the same as that for `jitcdde` except for:
@@ -896,4 +896,4 @@ class jitcdde_lyap_tangential(jitcdde):
 		
 		lyap = np.average(instantaneous_lyaps)
 		
-		return np.append(self.DDE.get_current_state()[:self.n_basic], lyap)
+		return np.append(self.DDE.get_current_state()[:self.n_basic], lyap, total_integration_time)
