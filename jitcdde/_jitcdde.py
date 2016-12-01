@@ -728,7 +728,9 @@ class jitcdde_lyap(jitcdde):
 		y : one-dimensional NumPy array
 			The first `len(f_sym)` entries are the state of the system.
 			The remaining entries are the “local” Lyapunov exponents as estimated from the growth or shrinking of the tangent vectors during the integration time of this very `integrate` command.
-		
+			
+			Note that this is not necessarily difference between `target_time` and the previous `target_time`, as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all. In this case, a warning is thrown and `nan` is returned for the local Lyapunov exponents.
+			
 		It is essential that you choose `target_time` properly such that orthonormalisation neither happens too often nor too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
 		"""
 		# TODO formula and citation like for JiTCODE?
@@ -737,9 +739,12 @@ class jitcdde_lyap(jitcdde):
 		result = super(jitcdde_lyap, self).integrate(target_time)[:self.n_basic]
 		delta_t = self.DDE.get_t()-old_t
 		
-		norms = self.DDE.orthonormalise(self._n_lyap, self.max_delay)
-		
-		lyaps = np.log(norms) / delta_t
+		if delta_t==0:
+			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent, so I return NAN instead.")
+			lyaps = np.nan*np.ones(self._n_lyap)
+		else:
+			norms = self.DDE.orthonormalise(self._n_lyap, self.max_delay)
+			lyaps = np.log(norms) / delta_t
 		
 		return np.hstack((result, lyaps))
 	
@@ -853,6 +858,8 @@ class jitcdde_lyap_tangential(jitcdde):
 			The first `len(f_sym)` entries are the state of the system.
 			The the last entry is “local” largest Lyapunov exponent as estimated from the growth or shrinking of the separation function during the integration time of this very `integrate` command.
 		
+			Note that this is not necessarily difference between `target_time` and the previous `target_time`, as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all. In this case, a warning is thrown and `nan` is returned for the local Lyapunov exponents.
+		
 		It is essential that you choose `target_time` properly such that orthonormalisation neither happens too often nor too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
 		"""
 		
@@ -860,8 +867,12 @@ class jitcdde_lyap_tangential(jitcdde):
 		result = super(jitcdde_lyap_tangential, self).integrate(target_time)[:self.n_basic]
 		delta_t = self.DDE.get_t()-old_t
 		
-		norm = self.DDE.remove_projections(self.max_delay, self.vectors)
-		lyap = np.log(norm) / delta_t
+		if delta_t==0:
+			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent, so I return NAN instead.")
+			lyap = np.nan
+		else:
+			norm = self.DDE.remove_projections(self.max_delay, self.vectors)
+			lyap = np.log(norm) / delta_t
 		return np.append(result, lyap)
 	
 	def integrate_blindly(self, target_time, step=0.1):
