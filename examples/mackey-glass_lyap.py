@@ -35,7 +35,7 @@ np.savetxt("timeseries.dat", data)
 
 n = len(f)
 for i in range(n_lyap):
-	lyap = np.average(data[400:,n+i])
-	stderr = sem(data[400:,n+i])
+	lyap = np.average(data[400:,n+i], weights=data[400:,-1])
+	stderr = sem(data[400:,n+i]) # Note that this only an estimate
 	print("%i. Lyapunov exponent: % .4f +/- %.4f" % (i+1,lyap,stderr))
 
