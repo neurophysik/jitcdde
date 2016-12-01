@@ -343,18 +343,18 @@ class dde_integrator(object):
 				anchor[2][dummies[dummy_index]] = vector[1]
 				dummy_index += 1
 		
-		# Orthonormalise dummies
 		for i,dummy in enumerate(dummies):
+			# Orthonormalise dummies
 			for j in range(i):
 				sp = self.scalar_product(delay, dummy, dummies[j])
 				self.subtract_from_past(dummy, dummies[j], sp)
 			norm = self.norm(delay, dummy)
-			self.scale_past(dummy, 1./norm)
-		
-		# remove projection from dummies
-		for dummy in dummies:
-			sp = self.scalar_product(delay, sep_func, dummy)
-			self.subtract_from_past(sep_func, dummy, sp)
+			if norm > 1e-10:
+				self.scale_past(dummy, 1./norm)
+				
+				# remove projection to dummy
+				sp = self.scalar_product(delay, sep_func, dummy)
+				self.subtract_from_past(sep_func, dummy, sp)
 		
 		# Remove dummy components
 		for anchor in self.past:
