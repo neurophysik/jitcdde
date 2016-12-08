@@ -336,7 +336,6 @@ class dde_integrator(object):
 		dummies = [np.arange(self.n+i*n_basic, self.n+(i+1)*n_basic) for i in range(d)]
 		
 		dummy_index = 0
-		dummy_past_index = 0
 		for anchor in self.past:
 			for vector in vectors:
 				# Setup dummy 
@@ -345,7 +344,7 @@ class dde_integrator(object):
 				dummy = dummies[dummy_index]
 				
 				# Orthonormalise dummies
-				for past_dummy in dummies[dummy_past_index:dummy_index]:
+				for past_dummy in dummies:
 					sp = self.scalar_product(delay, dummy, past_dummy)
 					self.subtract_from_past(dummy, past_dummy, sp)
 				norm = self.norm(delay, dummy)
@@ -359,7 +358,8 @@ class dde_integrator(object):
 				dummy_index += 1
 			
 			if dummy_index > len(vectors):
-				dummy_past_index += len(vectors)
+				del dummies[:len(vectors)]
+				dummy_index -= len(vectors)
 		
 		# Remove dummy components
 		for anchor in self.past:
