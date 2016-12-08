@@ -339,9 +339,9 @@ class dde_integrator(object):
 		for anchor in self.past:
 			for vector in vectors:
 				# Setup dummy 
-				anchor[1][dummies[dummy_index]] = vector[0]
-				anchor[2][dummies[dummy_index]] = vector[1]
 				dummy = dummies[dummy_index]
+				anchor[1][dummy] = vector[0]
+				anchor[2][dummy] = vector[1]
 				
 				# Orthonormalise dummies
 				for past_dummy in dummies:
