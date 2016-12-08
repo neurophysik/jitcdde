@@ -354,7 +354,7 @@ class dde_integrator(object):
 					# remove projection to dummy
 					sp = self.scalar_product(delay, sep_func, dummy)
 					self.subtract_from_past(sep_func, dummy, sp)
-					
+				
 				dummy_index += 1
 			
 			if dummy_index > len(vectors):
