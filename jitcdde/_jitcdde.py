@@ -522,14 +522,13 @@ class jitcdde(object):
 	
 	def _adjust_step_size(self):
 		p = self.DDE.get_p(self.atol, self.rtol)
-		
 		if p > self.decrease_threshold:
 			self.dt *= max(self.safety_factor*p**(-1/self.q), self.min_factor)
 			self._control_for_min_step()
 		else:
 			self.successful = True
 			self.DDE.accept_step()
-			if p < self.increase_threshold:
+			if p <= self.increase_threshold:
 				factor = self.safety_factor*p**(-1/(self.q+1)) if p else self.max_factor
 				
 				new_dt = min(
@@ -619,7 +618,8 @@ class jitcdde(object):
 		"""
 		
 		total_integration_time = target_time-self.DDE.get_t()
-		assert total_integration_time>=step, "Step size larger than total integration time."
+		if total_integration_time < step:
+			step = total_integration_time
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
 		
@@ -767,11 +767,12 @@ class jitcdde_lyap(jitcdde):
 	
 	def integrate_blindly(self, target_time, step=0.1):
 		"""
-		Like `jitcdde`’s `integrate_blindly`, except for orthonormalising the separation functions after each step and an output is analogous to `jitcdde_lyap`’s `integrate`.
+		Like `jitcdde`’s `integrate_blindly`, except for orthonormalising the separation functions after each step and the output being analogous to `jitcdde_lyap`’s `integrate`.
 		"""
 		
 		total_integration_time = target_time-self.DDE.get_t()
-		assert total_integration_time>=step, "Step size larger than total integration time."
+		if total_integration_time < step:
+			step = total_integration_time
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
 		assert(number*dt == total_integration_time)
@@ -804,6 +805,10 @@ class jitcdde_lyap_tangential(jitcdde):
 	def __init__(self, f_sym, vectors, helpers=[], n=None, max_delay=None, parameter_names=[], delays=None):
 		f_basic, n = _handle_input(f_sym,n)
 		
+		for vector in vectors:
+			assert len(vector[0]) == n
+			assert len(vector[1]) == n
+		
 		if delays:
 			act_delays = delays + ([] if (0 in delays) else [0])
 		else:
@@ -828,11 +833,14 @@ class jitcdde_lyap_tangential(jitcdde):
 						expression += entry * y(k+n, t-delay)
 				
 				yield sympy.simplify(expression, ratio=1.0)
+			
+			for _ in range(2*n*len(vectors)):
+				yield sympy.sympify(0)
 		
 		super(jitcdde_lyap_tangential, self).__init__(
 			f_lyap,
 			helpers = helpers,
-			n = n*2,
+			n = n*(2+2*len(vectors)),
 			max_delay = max_delay,
 			parameter_names = parameter_names
 			)
@@ -841,15 +849,16 @@ class jitcdde_lyap_tangential(jitcdde):
 		self.vectors = vectors
 	
 	def add_past_point(self, time, state, derivative):
+		padding = len(self.vectors)*2*self.n_basic
 		super(jitcdde_lyap_tangential, self).add_past_point(
 			time,
-			np.append(state, random_direction(self.n_basic)),
-			np.append(derivative, random_direction(self.n_basic))
+			np.hstack((state,      random_direction(self.n_basic), np.empty(padding))),
+			np.hstack((derivative, random_direction(self.n_basic), np.empty(padding)))
 			)
 	
 	def integrate(self, target_time):
 		"""
-		Like `jitcdde`’s `integrate`, except for orthonormalising the separation functions and:
+		Like `jitcdde`’s `integrate`, except for normalising and aligning the separation function and:
 		
 		Returns
 		-------
@@ -872,15 +881,16 @@ class jitcdde_lyap_tangential(jitcdde):
 		else:
 			norm = self.DDE.remove_projections(self.max_delay, self.vectors)
 			lyap = np.log(norm) / delta_t
-		return np.append(result, lyap, delta_t)
+		return np.hstack((result, lyap, delta_t))
 	
 	def integrate_blindly(self, target_time, step=0.1):
 		"""
-		Like `jitcdde`’s `integrate_blindly`, except for orthonormalising the separation functions after each step and an output is analogous to `jitcdde_lyap`’s `integrate`.
+		Like `jitcdde`’s `integrate_blindly`, except for normalising and aligning the separation function after each step and the output being analogous to `jitcdde_lyap_tangential`’s `integrate`.
 		"""
 		
 		total_integration_time = target_time-self.DDE.get_t()
-		assert total_integration_time>=step, "Step size larger than total integration time."
+		if total_integration_time < step:
+			step = total_integration_time
 		number = int(round(total_integration_time/step))
 		dt = total_integration_time/number
 		assert(number*dt == total_integration_time)
