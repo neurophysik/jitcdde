@@ -896,4 +896,4 @@ class jitcdde_lyap_tangential(jitcdde):
 		
 		lyap = np.average(instantaneous_lyaps)
 		
-		return np.append(self.DDE.get_current_state()[:self.n_basic], lyap, total_integration_time)
+		return np.hstack((self.DDE.get_current_state()[:self.n_basic], lyap, total_integration_time))
