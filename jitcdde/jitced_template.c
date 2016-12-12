@@ -653,6 +653,93 @@ static PyObject * orthonormalise(dde_integrator const * const self, PyObject * a
 	# pragma GCC diagnostic pop
 }
 
+
+	for (Py_ssize_t i=0; i<PyList_Size(past); i++)
+	{
+		PyObject * pyanchor = PyList_GetItem(past,i);
+		double time;
+		PyArrayObject * pystate;
+		PyArrayObject * pydiff;
+		if (!PyArg_ParseTuple(pyanchor, "dO!O!", &time, &PyArray_Type, &pystate, &PyArray_Type, &pydiff))
+		{
+			PyErr_SetString(PyExc_ValueError,"Wrong input.");
+			return 0;
+		}
+
+
+static PyObject * remove_projections(dde_integrator const * const self, PyObject * args)
+{
+	double delay;
+	PyObject * vectors;
+	if (!PyArg_ParseTuple(args, "dO!", &delay, &PyList_Type, &vectors))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return -1;
+	}
+	
+	unsigned int const sep_func = {{n_basic}};
+	
+	unsigned int len_vectors = PyList_Size(vectors);
+	unsigned int d = 2*len_vectors;
+	
+	unsigned int dummy_num = 0;
+	unsigned int len_dummies = 0;
+	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
+	{
+		for (Py_ssize_t vi=0; vi<len_vectors; vi++)
+		{
+			unsigned int dummy = get_dummy(dummy_num, 0);
+			
+			PyObject * vector = PyList_GetItem(vectors,vi);
+			PyArrayObject * pystate;
+			PyArrayObject * pydiff;
+			if (!PyArg_ParseTuple(vector, "O!O!", &PyArray_Type, &pystate, &PyArray_Type, &pydiff))
+			{
+				PyErr_SetString(PyExc_ValueError,"Wrong input.");
+				return 0;
+			}
+			
+			for (unsigned int j=0; j<{{n_basic}}; j++)
+			{
+				for (anchor * oa = self->first_anchor; oa; oa = oa->next)
+					oa->state[dummy+j] = 0.0;
+					oa->diff [dummy+j] = 0.0;
+				ca->state[dummy+j] = * (double *) PyArray_GETPTR1(pystate,j);
+				ca->diff [dummy+j] = * (double *) PyArray_GETPTR1(pydiff ,j);
+			}
+			
+			for (unsigned int i=0; i<{{n_basic}}; i++)
+			{
+				unsigned int past_dummy = get_dummy((dummy_num-i-1) % d);
+				double sp = scalar_product(self, delay, dummy, past_dummy);
+				subtract_from_past(self, dummy, past_dummy, sp);
+			}
+			
+			double norm = sqrt(norm_sq(self, delay, dummy));
+			if (norm > 1e-10)
+			{
+				scale_past(self, dummy, 1./norm);
+				
+				sp = scalar_product(self, delay, sep_func, dummy);
+				subtract_from_past(self, sep_func, dummy, sp);
+			}
+			else
+				scale_past(self, dummy, 0);
+			
+			len_dummies++;
+			dummy_num = (dummy_num+1)%d;
+		}
+		
+		if (len_dummies > len_vectors)
+			len_dummies -= len_vectors;
+		
+	}
+	double norm = sqrt(norm_sq(self, delay, sep_func));
+	self.scale_past(self, sep_func, 1./norm);
+	
+	return PyFloat_FromDouble(norm);
+}
+
 {% endif %}
 
 // ======================================================
