@@ -306,9 +306,14 @@ static PyObject * get_p(dde_integrator const * const self, PyObject * args)
 	double p=0.0;
 	for (int i=0; i<{{n}}; i++)
 	{
-		double x = fabs(self->error[i]/(atol+rtol*fabs(self->last_anchor->state[i])));
-		if (x>p)
-			p = x;
+		double error = fabs(self->error[i]);
+		double tolerance = atol+rtol*fabs(self->last_anchor->state[i]);
+		if (error!=0.0 && tolerance!=0.0)
+		{
+			double x = error/tolerance;
+			if (x>p)
+				p = x;
+		}
 	}
 	
 	return PyFloat_FromDouble(p);
@@ -653,19 +658,10 @@ static PyObject * orthonormalise(dde_integrator const * const self, PyObject * a
 	# pragma GCC diagnostic pop
 }
 
-
-	for (Py_ssize_t i=0; i<PyList_Size(past); i++)
-	{
-		PyObject * pyanchor = PyList_GetItem(past,i);
-		double time;
-		PyArrayObject * pystate;
-		PyArrayObject * pydiff;
-		if (!PyArg_ParseTuple(pyanchor, "dO!O!", &time, &PyArray_Type, &pystate, &PyArray_Type, &pydiff))
-		{
-			PyErr_SetString(PyExc_ValueError,"Wrong input.");
-			return 0;
-		}
-
+unsigned int get_dummy(unsigned int const index)
+{
+	return (2+index)*{{n_basic}};
+}
 
 static PyObject * remove_projections(dde_integrator const * const self, PyObject * args)
 {
@@ -674,21 +670,23 @@ static PyObject * remove_projections(dde_integrator const * const self, PyObject
 	if (!PyArg_ParseTuple(args, "dO!", &delay, &PyList_Type, &vectors))
 	{
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
-		return -1;
+		return NULL;
 	}
+	
+	calculate_sp_matrices(self, delay);
 	
 	unsigned int const sep_func = {{n_basic}};
 	
 	unsigned int len_vectors = PyList_Size(vectors);
 	unsigned int d = 2*len_vectors;
-	
 	unsigned int dummy_num = 0;
 	unsigned int len_dummies = 0;
 	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
 	{
 		for (Py_ssize_t vi=0; vi<len_vectors; vi++)
 		{
-			unsigned int dummy = get_dummy(dummy_num, 0);
+			unsigned int const dummy = get_dummy(dummy_num);
+			assert(dummy<{{n}});
 			
 			PyObject * vector = PyList_GetItem(vectors,vi);
 			PyArrayObject * pystate;
@@ -701,26 +699,30 @@ static PyObject * remove_projections(dde_integrator const * const self, PyObject
 			
 			for (unsigned int j=0; j<{{n_basic}}; j++)
 			{
+				assert(dummy+j<{{n}});
 				for (anchor * oa = self->first_anchor; oa; oa = oa->next)
+				{
 					oa->state[dummy+j] = 0.0;
 					oa->diff [dummy+j] = 0.0;
+				}
 				ca->state[dummy+j] = * (double *) PyArray_GETPTR1(pystate,j);
 				ca->diff [dummy+j] = * (double *) PyArray_GETPTR1(pydiff ,j);
 			}
 			
 			for (unsigned int i=0; i<{{n_basic}}; i++)
 			{
-				unsigned int past_dummy = get_dummy((dummy_num-i-1) % d);
-				double sp = scalar_product(self, delay, dummy, past_dummy);
+				unsigned int const past_dummy = get_dummy((dummy_num-i-1) % d);
+				assert(past_dummy<{{n}});
+				double const sp = scalar_product(self, dummy, past_dummy);
 				subtract_from_past(self, dummy, past_dummy, sp);
 			}
 			
-			double norm = sqrt(norm_sq(self, delay, dummy));
+			double norm = sqrt(norm_sq(self, dummy));
 			if (norm > 1e-10)
 			{
 				scale_past(self, dummy, 1./norm);
 				
-				sp = scalar_product(self, delay, sep_func, dummy);
+				double const sp = scalar_product(self, sep_func, dummy);
 				subtract_from_past(self, sep_func, dummy, sp);
 			}
 			else
@@ -732,10 +734,14 @@ static PyObject * remove_projections(dde_integrator const * const self, PyObject
 		
 		if (len_dummies > len_vectors)
 			len_dummies -= len_vectors;
-		
 	}
-	double norm = sqrt(norm_sq(self, delay, sep_func));
-	self.scale_past(self, sep_func, 1./norm);
+	
+	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
+		for (unsigned int j=2*{{n_basic}}; j<{{n}}; j++)
+			ca->state[j] = ca->diff[j] = 0.0;
+	
+	double const norm = sqrt(norm_sq(self, sep_func));
+	scale_past(self, sep_func, 1./norm);
 	
 	return PyFloat_FromDouble(norm);
 }
@@ -760,6 +766,7 @@ static PyMethodDef dde_integrator_methods[] = {
 	{"forget", (PyCFunction) forget, METH_VARARGS, NULL},
 	{% if n_basic != n: %}
 	{"orthonormalise", (PyCFunction) orthonormalise, METH_VARARGS, NULL},
+	{"remove_projections", (PyCFunction) remove_projections, METH_VARARGS, NULL},
 	{% endif %}
 	{NULL, NULL, 0, NULL}
 };

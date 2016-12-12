@@ -234,7 +234,7 @@ class dde_integrator(object):
 			self.past[-1] = (new_t, new_y, new_diff)
 	
 	def get_p(self, atol, rtol):
-		return np.max(np.abs(self.error)/(atol + rtol*np.abs(self.past[-1][1])))
+		return np.nanmax(np.abs(self.error)/(atol + rtol*np.abs(self.past[-1][1])))
 	
 	def check_new_y_diff(self, atol, rtol):
 		difference = np.abs(self.past[-1][1]-self.old_new_y)
@@ -325,24 +325,19 @@ class dde_integrator(object):
 		Remove projections of separation function to vectors and return norm after normalisation.
 		"""
 		
-		sep_func = np.split(np.arange(self.n, dtype=int), 2)[1]
+		sep_func = np.split(np.arange(self.n, dtype=int), 2+2*len(vectors))[1]
 		d = len(vectors)*2
-		
-		# Extend past with dummy components for orthogonalising
 		n_basic = len(sep_func)
-		for anchor in self.past:
-			anchor[1].resize(self.n+n_basic*d, refcheck=False)
-			anchor[2].resize(self.n+n_basic*d, refcheck=False)
 		
 		def get_dummy(index):
-			return np.arange(self.n+index*n_basic, self.n+(index+1)*n_basic)
+			return np.arange((index+2)*n_basic, (index+3)*n_basic)
 		
-		dummy_index = 0
-		dummy_len = 0
+		dummy_num = 0
+		len_dummies = 0
 		for anchor in self.past:
 			for vector in vectors:
 				# Setup dummy 
-				dummy = get_dummy(dummy_index)
+				dummy = get_dummy(dummy_num)
 				for other_anchor in self.past:
 					other_anchor[1][dummy] = np.zeros(n_basic)
 					other_anchor[2][dummy] = np.zeros(n_basic)
@@ -350,7 +345,7 @@ class dde_integrator(object):
 				anchor[2][dummy] = vector[1]
 				
 				# Orthonormalise dummies
-				past_dummies = [get_dummy( (dummy_index-i-1) % d ) for i in range(dummy_len)]
+				past_dummies = [get_dummy( (dummy_num-i-1) % d ) for i in range(len_dummies)]
 				for past_dummy in past_dummies:
 					sp = self.scalar_product(delay, dummy, past_dummy)
 					self.subtract_from_past(dummy, past_dummy, sp)
@@ -365,16 +360,11 @@ class dde_integrator(object):
 				else:
 					self.scale_past(dummy, 0.0)
 				
-				dummy_len += 1
-				dummy_index = (dummy_index+1)%d
+				len_dummies += 1
+				dummy_num = (dummy_num+1)%d
 			
-			if dummy_len > len(vectors):
-				dummy_len -= len(vectors)
-		
-		# Remove dummy components
-		for anchor in self.past:
-			anchor[1].resize(self.n, refcheck=False)
-			anchor[2].resize(self.n, refcheck=False)
+			if len_dummies > len(vectors):
+				len_dummies -= len(vectors)
 		
 		# Normalise separation function
 		norm = self.norm(delay, sep_func)
