@@ -333,15 +333,16 @@ class dde_integrator(object):
 		for anchor in self.past:
 			anchor[1].resize(self.n+n_basic*d, refcheck=False)
 			anchor[2].resize(self.n+n_basic*d, refcheck=False)
-		dummies = []
+		
+		def get_dummy(index):
+			return np.arange(self.n+index*n_basic, self.n+(index+1)*n_basic)
 		
 		dummy_index = 0
-		for anchor_index, anchor in enumerate(self.past):
-			new_dummies = 0
-			
+		dummy_length = 0
+		for anchor in self.past:
 			for vector in vectors:
 				# Setup dummy 
-				dummy = np.arange(self.n+dummy_index*n_basic, self.n+(dummy_index+1)*n_basic)
+				dummy = get_dummy(dummy_index)
 				for other_anchor in self.past:
 					other_anchor[1][dummy] = np.zeros(n_basic)
 					other_anchor[2][dummy] = np.zeros(n_basic)
@@ -349,14 +350,14 @@ class dde_integrator(object):
 				anchor[2][dummy] = vector[1]
 				
 				# Orthonormalise dummies
-				for past_dummy in dummies:
+				for i in range(dummy_length):
+					past_dummy = get_dummy( (dummy_index-i-1) % d )
 					sp = self.scalar_product(delay, dummy, past_dummy)
 					self.subtract_from_past(dummy, past_dummy, sp)
 				norm = self.norm(delay, dummy)
-				dummies.append(dummy)
+				dummy_length += 1
 				if norm > 1e-10:
 					self.scale_past(dummy, 1./norm)
-					new_dummies += 1
 					
 					# remove projection to dummy
 					sp = self.scalar_product(delay, sep_func, dummy)
@@ -366,7 +367,8 @@ class dde_integrator(object):
 				
 				dummy_index = (dummy_index+1)%d
 			
-			del dummies[:-len(vectors)]
+			if dummy_length > len(vectors):
+				dummy_length -= len(vectors)
 		
 		# Remove dummy components
 		for anchor in self.past:
