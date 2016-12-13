@@ -361,7 +361,6 @@ class dde_integrator(object):
 					sp = self.scalar_product(delay, sep_func, dummy)
 					self.subtract_from_past(sep_func, dummy, sp)
 				else:
-					print("blubb")
 					self.scale_past(dummy, 0.0)
 				
 				len_dummies += 1
