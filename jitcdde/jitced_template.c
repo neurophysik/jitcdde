@@ -16,6 +16,8 @@
 
 # define TYPE_INDEX NPY_DOUBLE
 
+# define NORM_THRESHOLD (1e-30)
+
 typedef struct anchor
 {
 	double time;
@@ -648,7 +650,8 @@ static PyObject * orthonormalise(dde_integrator const * const self, PyObject * a
 			subtract_from_past(self, (i+1)*{{n_basic}}, (j+1)*{{n_basic}}, sp);
 		}
 		double norm = sqrt(norm_sq(self, (i+1)*{{n_basic}}));
-		scale_past(self, (i+1)*{{n_basic}}, 1./norm);
+		if (norm > NORM_THRESHOLD)
+			scale_past(self, (i+1)*{{n_basic}}, 1./norm);
 		* (double *) PyArray_GETPTR1(norms, i) = norm;
 	}
 	
@@ -709,7 +712,7 @@ static PyObject * remove_projections(dde_integrator const * const self, PyObject
 				ca->diff [dummy+j] = * (double *) PyArray_GETPTR1(pydiff ,j);
 			}
 			
-			for (unsigned int i=0; i<{{n_basic}}; i++)
+			for (unsigned int i=0; i<len_dummies; i++)
 			{
 				unsigned int const past_dummy = get_dummy((dummy_num-i-1) % d);
 				assert(past_dummy<{{n}});
@@ -718,7 +721,7 @@ static PyObject * remove_projections(dde_integrator const * const self, PyObject
 			}
 			
 			double norm = sqrt(norm_sq(self, dummy));
-			if (norm > 1e-10)
+			if (norm > NORM_THRESHOLD)
 			{
 				scale_past(self, dummy, 1./norm);
 				

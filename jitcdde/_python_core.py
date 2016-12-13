@@ -10,6 +10,7 @@ import numpy as np
 from itertools import count, chain
 
 MIN_GARBAGE = 10
+NORM_THRESHOLD = 1e-30
 
 sumsq = lambda x: np.sum(x**2)
 
@@ -315,7 +316,8 @@ class dde_integrator(object):
 				sp = self.scalar_product(delay, vector, vectors[j])
 				self.subtract_from_past(vector, vectors[j], sp)
 			norm = self.norm(delay, vector)
-			self.scale_past(vector, 1./norm)
+			if norm > NORM_THRESHOLD:
+				self.scale_past(vector, 1./norm)
 			norms.append(norm)
 		
 		return np.array(norms)
@@ -346,18 +348,20 @@ class dde_integrator(object):
 				
 				# Orthonormalise dummies
 				past_dummies = [get_dummy( (dummy_num-i-1) % d ) for i in range(len_dummies)]
+				
 				for past_dummy in past_dummies:
 					sp = self.scalar_product(delay, dummy, past_dummy)
 					self.subtract_from_past(dummy, past_dummy, sp)
 				
 				norm = self.norm(delay, dummy)
-				if norm > 1e-10:
+				if norm > NORM_THRESHOLD:
 					self.scale_past(dummy, 1./norm)
 					
 					# remove projection to dummy
 					sp = self.scalar_product(delay, sep_func, dummy)
 					self.subtract_from_past(sep_func, dummy, sp)
 				else:
+					print("blubb")
 					self.scale_past(dummy, 0.0)
 				
 				len_dummies += 1
@@ -365,6 +369,10 @@ class dde_integrator(object):
 			
 			if len_dummies > len(vectors):
 				len_dummies -= len(vectors)
+		
+		for anchor in self.past:
+			anchor[1][2*n_basic:] = 0.0
+			anchor[2][2*n_basic:] = 0.0
 		
 		# Normalise separation function
 		norm = self.norm(delay, sep_func)
