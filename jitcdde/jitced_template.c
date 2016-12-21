@@ -44,6 +44,9 @@ typedef struct
 	double old_new_y[{{n}}];
 	double error[{{n}}];
 	double last_actual_step_start;
+	{% for control_par in control_pars %}
+	double parameter_{{control_par}};
+	{% endfor %}
 } dde_integrator;
 
 void append_anchor(
@@ -99,6 +102,27 @@ void replace_last_anchor(
 	memcpy(self->last_anchor->state, state, {{n}}*sizeof(double));
 	memcpy(self->last_anchor->diff, diff, {{n}}*sizeof(double));
 }
+
+{% if control_pars|length %}
+
+static PyObject * set_parameters(dde_integrator * const self, PyObject * args)
+{
+	if (!PyArg_ParseTuple(
+		args,
+		"{{'d'*control_pars|length}}"
+		{% for control_par in control_pars %}
+		, &(self->parameter_{{control_par}})
+		{% endfor %}
+		))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
+	
+	Py_RETURN_NONE;
+}
+
+{% endif %}
 
 static PyObject * get_t(dde_integrator const * const self)
 {
@@ -760,6 +784,9 @@ static PyMemberDef dde_integrator_members[] = {
 
 static PyMethodDef dde_integrator_methods[] = {
 	{"get_t", (PyCFunction) get_t, METH_NOARGS, NULL},
+	{% if control_pars|length %}
+	{"set_parameters", (PyCFunction) set_parameters, METH_VARARGS, NULL},
+	{% endif %}
 	{"get_recent_state", (PyCFunction) get_recent_state, METH_VARARGS, NULL},
 	{"get_current_state", (PyCFunction) get_current_state, METH_NOARGS, NULL},
 	{"get_next_step", (PyCFunction) get_next_step, METH_VARARGS, NULL},

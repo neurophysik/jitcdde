@@ -196,12 +196,17 @@ f_params = [
 	omega[1] * (b + y(5) * (y(3) - c))
 	]
 
-class TestParametersPython(TestIntegration):
+class TestParameters(TestIntegration):
 	@classmethod
 	def setUpClass(self):
-		self.DDE = jitcdde(f_params, parameter_names=[a,b,c,k])
+		self.DDE = jitcdde(f_params, control_pars=[a,b,c,k])
 		self.DDE.set_integration_parameters(**test_parameters)
 	
+	def generator(self):
+		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.set_parameters(0.165, 0.2, 10.0, 0.25)
+
+class TestParametersPython(TestParameters):
 	def generator(self):
 		self.DDE.generate_f_lambda()
 		self.DDE.set_parameters(0.165, 0.2, 10.0, 0.25)

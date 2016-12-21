@@ -23,6 +23,7 @@ from jitcdde._helpers import (
 	random_direction
 	)
 from numbers import Number
+import shutil
 
 _default_min_step = 1e-10
 
@@ -158,13 +159,13 @@ class jitcdde(object):
 		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
 	"""
 	
-	def __init__(self, f_sym, helpers=None, n=None, max_delay=None, parameter_names=[]):
+	def __init__(self, f_sym, helpers=None, n=None, max_delay=None, control_pars=[]):
 		self.f_sym, self.n = _handle_input(f_sym,n)
 		self.n_basic = self.n
 		self.helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		self._tmpdir = None
 		self._modulename = "jitced"
-		self.parameter_names = parameter_names
+		self.control_pars = control_pars
 		self.past = []
 		self.max_delay = max_delay or _find_max_delay(_delays(self.f_sym, self.helpers))
 		assert self.max_delay >= 0.0, "Negative maximum delay."
@@ -202,7 +203,7 @@ class jitcdde(object):
 			Prepares a purely Python-based integrator.
 		"""
 		
-		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers, self.parameter_names)
+		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers, self.control_pars)
 	
 	def generate_f_c(self, *args, **kwargs):
 		raise DeprecationWarning("You are very likely seeing this message because you ignored a warning. You should not do this. Warnings exist for a reason. Well, now it’s an exception. Use generate_f_C instead of generate_f_c.")
@@ -276,9 +277,13 @@ class jitcdde(object):
 		functions = ["current_y","past_y","anchors"]
 		helper_i = 0
 		anchor_i = 0
-		self.substitutions = []
 		converted_helpers = []
 		self.past_calls = 0
+		self.substitutions = [
+				(control_par, sympy.Symbol("self->parameter_"+control_par.name))
+				for control_par in self.control_pars
+			]
+		
 		
 		def finalise(expression):
 			expression = expression.subs(self.substitutions)
@@ -355,7 +360,8 @@ class jitcdde(object):
 			number_of_anchor_helpers = anchor_i,
 			has_any_helpers = anchor_i or helper_i,
 			anchor_mem_length = self.past_calls,
-			n_basic = self.n_basic
+			n_basic = self.n_basic,
+			control_pars = [par.name for par in self.control_pars]
 			)
 		
 		setup(
@@ -630,6 +636,12 @@ class jitcdde(object):
 			self.DDE.forget(self.max_delay)
 		
 		return self.DDE.get_current_state()
+	
+	def __del__(self):
+		try:
+			shutil.rmtree(self._tmpdir)
+		except (OSError, AttributeError, TypeError):
+			pass
 
 
 def _jac(f, helpers, delay, n):
@@ -667,7 +679,7 @@ class jitcdde_lyap(jitcdde):
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	"""
 	
-	def __init__(self, f_sym, helpers=[], n=None, max_delay=None, parameter_names=[], n_lyap=1, delays=None):
+	def __init__(self, f_sym, helpers=[], n=None, max_delay=None, control_pars=[], n_lyap=1, delays=None):
 		f_basic, n = _handle_input(f_sym,n)
 		
 		if delays:
@@ -704,7 +716,7 @@ class jitcdde_lyap(jitcdde):
 			helpers = helpers,
 			n = n*(self._n_lyap+1),
 			max_delay = max_delay,
-			parameter_names = parameter_names
+			control_pars = control_pars
 			)
 		
 		self.n_basic = n
@@ -802,7 +814,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	"""
 	
-	def __init__(self, f_sym, vectors, helpers=[], n=None, max_delay=None, parameter_names=[], delays=None):
+	def __init__(self, f_sym, vectors, helpers=[], n=None, max_delay=None, control_pars=[], delays=None):
 		f_basic, n = _handle_input(f_sym,n)
 		
 		for vector in vectors:
@@ -842,7 +854,7 @@ class jitcdde_lyap_tangential(jitcdde):
 			helpers = helpers,
 			n = n*(2+2*len(vectors)),
 			max_delay = max_delay,
-			parameter_names = parameter_names
+			control_pars = control_pars
 			)
 		
 		self.n_basic = n

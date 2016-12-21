@@ -123,7 +123,7 @@ class dde_integrator(object):
 				f,
 				past,
 				helpers = [],
-				parameter_names = []
+				control_pars = []
 			):
 		self.past = past
 		self.t, self.y, self.diff = self.past[-1]
@@ -144,7 +144,7 @@ class dde_integrator(object):
 			f_wc.append(new_entry)
 		
 		F = self.F = sympy.lambdify(
-			[t]+[Yentry for Yentry in Y]+parameter_names,
+			[t]+[Yentry for Yentry in Y]+control_pars,
 			f_wc,
 			[
 				{
