@@ -128,7 +128,6 @@ class dde_integrator(object):
 		self.past = past
 		self.t, self.y, self.diff = self.past[-1]
 		self.n = len(self.y)
-		self.step_count = 0 # For benchmarking purposes.
 		self.last_garbage = -1
 		
 		self.parameters = []
@@ -214,8 +213,6 @@ class dde_integrator(object):
 		return self.f(t, y)
 	
 	def get_next_step(self, delta_t):
-		self.step_count += 1
-		
 		self.past_within_step = False
 		
 		k_1 = self.diff
