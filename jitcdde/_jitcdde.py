@@ -208,7 +208,8 @@ class jitcdde(object):
 		assert derivative.shape == (self.n,), "Derivative has wrong shape."
 		
 		if self.DDE is not None:
-			raise NotImplementedError("You cannot add past points after the integrator has been initiated.")
+			warn("You have to re-generate the integrator if you add past points after it’s been initiated.")
+			self.DDE = None
 		
 		if time in [anchor[0] for anchor in self.past]:
 			raise ValueError("There already is an anchor with that time.")
@@ -232,7 +233,7 @@ class jitcdde(object):
 			Prepares a purely Python-based integrator.
 		"""
 		
-		assert len(self.past)>1, "You need to add past points first."
+		assert len(self.past)>1, "You need to add at least two past points first."
 		
 		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers, self.control_pars)
 	
@@ -277,7 +278,7 @@ class jitcdde(object):
 			The name used for the compiled module. If `None` or empty, the filename will be chosen by JiTCDDE based on previously used filenames or default to `jitced.so`. The only reason why you may want to change this is if you want to save the module file for later use (with`save_compiled`). It is not possible to re-use a modulename for a given instance of Python (due to the limitations of Python’s import machinery).
 		"""
 		
-		assert len(self.past)>1, "You need to add past points first."
+		assert len(self.past)>1, "You need to add at least two past points first."
 		
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		

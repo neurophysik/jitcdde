@@ -13,8 +13,8 @@ DDE = jitcdde(f)
 
 y0 = 0.8
 dy = -0.0794952762375263
-DDE.add_past_point(-1.0, np.array([y0-dy]), np.array([dy]))
 DDE.add_past_point( 0.0, np.array([y0   ]), np.array([dy]))
+DDE.add_past_point(-1.0, np.array([y0-dy]), np.array([dy]))
 
 pre_T = 100
 dt = 10.0
