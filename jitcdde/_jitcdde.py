@@ -207,6 +207,9 @@ class jitcdde(object):
 		assert state.shape == (self.n,), "State has wrong shape."
 		assert derivative.shape == (self.n,), "Derivative has wrong shape."
 		
+		if self.DDE is not None:
+			raise NotImplementedError("You cannot add past points after the integrator has been initiated.")
+		
 		if time in [anchor[0] for anchor in self.past]:
 			raise ValueError("There already is an anchor with that time.")
 		
