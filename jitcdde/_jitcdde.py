@@ -207,7 +207,12 @@ class jitcdde(object):
 		assert state.shape == (self.n,), "State has wrong shape."
 		assert derivative.shape == (self.n,), "Derivative has wrong shape."
 		
+		if time in [anchor[0] for anchor in self.past]:
+			raise ValueError("There already is an anchor with that time.")
+		
 		self.past.append((time, np.copy(state), np.copy(derivative)))
+		
+		self.past.sort(key = lambda anchor: anchor[0])
 	
 	def _generate_f(self):
 		if (self.DDE is None):
@@ -678,6 +683,25 @@ class jitcdde(object):
 			self.DDE.forget(self.max_delay)
 		
 		return self.DDE.get_current_state()
+	
+	def integrate_tracking_discontinuities(self, propagations=1):
+		"""
+		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped.
+		
+		This only makes sense if you just defined the past (via `add_past_point`) and start integrating.
+		
+		Parameters
+		----------
+		propagations : integer
+			how often the discontinuity has to propagate to before it’s considered smoothed
+		
+		Returns
+		-------
+		state : NumPy array
+			the computed state of the system after integration
+		"""
+		
+		raise NotImplementedError
 	
 	def __del__(self):
 		try:
