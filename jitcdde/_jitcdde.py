@@ -636,7 +636,20 @@ class jitcdde(object):
 			result = self.DDE.get_recent_state(target_time)
 			self.DDE.forget(self.max_delay)
 			return result
-
+	
+	def _prepare_blind_int(self, target_time, step):
+		self._generate_f()
+		self._set_integration_parameters()
+		
+		total_integration_time = target_time-self.DDE.get_t()
+		if total_integration_time < step:
+			step = total_integration_time
+		number = int(round(total_integration_time/step))
+		
+		dt = total_integration_time/number
+		assert(number*dt == total_integration_time)
+		return dt, number, total_integration_time
+	
 	def integrate_blindly(self, target_time, step=0.1):
 		"""
 		Evolves the dynamics with a fixed step size ignoring any accuracy concerns. If a delay is smaller than the time step, the state is extrapolated from the previous step.
@@ -657,16 +670,8 @@ class jitcdde(object):
 			the computed state of the system at `target_time`.
 		"""
 		
-		self._generate_f()
-		self._set_integration_parameters()
+		dt,number,_ = self._prepare_blind_int(target_time, step)
 		
-		total_integration_time = target_time-self.DDE.get_t()
-		if total_integration_time < step:
-			step = total_integration_time
-		number = int(round(total_integration_time/step))
-		dt = total_integration_time/number
-		
-		assert(number*dt == total_integration_time)
 		for _ in range(number):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
@@ -818,15 +823,7 @@ class jitcdde_lyap(jitcdde):
 		Like `jitcdde`’s `integrate_blindly`, except for orthonormalising the separation functions after each step and the output being analogous to `jitcdde_lyap`’s `integrate`.
 		"""
 		
-		self._generate_f()
-		self._set_integration_parameters()
-		
-		total_integration_time = target_time-self.DDE.get_t()
-		if total_integration_time < step:
-			step = total_integration_time
-		number = int(round(total_integration_time/step))
-		dt = total_integration_time/number
-		assert(number*dt == total_integration_time)
+		dt,number,total_integration_time = self._prepare_blind_int(target_time, step)
 		
 		instantaneous_lyaps = []
 		
@@ -939,15 +936,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		Like `jitcdde`’s `integrate_blindly`, except for normalising and aligning the separation function after each step and the output being analogous to `jitcdde_lyap_tangential`’s `integrate`.
 		"""
 		
-		self._generate_f()
-		self._set_integration_parameters()
-		
-		total_integration_time = target_time-self.DDE.get_t()
-		if total_integration_time < step:
-			step = total_integration_time
-		number = int(round(total_integration_time/step))
-		dt = total_integration_time/number
-		assert(number*dt == total_integration_time)
+		dt,number,total_integration_time = self._prepare_blind_int(target_time, step)
 		
 		instantaneous_lyaps = []
 		
