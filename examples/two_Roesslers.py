@@ -24,7 +24,6 @@ start_state = np.random.uniform(-0.5,0.5,6)
 DDE.add_past_point(-delay, start_state, np.zeros(6))
 DDE.add_past_point(0.0   , start_state, np.zeros(6))
 
-DDE.generate_f_C()
 DDE.set_integration_parameters(rtol=1e-5)
 
 pre_T = 100

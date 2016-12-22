@@ -6,6 +6,7 @@ from __future__ import print_function, absolute_import, division
 from inspect import isgeneratorfunction
 from warnings import warn
 from itertools import chain, count
+from traceback import format_exc
 import jitcdde._python_core as python_core
 import sympy
 import numpy as np
@@ -157,9 +158,12 @@ class jitcdde(object):
 	
 	max_delay : number
 		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
+	
+	verbose : boolean
+		Whether JiTCDDE shall give progress reports on the processing steps.
 	"""
 	
-	def __init__(self, f_sym, helpers=None, n=None, max_delay=None, control_pars=[]):
+	def __init__(self, f_sym, helpers=None, n=None, max_delay=None, control_pars=[], verbose=True):
 		self.f_sym, self.n = _handle_input(f_sym,n)
 		self.n_basic = self.n
 		self.helpers = _sort_helpers(_sympify_helpers(helpers or []))
@@ -167,6 +171,9 @@ class jitcdde(object):
 		self._modulename = "jitced"
 		self.control_pars = control_pars
 		self.past = []
+		self.integration_parameters_set = False
+		self.DDE = None
+		self.verbose = verbose
 		self.max_delay = max_delay or _find_max_delay(_delays(self.f_sym, self.helpers))
 		assert self.max_delay >= 0.0, "Negative maximum delay."
 	
@@ -178,6 +185,10 @@ class jitcdde(object):
 			return self._tmpdir
 		else:
 			return path.join(self._tmpdir, filename)
+	
+	def report(self, message):
+		if self.verbose:
+			print(message)
 	
 	def add_past_point(self, time, state, derivative):
 		"""
@@ -198,10 +209,22 @@ class jitcdde(object):
 		
 		self.past.append((time, np.copy(state), np.copy(derivative)))
 	
+	def _generate_f(self):
+		if (self.DDE is None):
+			try:
+				self.report("Generating and compiling C code.")
+				self.generate_f_C()
+			except:
+				warn(format_exc())
+				warn("Generating compiled integrator failed; resorting to lambdified functions.")
+				self.generate_f()
+	
 	def generate_f_lambda(self):
 		"""
 			Prepares a purely Python-based integrator.
 		"""
+		
+		assert len(self.past)>1, "You need to add past points first."
 		
 		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers, self.control_pars)
 	
@@ -246,7 +269,7 @@ class jitcdde(object):
 			The name used for the compiled module. If `None` or empty, the filename will be chosen by JiTCDDE based on previously used filenames or default to `jitced.so`. The only reason why you may want to change this is if you want to save the module file for later use (with`save_compiled`). It is not possible to re-use a modulename for a given instance of Python (due to the limitations of Python’s import machinery).
 		"""
 		
-		assert len(self.past)>1, "You need to add the past first."
+		assert len(self.past)>1, "You need to add past points first."
 		
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
@@ -385,7 +408,14 @@ class jitcdde(object):
 		self.DDE = jitced.dde_integrator(self.past)
 	
 	def set_parameters(self, *parameters):
+		self._generate_f()
+		self._set_integration_parameters()
 		self.DDE.set_parameters(*parameters)
+	
+	def _set_integration_parameters(self):
+		if not self.integration_parameters_set:
+			self.report("Using default integration parameters.")
+			self.set_integration_parameters()
 	
 	def set_integration_parameters(self,
 			atol = 0.0,
@@ -513,6 +543,8 @@ class jitcdde(object):
 				else:
 					return False
 			self.do_increase = do_increase
+		
+		self.integration_parameters_set = True
 	
 	def _control_for_min_step(self):
 		if self.dt < self.min_step:
@@ -562,6 +594,8 @@ class jitcdde(object):
 		state : NumPy array
 			the computed state of the system at `target_time`. If the integration fails and `raise_exception` is `True`, an array of NaNs is returned.
 		"""
+		self._generate_f()
+		self._set_integration_parameters()
 		
 		try:
 			while self.DDE.get_t() < target_time:
@@ -622,6 +656,9 @@ class jitcdde(object):
 		state : NumPy array
 			the computed state of the system at `target_time`.
 		"""
+		
+		self._generate_f()
+		self._set_integration_parameters()
 		
 		total_integration_time = target_time-self.DDE.get_t()
 		if total_integration_time < step:
@@ -730,7 +767,6 @@ class jitcdde_lyap(jitcdde):
 		
 		super(jitcdde_lyap, self).add_past_point(time, np.hstack(new_state), np.hstack(new_derivative))
 	
-	
 	def integrate(self, target_time):
 		"""
 		Like `jitcdde`’s `integrate`, except for orthonormalising the separation functions and:
@@ -781,6 +817,9 @@ class jitcdde_lyap(jitcdde):
 		"""
 		Like `jitcdde`’s `integrate_blindly`, except for orthonormalising the separation functions after each step and the output being analogous to `jitcdde_lyap`’s `integrate`.
 		"""
+		
+		self._generate_f()
+		self._set_integration_parameters()
 		
 		total_integration_time = target_time-self.DDE.get_t()
 		if total_integration_time < step:
@@ -899,6 +938,9 @@ class jitcdde_lyap_tangential(jitcdde):
 		"""
 		Like `jitcdde`’s `integrate_blindly`, except for normalising and aligning the separation function after each step and the output being analogous to `jitcdde_lyap_tangential`’s `integrate`.
 		"""
+		
+		self._generate_f()
+		self._set_integration_parameters()
 		
 		total_integration_time = target_time-self.DDE.get_t()
 		if total_integration_time < step:
