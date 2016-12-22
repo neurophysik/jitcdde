@@ -159,6 +159,9 @@ class jitcdde(object):
 	max_delay : number
 		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
 	
+	control_pars : list of SymPy symbols
+		Each symbol corresponds to a control parameter that can be used when defining the equations and set after compilation with `set_parameters`. Using this makes sense if you need to do a parameter scan with short integrations for each parameter and you are spending a considerable amount of time compiling.
+	
 	verbose : boolean
 		Whether JiTCDDE shall give progress reports on the processing steps.
 	"""
@@ -417,8 +420,18 @@ class jitcdde(object):
 		self.DDE = jitced.dde_integrator(self.past)
 	
 	def set_parameters(self, *parameters):
+		"""
+		Set the control parameters defined by the `control_pars` argument of the `jitcdde`.
+		
+		Parameters
+		----------
+		parameters : floats
+			Values of the control parameters. The order must be the same as in the `control_pars` argument of the `jitcdde`.
+		"""
+		
 		self._generate_f()
 		self._set_integration_parameters()
+		
 		self.DDE.set_parameters(*parameters)
 	
 	def _set_integration_parameters(self):
