@@ -126,6 +126,19 @@ def _find_max_delay(delays):
 	else:
 		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
 
+def _propagate_delays(delays, p, threshold=1e-5):
+	result = [0]
+	if p!=0:
+		for delay in _propagate_delays(delays, p-1, threshold):
+			for other_delay in delays:
+				new_entry = delay + other_delay
+				for old_entry in result:
+					if abs(new_entry-old_entry) < threshold:
+						break
+				else:
+					result.append(new_entry)
+	return result
+
 class UnsuccessfulIntegration(Exception):
 	"""
 		This exception is raised when the integrator cannot meet the accuracy and step-size requirements and the argument `raise_exception` of `set_integration_parameters` is set.
@@ -721,11 +734,14 @@ class jitcdde(object):
 		
 		return self.DDE.get_current_state()
 	
-	def integrate_tracking_discontinuities(self, propagations=1):
+	def integrate_tracking_discontinuities(
+		self,
+		propagations = 1,
+		threshold = 1e-5):
 		"""
 		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped.
 		
-		This only makes sense if you just defined the past (via `add_past_point`) and start integrating.
+		This only makes sense if you just defined the past (via `add_past_point`) and start integrating or just reset the integrator.
 		
 		Parameters
 		----------
@@ -737,6 +753,13 @@ class jitcdde(object):
 		state : NumPy array
 			the computed state of the system after integration
 		"""
+		
+		delays = _delays(f_basic, helpers)
+		if not all(sympy.sympify(delay).is_Number for delay in delays):
+			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
+		
+		steps = _propagate_delays(delays, propagations, threshold)
+		steps.remove(0)
 		
 		raise NotImplementedError
 	
