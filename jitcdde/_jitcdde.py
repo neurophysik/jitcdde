@@ -752,7 +752,7 @@ class jitcdde(object):
 		self,
 		propagations = 1,
 		step = None,
-		threshold = 1e-5,
+		min_distance = 1e-5,
 		):
 		"""
 		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped.
@@ -767,8 +767,8 @@ class jitcdde(object):
 		step : float
 			maximum step size. If `None`, `0`, or otherwise falsy, the maximum step size as set with `max_step` of `set_integration_parameters` is used.
 		
-		threshold : float
-			if two steps are closer than this, they will be conflated
+		min_distance : float
+			If two required steps are closer than this, they will be treated as one.
 		
 		Returns
 		-------
@@ -776,13 +776,13 @@ class jitcdde(object):
 			the computed state of the system after integration
 		"""
 		
-		assert threshold > 0, "Threshold must be positive."
+		assert min_distance > 0, "min_distance must be positive."
 		assert type(propagations) == int, "Non-integer number of propagations."
 		
 		if not all(sympy.sympify(delay).is_Number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
 		
-		steps = _propagate_delays(self.delays, propagations, threshold)
+		steps = _propagate_delays(self.delays, propagations, min_distance)
 		steps.remove(0)
 		steps.sort()
 		
