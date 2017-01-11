@@ -192,7 +192,8 @@ class jitcdde(object):
 		self.jitced = None
 		self.compile_attempt = None
 		self.verbose = verbose
-		self.max_delay = max_delay or _find_max_delay(_delays(self.f_sym, self.helpers))
+		self.delays = _delays(self.f_sym, self.helpers)
+		self.max_delay = max_delay or _find_max_delay(self.delays)
 		assert self.max_delay >= 0.0, "Negative maximum delay."
 	
 	def _tmpfile(self, filename=None):
@@ -636,6 +637,16 @@ class jitcdde(object):
 					self.count = 0
 					self.last_pws = False
 	
+	def t(self):
+		"""
+		Returns
+		-------
+		time : float
+		The current time of the integrator.
+		"""
+		self._initiate()
+		return self.DDE.get_t()
+	
 	def integrate(self, target_time):
 		"""
 		Tries to evolve the dynamics.
@@ -696,6 +707,9 @@ class jitcdde(object):
 	def _prepare_blind_int(self, target_time, step):
 		self._initiate()
 		
+		step = step or self.max_step
+		assert step>0, "step must be positive"
+		
 		total_integration_time = target_time-self.DDE.get_t()
 		if total_integration_time < step:
 			step = total_integration_time
@@ -705,7 +719,7 @@ class jitcdde(object):
 		assert(number*dt == total_integration_time)
 		return dt, number, total_integration_time
 	
-	def integrate_blindly(self, target_time, step=0.1):
+	def integrate_blindly(self, target_time, step=None):
 		"""
 		Evolves the dynamics with a fixed step size ignoring any accuracy concerns. If a delay is smaller than the time step, the state is extrapolated from the previous step.
 		
@@ -717,7 +731,7 @@ class jitcdde(object):
 			time until which the dynamics is evolved
 		
 		step : float
-			aspired step size. The actual step size may be slightly adapted to make it divide the integration time.
+			aspired step size. The actual step size may be slightly adapted to make it divide the integration time. If `None`, `0`, or otherwise falsy, the maximum step size as set with `max_step` of `set_integration_parameters` is used.
 		
 		Returns
 		-------
@@ -734,10 +748,12 @@ class jitcdde(object):
 		
 		return self.DDE.get_current_state()
 	
-	def integrate_tracking_discontinuities(
+	def step_on_discontinuities(
 		self,
 		propagations = 1,
-		threshold = 1e-5):
+		step = None,
+		threshold = 1e-5,
+		):
 		"""
 		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped.
 		
@@ -748,20 +764,34 @@ class jitcdde(object):
 		propagations : integer
 			how often the discontinuity has to propagate to before it’s considered smoothed
 		
+		step : float
+			maximum step size. If `None`, `0`, or otherwise falsy, the maximum step size as set with `max_step` of `set_integration_parameters` is used.
+		
+		threshold : float
+			if two steps are closer than this, they will be conflated
+		
 		Returns
 		-------
 		state : NumPy array
 			the computed state of the system after integration
 		"""
 		
-		delays = _delays(f_basic, helpers)
-		if not all(sympy.sympify(delay).is_Number for delay in delays):
+		assert threshold > 0, "Threshold must be positive."
+		assert type(propagations) == int, "Non-integer number of propagations."
+		
+		if not all(sympy.sympify(delay).is_Number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
 		
-		steps = _propagate_delays(delays, propagations, threshold)
+		steps = _propagate_delays(self.delays, propagations, threshold)
 		steps.remove(0)
+		steps.sort()
 		
-		raise NotImplementedError
+		start_time = self.past[-1][0]
+		
+		for step in steps:
+			result = self.integrate_blindly(start_time+step)
+		
+		return result
 	
 	def __del__(self):
 		try:
@@ -902,7 +932,7 @@ class jitcdde_lyap(jitcdde):
 			
 		super(jitcdde_lyap, self).set_integration_parameters(**kwargs)
 	
-	def integrate_blindly(self, target_time, step=0.1):
+	def integrate_blindly(self, target_time, step=None):
 		"""
 		Like `jitcdde`’s `integrate_blindly`, except for orthonormalising the separation functions after each step and the output being analogous to `jitcdde_lyap`’s `integrate`.
 		"""
@@ -1015,7 +1045,7 @@ class jitcdde_lyap_tangential(jitcdde):
 			lyap = np.log(norm) / delta_t
 		return np.hstack((result, lyap, delta_t))
 	
-	def integrate_blindly(self, target_time, step=0.1):
+	def integrate_blindly(self, target_time, step=None):
 		"""
 		Like `jitcdde`’s `integrate_blindly`, except for normalising and aligning the separation function after each step and the output being analogous to `jitcdde_lyap_tangential`’s `integrate`.
 		"""
