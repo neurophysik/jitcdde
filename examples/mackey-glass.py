@@ -22,7 +22,7 @@ dt = 10.0
 DDE.integrate_blindly(pre_T)
 data = []
 for T in np.arange(pre_T+dt,10000,dt):
-	print(T)
+	#print(T)
 	data.append( DDE.integrate(T) )
 data = np.vstack(data)
 

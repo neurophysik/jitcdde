@@ -212,13 +212,13 @@ class jitcdde(object):
 		assert state.shape == (self.n,), "State has wrong shape."
 		assert derivative.shape == (self.n,), "Derivative has wrong shape."
 		
+		# Force reinitiation
 		self.DDE = None
 		
 		if time in [anchor[0] for anchor in self.past]:
 			raise ValueError("There already is an anchor with that time.")
 		
 		self.past.append((time, np.copy(state), np.copy(derivative)))
-		
 		self.past.sort(key = lambda anchor: anchor[0])
 	
 	def generate_f_lambda(self):
@@ -262,7 +262,7 @@ class jitcdde(object):
 			If smaller than 1, no chunking will happen.
 		
 		extra_compile_args : list of strings
-			Arguments to be handed to the C compiler on top of what Setuptools chooses. In most situations, it’s best not to write your own list, but modify `DEFAULT_COMPILE_ARGS`, e.g., like this: `compile_C(extra_compile_args = DEFAULT_COMPILE_ARGS + ["--my-flag"])`. However, if your compiler cannot handle one of the DEFAULT_COMPILE_ARGS, you best write your own arguments.
+			Arguments to be handed to the C compiler on top of what Setuptools chooses. In most situations, it’s best not to write your own list, but modify `DEFAULT_COMPILE_ARGS`, e.g., like this: `generate_f_C(extra_compile_args = DEFAULT_COMPILE_ARGS + ["--my-flag"])`. However, if your compiler cannot handle one of the DEFAULT_COMPILE_ARGS, you best write your own arguments.
 
 		verbose : boolean
 			Whether the compiler commands shall be shown. This is the same as Setuptools’ `verbose` setting.
@@ -414,17 +414,19 @@ class jitcdde(object):
 		if self.compile_attempt is None:
 			try:
 				self.report("Generating, compiling, and loading C code.")
+				self.generate_f_C()
 			except:
 				warn(format_exc())
 				warn("Generating compiled integrator failed; resorting to lambdified functions.")
 			else:
+				# trigger re-initiation
 				self.DDE = None
 		
 		if self.DDE is None:
-			if self.jitced:
-				self.generate_f_C()
-			else:
+			if self.compile_attempt:
 				self.DDE = self.jitced.dde_integrator(self.past)
+			else:
+				self.generate_f_lambda()
 		
 		self._set_integration_parameters()
 	
@@ -438,9 +440,7 @@ class jitcdde(object):
 			Values of the control parameters. The order must be the same as in the `control_pars` argument of the `jitcdde`.
 		"""
 		
-		self._generate_f()
-		self._set_integration_parameters()
-		
+		self._initiate()
 		self.DDE.set_parameters(*parameters)
 	
 	def _set_integration_parameters(self):
@@ -475,7 +475,7 @@ class jitcdde(object):
 		----------
 		atol : float
 		rtol : float
-			The tolerance of the estimated integration error is determined as :math:`\texttt{atol} + \texttt{rtol}·|y|`. The step-size adaption algorithm is the same as for the GSL. For details see its documentation (TODO: link).
+			The tolerance of the estimated integration error is determined as :math:`\texttt{atol} + \texttt{rtol}·|y|`. The step-size adaption algorithm is the same as for the GSL. For details see `its documentation <http://www.gnu.org/software/gsl/manual/html_node/Adaptive-Step_002dsize-Control.html>`_.
 		
 		first_step : float
 			The step-size adaption starts with this value.
@@ -625,7 +625,7 @@ class jitcdde(object):
 		state : NumPy array
 			the computed state of the system at `target_time`. If the integration fails and `raise_exception` is `True`, an array of NaNs is returned.
 		"""
-		self._initate()
+		self._initiate()
 		
 		try:
 			while self.DDE.get_t() < target_time:
@@ -668,8 +668,7 @@ class jitcdde(object):
 			return result
 	
 	def _prepare_blind_int(self, target_time, step):
-		self._generate_f()
-		self._set_integration_parameters()
+		self._initiate()
 		
 		total_integration_time = target_time-self.DDE.get_t()
 		if total_integration_time < step:
