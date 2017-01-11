@@ -212,8 +212,7 @@ class jitcdde(object):
 		assert state.shape == (self.n,), "State has wrong shape."
 		assert derivative.shape == (self.n,), "Derivative has wrong shape."
 		
-		# Force reinitiation
-		self.DDE = None
+		self.reset_integrator()
 		
 		if time in [anchor[0] for anchor in self.past]:
 			raise ValueError("There already is an anchor with that time.")
@@ -221,9 +220,23 @@ class jitcdde(object):
 		self.past.append((time, np.copy(state), np.copy(derivative)))
 		self.past.sort(key = lambda anchor: anchor[0])
 	
+	def purge_past(self):
+		"""
+		Cleans the past and resets the integrator. You need to add a new past after this.
+		"""
+		
+		self.past = []
+		self.reset_integrator()
+	
+	def reset_integrator(self):
+		"""
+			Resets the integrator, forgetting all integration progress and forcing re-initiation when it is needed next.
+		"""
+		self.DDE = None
+	
 	def generate_f_lambda(self):
 		"""
-			Initiates a purely Python-based integrator.
+			Explicitly initiates a purely Python-based integrator.
 		"""
 		
 		assert len(self.past)>1, "You need to add at least two past points first."
@@ -271,7 +284,6 @@ class jitcdde(object):
 			The name used for the compiled module. If `None` or empty, the filename will be chosen by JiTCDDE based on previously used filenames or default to `jitced.so`. The only reason why you may want to change this is if you want to save the module file for later use (with`save_compiled`). It is not possible to re-use a modulename for a given instance of Python (due to the limitations of Python’s import machinery).
 		"""
 		
-		assert len(self.past)>1, "You need to add at least two past points first."
 		self.compile_attempt = False
 		
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
@@ -419,10 +431,11 @@ class jitcdde(object):
 				warn(format_exc())
 				warn("Generating compiled integrator failed; resorting to lambdified functions.")
 			else:
-				# trigger re-initiation
-				self.DDE = None
+				self.reset_integrator()
 		
 		if self.DDE is None:
+			assert len(self.past)>1, "You need to add at least two past points first."
+			
 			if self.compile_attempt:
 				self.DDE = self.jitced.dde_integrator(self.past)
 			else:
