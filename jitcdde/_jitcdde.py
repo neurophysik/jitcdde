@@ -176,6 +176,8 @@ class jitcdde(object):
 		self.past = []
 		self.integration_parameters_set = False
 		self.DDE = None
+		self.jitced = None
+		self.compile_attempt = None
 		self.verbose = verbose
 		self.max_delay = max_delay or _find_max_delay(_delays(self.f_sym, self.helpers))
 		assert self.max_delay >= 0.0, "Negative maximum delay."
@@ -210,9 +212,7 @@ class jitcdde(object):
 		assert state.shape == (self.n,), "State has wrong shape."
 		assert derivative.shape == (self.n,), "Derivative has wrong shape."
 		
-		if self.DDE is not None:
-			warn("You have to re-generate the integrator if you add past points after it’s been initiated.")
-			self.DDE = None
+		self.DDE = None
 		
 		if time in [anchor[0] for anchor in self.past]:
 			raise ValueError("There already is an anchor with that time.")
@@ -221,19 +221,9 @@ class jitcdde(object):
 		
 		self.past.sort(key = lambda anchor: anchor[0])
 	
-	def _generate_f(self):
-		if (self.DDE is None):
-			try:
-				self.report("Generating and compiling C code.")
-				self.generate_f_C()
-			except:
-				warn(format_exc())
-				warn("Generating compiled integrator failed; resorting to lambdified functions.")
-				self.generate_f()
-	
 	def generate_f_lambda(self):
 		"""
-			Prepares a purely Python-based integrator.
+			Initiates a purely Python-based integrator.
 		"""
 		
 		assert len(self.past)>1, "You need to add at least two past points first."
@@ -282,6 +272,7 @@ class jitcdde(object):
 		"""
 		
 		assert len(self.past)>1, "You need to add at least two past points first."
+		self.compile_attempt = False
 		
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
@@ -416,8 +407,26 @@ class jitcdde(object):
 			verbose = verbose
 			)
 		
-		jitced = find_and_load_module(self._modulename,self._tmpfile())
-		self.DDE = jitced.dde_integrator(self.past)
+		self.jitced = find_and_load_module(self._modulename,self._tmpfile())
+		self.compile_attempt = True
+	
+	def _initiate(self):
+		if self.compile_attempt is None:
+			try:
+				self.report("Generating, compiling, and loading C code.")
+			except:
+				warn(format_exc())
+				warn("Generating compiled integrator failed; resorting to lambdified functions.")
+			else:
+				self.DDE = None
+		
+		if self.DDE is None:
+			if self.jitced:
+				self.generate_f_C()
+			else:
+				self.DDE = self.jitced.dde_integrator(self.past)
+		
+		self._set_integration_parameters()
 	
 	def set_parameters(self, *parameters):
 		"""
@@ -616,8 +625,7 @@ class jitcdde(object):
 		state : NumPy array
 			the computed state of the system at `target_time`. If the integration fails and `raise_exception` is `True`, an array of NaNs is returned.
 		"""
-		self._generate_f()
-		self._set_integration_parameters()
+		self._initate()
 		
 		try:
 			while self.DDE.get_t() < target_time:
