@@ -751,7 +751,7 @@ class jitcdde(object):
 	def step_on_discontinuities(
 		self,
 		propagations = 1,
-		step = None,
+		max_step = None,
 		min_distance = 1e-5,
 		):
 		"""
@@ -764,8 +764,8 @@ class jitcdde(object):
 		propagations : integer
 			how often the discontinuity has to propagate to before it’s considered smoothed
 		
-		step : float
-			maximum step size. If `None`, `0`, or otherwise falsy, the maximum step size as set with `max_step` of `set_integration_parameters` is used.
+		max_step : float
+			maximum step size. If `None`, `0`, or otherwise falsy, the `max_step` as set with `set_integration_parameters` is used.
 		
 		min_distance : float
 			If two required steps are closer than this, they will be treated as one.
@@ -786,10 +786,10 @@ class jitcdde(object):
 		steps.remove(0)
 		steps.sort()
 		
-		start_time = self.past[-1][0]
+		start_time = self.t()
 		
 		for step in steps:
-			result = self.integrate_blindly(start_time+step)
+			result = self.integrate_blindly(start_time+step, max_step)
 		
 		return result
 	

@@ -10,7 +10,7 @@ t, y, current_y, past_y, anchors = provide_advanced_symbols()
 
 f = [0.25 * y(0,t-tau) / (1 + y(0,t-tau)**p) - 0.1*y(0)]
 
-n_lyap = 6
+n_lyap = 4
 DDE = jitcdde_lyap(f, n_lyap=n_lyap)
 
 y0 = 0.8
@@ -18,13 +18,13 @@ dy = -0.0794952762375263
 DDE.add_past_point(-1.0, np.array([y0-dy]), np.array([dy]))
 DDE.add_past_point( 0.0, np.array([y0   ]), np.array([dy]))
 
-pre_T = 100
-dt = 10.0
+#DDE.integrate_blindly(DDE.t()+15.0,1.0)
+DDE.step_on_discontinuities(1,1.0)
 
-DDE.integrate_blindly(pre_T)
+
+dt = 10.0
 data = []
-for T in np.arange(pre_T+dt,10000,dt):
-	print(T)
+for T in np.arange(DDE.t()+dt,10000,dt):
 	data.append( DDE.integrate(T) )
 data = np.vstack(data)
 
