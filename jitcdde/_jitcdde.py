@@ -217,11 +217,14 @@ class jitcdde(object):
 		----------
 		time : float
 			the time of the anchor point. Must be later than the time of all previously added points.
-		state : NumPy array of floats
+		state : iterable of floats
 			the position of the anchor point. The dimension of the array must match the dimension of the differential equation.
 		derivative : NumPy array of floats
 			the derivative at the anchor point. The dimension of the array must match the dimension of the differential equation.
 		"""
+		
+		state = np.copy(state)
+		derivative = np.copy(derivative)
 		
 		assert state.shape == (self.n,), "State has wrong shape."
 		assert derivative.shape == (self.n,), "Derivative has wrong shape."
@@ -231,7 +234,7 @@ class jitcdde(object):
 		if time in [anchor[0] for anchor in self.past]:
 			raise ValueError("There already is an anchor with that time.")
 		
-		self.past.append((time, np.copy(state), np.copy(derivative)))
+		self.past.append((time, state, derivative))
 		self.past.sort(key = lambda anchor: anchor[0])
 	
 	def purge_past(self):
@@ -637,6 +640,7 @@ class jitcdde(object):
 					self.count = 0
 					self.last_pws = False
 	
+	@property
 	def t(self):
 		"""
 		Returns
@@ -786,7 +790,7 @@ class jitcdde(object):
 		steps.remove(0)
 		steps.sort()
 		
-		start_time = self.t()
+		start_time = self.t
 		
 		for step in steps:
 			result = self.integrate_blindly(start_time+step, max_step)

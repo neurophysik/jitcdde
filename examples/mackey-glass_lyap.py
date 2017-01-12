@@ -15,8 +15,8 @@ DDE = jitcdde_lyap(f, n_lyap=n_lyap)
 
 y0 = 0.8
 dy = -0.0794952762375263
-DDE.add_past_point(-1.0, np.array([y0-dy]), np.array([dy]))
-DDE.add_past_point( 0.0, np.array([y0   ]), np.array([dy]))
+DDE.add_past_point(-1.0, [y0-dy], [dy])
+DDE.add_past_point( 0.0, [y0   ], [dy])
 
 #DDE.integrate_blindly(DDE.t()+15.0,1.0)
 DDE.step_on_discontinuities(1,1.0)
@@ -24,7 +24,7 @@ DDE.step_on_discontinuities(1,1.0)
 
 dt = 10.0
 data = []
-for T in np.arange(DDE.t()+dt,10000,dt):
+for T in np.arange(DDE.t+dt,10000,dt):
 	data.append( DDE.integrate(T) )
 data = np.vstack(data)
 

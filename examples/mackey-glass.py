@@ -13,14 +13,14 @@ DDE = jitcdde(f)
 
 y0 = 0.3
 dy = -0.4
-DDE.add_past_point( 0.0, np.array([y0   ]), np.array([dy]))
-DDE.add_past_point(-1.0, np.array([y0-dy]), np.array([dy]))
+DDE.add_past_point( 0.0, [y0   ], [dy])
+DDE.add_past_point(-1.0, [y0-dy], [dy])
 
 dt = 10.0
 DDE.step_on_discontinuities()
 
 data = []
-for T in np.arange(DDE.t()+dt,10000,dt):
+for T in np.arange(DDE.t, 10000, dt):
 	data.append( DDE.integrate(T) )
 data = np.vstack(data)
 
