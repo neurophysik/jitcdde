@@ -786,6 +786,8 @@ class jitcdde(object):
 		if not all(sympy.sympify(delay).is_Number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
 		
+		self.delays = map(float, self.delays)
+		
 		steps = _propagate_delays(self.delays, propagations, min_distance)
 		steps.remove(0)
 		steps.sort()
@@ -1042,7 +1044,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t==0:
-			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent, so I return NAN instead.")
+			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent; therefore I return 0 instead.")
 			lyap = 0
 		else:
 			norm = self.DDE.remove_projections(self.max_delay, self.vectors)
