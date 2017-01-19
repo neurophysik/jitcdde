@@ -908,6 +908,7 @@ class jitcdde_lyap(jitcdde):
 		"""
 		# TODO formula and citation like for JiTCODE?
 		
+		self._initiate()
 		old_t = self.DDE.get_t()
 		result = super(jitcdde_lyap, self).integrate(target_time)[:self.n_basic]
 		delta_t = self.DDE.get_t()-old_t
@@ -1039,6 +1040,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		It is essential that you choose `target_time` properly such that orthonormalisation neither happens too often nor too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
 		"""
 		
+		self._initiate()
 		old_t = self.DDE.get_t()
 		result = super(jitcdde_lyap_tangential, self).integrate(target_time)[:self.n_basic]
 		delta_t = self.DDE.get_t()-old_t
