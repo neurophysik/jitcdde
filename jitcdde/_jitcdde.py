@@ -786,7 +786,7 @@ class jitcdde(object):
 		if not all(sympy.sympify(delay).is_Number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
 		
-		self.delays = map(float, self.delays)
+		self.delays = list(map(float, self.delays))
 		
 		steps = _propagate_delays(self.delays, propagations, min_distance)
 		steps.remove(0)
@@ -849,6 +849,7 @@ class jitcdde_lyap(jitcdde):
 		else:
 			act_delays = _delays(f_basic, helpers)
 		max_delay = max_delay or _find_max_delay(act_delays)
+		assert max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 		
 		assert n_lyap>=0, "n_lyap negative"
 		self._n_lyap = n_lyap
@@ -983,7 +984,8 @@ class jitcdde_lyap_tangential(jitcdde):
 		else:
 			act_delays = _delays(f_basic, helpers)
 		max_delay = max_delay or _find_max_delay(act_delays)
-		
+		assert max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
+
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		
 		t,y = provide_basic_symbols()
