@@ -852,6 +852,8 @@ class jitcdde_lyap(jitcdde):
 	"""
 	
 	def __init__(self, f_sym, helpers=[], n=None, max_delay=None, control_pars=[], n_lyap=1, delays=None):
+		warn("The output of integrate for jitcdde_lyap was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
+		
 		f_basic, n = _handle_input(f_sym,n)
 		
 		if delays:
@@ -909,10 +911,15 @@ class jitcdde_lyap(jitcdde):
 		Returns
 		-------
 		y : one-dimensional NumPy array
-			The first `len(f_sym)` entries are the state of the system.
-			They are followed by the “local” Lyapunov exponents as estimated from the growth or shrinking of the tangent vectors during the integration time of this very `integrate` command. The last entry is this integration time.
+			The state of the system. Same as the output of `jitcdde`’s `integrate`.
+		
+		lyaps : one-dimensional NumPy array
+			The “local” Lyapunov exponents as estimated from the growth or shrinking of the separation function during the integration time of this very `integrate` command.
 			
-			Note that the latter is not necessarily difference between `target_time` and the previous `target_time`, as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. When averaging the Lyapunov exponents, you may want to weigh it with the integration time. If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all and the integration time is zero. In this case, the local Lyapunov exponents are returned as `0`, which is as nonsensical as any other result (except perhaps `nan`) but should not matter with a proper weighted averaging.
+		integration time : float
+			The actual integration time during to which the local Lyapunov exponents apply. Note that this is not necessarily difference between `target_time` and the previous `target_time`, as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. When averaging the Lyapunov exponents, you almost always want to weigh them with the integration time.
+			
+			If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all and the integration time is zero. In this case, the local Lyapunov exponents are returned as `0`, which is as nonsensical as any other result (except perhaps `nan`) but should not matter with a proper weighted averaging.
 			
 		It is essential that you choose `target_time` properly such that orthonormalisation neither happens too often nor too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
 		"""
@@ -929,7 +936,7 @@ class jitcdde_lyap(jitcdde):
 		else:
 			lyaps = np.zeros(self._n_lyap)
 		
-		return np.hstack((result, lyaps, delta_t))
+		return result, lyaps, delta_t
 	
 	def set_integration_parameters(self, **kwargs):
 		if self._n_lyap/self.n_basic > 2:
@@ -967,7 +974,7 @@ class jitcdde_lyap(jitcdde):
 		
 		lyaps = np.average(instantaneous_lyaps, axis=0)
 		
-		return np.hstack((self.DDE.get_current_state()[:self.n_basic], lyaps, total_integration_time))
+		return self.DDE.get_current_state()[:self.n_basic], lyaps, total_integration_time
 
 class jitcdde_lyap_tangential(jitcdde):
 	"""Calculates the largest Lyapunov exponent tangential to a predefined plane. The handling is the same as that for `jitcdde` except for:
@@ -982,6 +989,8 @@ class jitcdde_lyap_tangential(jitcdde):
 	"""
 	
 	def __init__(self, f_sym, vectors, helpers=[], n=None, max_delay=None, control_pars=[], delays=None):
+		warn("The output of integrate for jitcdde_lyap_tangential was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
+		
 		f_basic, n = _handle_input(f_sym,n)
 		
 		for vector in vectors:
@@ -1042,10 +1051,15 @@ class jitcdde_lyap_tangential(jitcdde):
 		Returns
 		-------
 		y : one-dimensional NumPy array
-			The first `len(f_sym)` entries are the state of the system.
-			They are followed by the “local” largest tangential Lyapunov exponent as estimated from the growth or shrinking of the separation function during the integration time of this very `integrate` command. The last entry is this integration time.
+			The state of the system. Same as the output of `jitcdde`’s `integrate`.
 		
-			Note that the latter is not necessarily difference between `target_time` and the previous `target_time`, as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. When averaging the local Lyapunov exponents, you may want to weigh it with the integration time. If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all and the integration time is zero. In this case, the local Lyapunov exponent is returned as `0`, which is as nonsensical as any other result (except perhaps `nan`) but should not matter with a proper weighted averaging.
+		lyap : float
+			The “local” largest tangential Lyapunov exponent as estimated from the growth or shrinking of the separation function during the integration time of this very `integrate` command.
+			
+		integration time : float
+			The actual integration time during to which the local Lyapunov exponents apply. Note that this is not necessarily difference between `target_time` and the previous `target_time`, as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. When averaging the Lyapunov exponents, you almost always want to weigh them with the integration time.
+			
+			If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all and the integration time is zero. In this case, the local Lyapunov exponents are returned as `0`, which is as nonsensical as any other result (except perhaps `nan`) but should not matter with a proper weighted averaging.
 		
 		It is essential that you choose `target_time` properly such that orthonormalisation neither happens too often nor too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
 		"""
@@ -1061,7 +1075,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		else:
 			norm = self.DDE.remove_projections(self.max_delay, self.vectors)
 			lyap = np.log(norm) / delta_t
-		return np.hstack((result, lyap, delta_t))
+		return result, lyap, delta_t
 	
 	def integrate_blindly(self, target_time, step=None):
 		"""
@@ -1081,4 +1095,4 @@ class jitcdde_lyap_tangential(jitcdde):
 		
 		lyap = np.average(instantaneous_lyaps)
 		
-		return np.hstack((self.DDE.get_current_state()[:self.n_basic], lyap, total_integration_time))
+		return self.DDE.get_current_state()[:self.n_basic], lyap, total_integration_time

@@ -23,16 +23,20 @@ DDE.step_on_discontinuities(1,1.0)
 
 
 dt = 10.0
-data = []
+lyaps = []
+weights = []
 for T in np.arange(DDE.t+dt,10000,dt):
-	data.append( DDE.integrate(T) )
-data = np.vstack(data)
+	state, lyap, weight = DDE.integrate(T)
+	lyaps.append(lyap)
+	weights.append(weight)
 
-np.savetxt("timeseries.dat", data)
+lyaps = np.vstack(lyaps)
+
+np.savetxt("timeseries.dat", lyaps)
 
 n = len(f)
 for i in range(n_lyap):
-	lyap = np.average(data[400:,n+i], weights=data[400:,-1])
-	stderr = sem(data[400:,n+i]) # Note that this only an estimate
+	lyap = np.average(lyaps[400:,i], weights=weights[400:])
+	stderr = sem(lyaps[400:,i]) # Note that this only an estimate
 	print("%i. Lyapunov exponent: % .4f +/- %.4f" % (i+1,lyap,stderr))
 
