@@ -331,9 +331,6 @@ class jitcdde(object):
 			helpers_wc.extend(_cse[0])
 			f_sym_wc = _cse[1][0]
 		
-		if modulename:
-			warn("Setting the module name works, but saving and loading are not implemented yet. Your file will be located in %s." % self._tmpfile())
-		
 		arguments = [
 			("self", "dde_integrator * const"),
 			("t", "double const"),
@@ -469,6 +466,40 @@ class jitcdde(object):
 				self.generate_f_lambda()
 		
 		self._set_integration_parameters()
+	
+	def save_compiled(self, destination="", overwrite=False):
+		"""
+		saves the module file with the compiled functions for later use (see `dde_from_module_file`). If no compiled derivative exists, it tries to compile it first using `generate_f_C`. In most circumstances, you should not rename this file, as the filename is needed to determine the module name.
+		
+		Parameters
+		----------
+		destination : string specifying a path
+			If this specifies only a directory (don’t forget the trailing `/` or similar), the module will be saved to that directory. If empty (default), the module will be saved to the current working directory. Otherwise, the functions will be (re)compiled to match that filename. The ending `.so` will be appended, if needed.
+		overwrite : boolean
+			Whether to overwrite the specified target, if it already exists.
+		"""
+		
+		folder, filename = path.split(destination)
+		
+		if filename:
+			destination = ensure_suffix(destination, ".so")
+			modulename = modulename_from_path(filename)
+			if modulename != self._modulename:
+				self.generate_f_C(modulename=modulename)
+				self.report("compiled C code")
+			else:
+				self._initiate()
+			sourcefile = get_module_path(self._modulename, self._tmpfile())
+		else:
+			self._initiate()
+			sourcefile = get_module_path(self._modulename, self._tmpfile())
+			destination = path.join(folder, ensure_suffix(self._modulename, ".so"))
+			self.report("saving file to " + destination)
+		
+		if path.isfile(destination) and not overwrite:
+			raise OSError("Target File already exists and \"overwrite\" is set to False")
+		else:
+			shutil.copy(sourcefile, destination)
 	
 	def set_parameters(self, *parameters):
 		"""
