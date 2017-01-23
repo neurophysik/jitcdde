@@ -113,7 +113,7 @@ def _sort_helpers(helpers):
 def _sympify_helpers(helpers):
 	return [(helper[0], sympy.sympify(helper[1]).doit()) for helper in helpers]
 
-def _delays(f, helpers=[]):
+def _get_delays(f, helpers=[]):
 	t, _, _, _, anchors = provide_advanced_symbols()
 	delay_terms = set().union(*(collect_arguments(entry, anchors) for entry in f()))
 	delay_terms.update(*(collect_arguments(helper[1], anchors) for helper in helpers))
@@ -192,9 +192,19 @@ class jitcdde(object):
 		self.jitced = None
 		self.compile_attempt = None
 		self.verbose = verbose
-		self.delays = _delays(self.f_sym, self.helpers)
+		self._delays = None
 		self.max_delay = max_delay or _find_max_delay(self.delays)
 		assert self.max_delay >= 0.0, "Negative maximum delay."
+	
+	@property
+	def delays(self):
+		if self._delays is None:
+			self._delays = _get_delays(self.f_sym, self.helpers)
+		return self._delays
+	
+	@delays.setter
+	def delays(self, new_delays):
+		self._delays = new_delays
 	
 	def _tmpfile(self, filename=None):
 		if self._tmpdir is None:
@@ -786,7 +796,7 @@ class jitcdde(object):
 		if not all(sympy.sympify(delay).is_Number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
 		
-		self.delays = map(float, self.delays)
+		self.delays = list(map(float, self.delays))
 		
 		steps = _propagate_delays(self.delays, propagations, min_distance)
 		steps.remove(0)
@@ -847,7 +857,7 @@ class jitcdde_lyap(jitcdde):
 		if delays:
 			act_delays = delays + ([] if (0 in delays) else [0])
 		else:
-			act_delays = _delays(f_basic, helpers)
+			act_delays = _get_delays(f_basic, helpers)
 		max_delay = max_delay or _find_max_delay(act_delays)
 		
 		assert n_lyap>=0, "n_lyap negative"
@@ -981,7 +991,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		if delays:
 			act_delays = delays + ([] if (0 in delays) else [0])
 		else:
-			act_delays = _delays(f_basic, helpers)
+			act_delays = _get_delays(f_basic, helpers)
 		max_delay = max_delay or _find_max_delay(act_delays)
 		
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
