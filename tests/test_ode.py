@@ -55,6 +55,7 @@ class basic_test(unittest.TestCase):
 		self.ODE = jitcdde(f)
 	
 	def setUp(self):
+		self.ODE.purge_past()
 		self.ODE.add_past_point(-1.0, y0, f_of_y0)
 		self.ODE.add_past_point( 0.0, y0, f_of_y0)
 		self.ODE.set_integration_parameters(first_step=0.01)
