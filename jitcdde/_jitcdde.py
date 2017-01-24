@@ -909,6 +909,27 @@ def _jac(f, helpers, delay, n):
 		yield line(f_entry)
 
 
+def tangent_vector_f(f, helpers, n, n_lyap, delays):
+	t,y = provide_basic_symbols()
+	
+	def f_lyap():
+		#Replace with yield from, once Python 2 is dead:
+		for entry in f():
+			yield entry
+		
+		for i in range(n_lyap):
+			jacs = [_jac(f, helpers, delay, n) for delay in delays]
+			
+			for _ in range(n):
+				expression = 0
+				for delay,jac in zip(delays,jacs):
+					for k,entry in enumerate(next(jac)):
+						expression += entry * y(k+(i+1)*n, t-delay)
+				
+				yield sympy.simplify(expression, ratio=1.0)
+	
+	return f_lyap
+
 class jitcdde_lyap(jitcdde):
 	"""Calculates the Lyapunov exponents of the dynamics. The handling is the same as that for `jitcdde` except for:
 	
@@ -929,23 +950,7 @@ class jitcdde_lyap(jitcdde):
 		delays = delays or _get_delays(f_basic, helpers)
 		
 		if f_basic:
-			t,y = provide_basic_symbols()
-			
-			def f_lyap():
-				#Replace with yield from, once Python 2 is dead:
-				for entry in f_basic():
-					yield entry
-				
-				for i in range(self._n_lyap):
-					jacs = [_jac(f_basic, helpers, delay, n) for delay in delays]
-					
-					for _ in range(n):
-						expression = 0
-						for delay,jac in zip(delays,jacs):
-							for k,entry in enumerate(next(jac)):
-								expression += entry * y(k+(i+1)*n, t-delay)
-						
-						yield sympy.simplify(expression, ratio=1.0)
+			f_lyap = tangent_vector_f(f_basic, helpers, n, self._n_lyap, delays)
 		else:
 			f_lyap = []
 		
