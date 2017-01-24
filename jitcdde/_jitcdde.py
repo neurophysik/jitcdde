@@ -84,12 +84,14 @@ def provide_advanced_symbols():
 def _handle_input(f_sym,n):
 	if isgeneratorfunction(f_sym):
 		n = n or sum(1 for _ in f_sym())
-		return ( f_sym, n )
+		return f_sym, n
+	elif f_sym == []:
+		return f_sym, n
 	else:
 		len_f = len(f_sym)
-		if (n is not None) and(len_f != n):
+		if (n is not None) and (len_f != n):
 			raise ValueError("len(f_sym) and n do not match.")
-		return (lambda: (entry.doit() for entry in f_sym), len_f)
+		return (lambda: (entry.doit() for entry in f_sym)), len_f
 
 def _depends_on_any(helper, other_helpers):
 	for other_helper in other_helpers:
@@ -169,6 +171,9 @@ class jitcdde(object):
 	n : integer
 		Length of `f_sym`. While JiTCDDE can easily determine this itself (and will, if necessary), this may take some time if `f_sym` is a generator function and `n` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
 	
+	delays : iterable of SymPy expressions or floats
+		The delays of the dynamics. If not given, JiTCDDE will determine these itself if needed. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
+	
 	max_delay : number
 		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
 	
@@ -182,12 +187,18 @@ class jitcdde(object):
 		location of a module file from which functions are to be loaded (see `save_compiled`). If you use this, you need not give `f_sym` as an argument, but if you do, you must give `n` and `max_delay`. Also note that the integrator may lake some functionalities, depending on the arguments you provide.
 	"""
 	
-	def __init__(self, f_sym=[], helpers=None, n=None, max_delay=None, control_pars=[], verbose=True, module_location=None):
+	def __init__(
+		self,
+		f_sym = [],
+		helpers = None,
+		n = None,
+		delays = None,
+		max_delay = None,
+		control_pars = [],
+		verbose = True,
+		module_location = None
+		):
 		if module_location is not None:
-			if not f_sym:
-				def f():
-					yield None
-				f_sym = f
 			self.jitced = module_from_path(module_location)
 			self.compile_attempt = True
 		else:
@@ -204,19 +215,33 @@ class jitcdde(object):
 		self.integration_parameters_set = False
 		self.DDE = None
 		self.verbose = verbose
-		self._delays = None
-		self.max_delay = max_delay or _find_max_delay(self.delays)
-		assert self.max_delay >= 0.0, "Negative maximum delay."
+		self.delays = delays
+		self.max_delay = max_delay
 	
 	@property
 	def delays(self):
 		if self._delays is None:
-			self._delays = _get_delays(self.f_sym, self.helpers)
+			self.delays = _get_delays(self.f_sym, self.helpers)
 		return self._delays
 	
 	@delays.setter
 	def delays(self, new_delays):
 		self._delays = new_delays
+		if (self._delays is not None) and (0 not in self._delays):
+			self._delays.append(0)
+	
+	@property
+	def max_delay(self):
+		if self._max_delay is None:
+			self._max_delay = _find_max_delay(self.delays)
+		assert self._max_delay >= 0.0, "Negative maximum delay."
+		return self._max_delay
+	
+	@max_delay.setter
+	def max_delay(self, new_max_delay):
+		if new_max_delay is not None:
+			assert new_max_delay >= 0.0, "Negative maximum delay."
+		self._max_delay = new_max_delay
 	
 	def _tmpfile(self, filename=None):
 		if self._tmpdir is None:
@@ -831,9 +856,6 @@ class jitcdde(object):
 		min_distance : float
 			If two required steps are closer than this, they will be treated as one.
 		
-		delays : iterable of floats
-			all delays of the dynamics. JiTCDDE will determine these itself (and will do so, if `delays` is `None`), but it may take some time for larger systems and is not possible with a loaded module file (unless `f_sym` was given).
-		
 		Returns
 		-------
 		state : NumPy array
@@ -843,19 +865,15 @@ class jitcdde(object):
 		assert min_distance > 0, "min_distance must be positive."
 		assert type(propagations) == int, "Non-integer number of propagations."
 		
-		if delays is not None:
-			self.delays = delays
-		else:
-			if not all(sympy.sympify(delay).is_Number for delay in self.delays):
-				raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
-			self.delays = list(map(float, self.delays))
+		if not all(sympy.sympify(delay).is_Number for delay in self.delays):
+			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
+		self.delays = list(map(float, self.delays))
 		
 		steps = _propagate_delays(self.delays, propagations, min_distance)
 		steps.remove(0)
 		steps.sort()
 		
 		start_time = self.t
-		
 		for step in steps:
 			result = self.integrate_blindly(start_time+step, max_step)
 		
@@ -866,6 +884,7 @@ class jitcdde(object):
 			shutil.rmtree(self._tmpdir)
 		except (OSError, AttributeError, TypeError):
 			pass
+
 
 def _jac(f, helpers, delay, n):
 	t,y = provide_basic_symbols()
@@ -897,55 +916,51 @@ class jitcdde_lyap(jitcdde):
 	----------
 	n_lyap : integer
 		Number of Lyapunov exponents to calculate.
-		
-	delays : iterable of SymPy expressions
-		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	"""
 	
-	def __init__(self, f_sym, helpers=[], n=None, max_delay=None, control_pars=[], n_lyap=1, delays=None):
+	def __init__(self, f_sym=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], n_lyap=1, module_location=None):
 		warn("The output of integrate for jitcdde_lyap was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
 		
 		f_basic, n = _handle_input(f_sym,n)
 		
-		if delays:
-			act_delays = delays + ([] if (0 in delays) else [0])
-		else:
-			act_delays = _get_delays(f_basic, helpers)
-		max_delay = max_delay or _find_max_delay(act_delays)
-		assert max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
-		
 		assert n_lyap>=0, "n_lyap negative"
 		self._n_lyap = n_lyap
-		
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
+		delays = delays or _get_delays(f_basic, helpers)
 		
-		t,y = provide_basic_symbols()
-		
-		def f_lyap():
-			#Replace with yield from, once Python 2 is dead:
-			for entry in f_basic():
-				yield entry
+		if f_basic:
+			t,y = provide_basic_symbols()
 			
-			for i in range(self._n_lyap):
-				jacs = [_jac(f_basic, helpers, delay, n) for delay in act_delays]
+			def f_lyap():
+				#Replace with yield from, once Python 2 is dead:
+				for entry in f_basic():
+					yield entry
 				
-				for _ in range(n):
-					expression = 0
-					for delay,jac in zip(act_delays,jacs):
-						for k,entry in enumerate(next(jac)):
-							expression += entry * y(k+(i+1)*n, t-delay)
+				for i in range(self._n_lyap):
+					jacs = [_jac(f_basic, helpers, delay, n) for delay in delays]
 					
-					yield sympy.simplify(expression, ratio=1.0)
+					for _ in range(n):
+						expression = 0
+						for delay,jac in zip(delays,jacs):
+							for k,entry in enumerate(next(jac)):
+								expression += entry * y(k+(i+1)*n, t-delay)
+						
+						yield sympy.simplify(expression, ratio=1.0)
+		else:
+			f_lyap = []
 		
 		super(jitcdde_lyap, self).__init__(
 			f_lyap,
 			helpers = helpers,
 			n = n*(self._n_lyap+1),
+			delays = delays,
 			max_delay = max_delay,
-			control_pars = control_pars
+			control_pars = control_pars,
+			module_location = module_location
 			)
 		
 		self.n_basic = n
+		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 	
 	def add_past_point(self, time, state, derivative):
 		new_state = [state]
