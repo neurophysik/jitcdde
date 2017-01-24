@@ -353,7 +353,7 @@ class jitcdde(object):
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
 		f_sym_wc = self.f_sym()
-		helpers_wc = self.helpers
+		helpers_wc = [helper for helper in self.helpers]
 		
 		if simplify:
 			f_sym_wc = (entry.simplify(ratio=1.0) for entry in f_sym_wc)
@@ -382,7 +382,6 @@ class jitcdde(object):
 				(control_par, sympy.Symbol("self->parameter_"+control_par.name))
 				for control_par in self.control_pars
 			]
-		
 		
 		def finalise(expression):
 			expression = expression.subs(self.substitutions)
