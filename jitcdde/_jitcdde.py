@@ -1063,7 +1063,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	"""
 	
-	def __init__(self, f_sym, vectors, helpers=[], n=None, delays=None, max_delay=None, control_pars=[], module_location=None):
+	def __init__(self, f_sym=[], vectors=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], module_location=None):
 		warn("The output of integrate for jitcdde_lyap_tangential was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
 		
 		f_basic, n = _handle_input(f_sym,n)
