@@ -353,8 +353,7 @@ class jitcdde(object):
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
 		f_sym_wc = self.f_sym()
-		# copy helpers:
-		helpers_wc = [helper for helper in self.helpers]
+		helpers_wc = list(self.helpers) # list is here for copying
 		
 		if simplify:
 			f_sym_wc = (entry.simplify(ratio=1.0) for entry in f_sym_wc)
