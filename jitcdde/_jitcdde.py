@@ -909,7 +909,7 @@ def _jac(f, helpers, delay, n):
 		yield line(f_entry)
 
 
-def tangent_vector_f(f, helpers, n, n_lyap, delays):
+def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0):
 	t,y = provide_basic_symbols()
 	
 	def f_lyap():
@@ -927,6 +927,9 @@ def tangent_vector_f(f, helpers, n, n_lyap, delays):
 						expression += entry * y(k+(i+1)*n, t-delay)
 				
 				yield sympy.simplify(expression, ratio=1.0)
+		
+		for _ in range(zero_padding):
+			yield sympy.sympify(0)
 	
 	return f_lyap
 
@@ -1073,7 +1076,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		delays = delays or _get_delays(f_basic, helpers)
 		
 		if f_basic:
-			f_lyap = tangent_vector_f(f_basic, helpers, n, 1, delays)
+			f_lyap = tangent_vector_f(f_basic, helpers, n, 1, delays, zero_padding=2*n*len(vectors))
 		else:
 			f_lyap = []
 		
