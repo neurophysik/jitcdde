@@ -234,7 +234,7 @@ class jitcdde(object):
 	def max_delay(self):
 		if self._max_delay is None:
 			self._max_delay = _find_max_delay(self.delays)
-		assert self._max_delay >= 0.0, "Negative maximum delay."
+			assert self._max_delay >= 0.0, "Negative maximum delay."
 		return self._max_delay
 	
 	@max_delay.setter
@@ -353,6 +353,7 @@ class jitcdde(object):
 		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
 		f_sym_wc = self.f_sym()
+		# copy helpers:
 		helpers_wc = [helper for helper in self.helpers]
 		
 		if simplify:
@@ -1059,7 +1060,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	"""
 	
-	def __init__(self, f_sym, vectors, helpers=[], n=None, max_delay=None, control_pars=[], delays=None):
+	def __init__(self, f_sym, vectors, helpers=[], n=None, delays=None, max_delay=None, control_pars=[], module_location=None):
 		warn("The output of integrate for jitcdde_lyap_tangential was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
 		
 		f_basic, n = _handle_input(f_sym,n)
@@ -1068,45 +1069,27 @@ class jitcdde_lyap_tangential(jitcdde):
 			assert len(vector[0]) == n
 			assert len(vector[1]) == n
 		
-		if delays:
-			act_delays = delays + ([] if (0 in delays) else [0])
-		else:
-			act_delays = _get_delays(f_basic, helpers)
-		max_delay = max_delay or _find_max_delay(act_delays)
-		assert max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
-
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
+		delays = delays or _get_delays(f_basic, helpers)
 		
-		t,y = provide_basic_symbols()
-		
-		def f_lyap():
-			#Replace with yield from, once Python 2 is dead:
-			for entry in f_basic():
-				yield entry
-			
-			jacs = [_jac(f_basic, helpers, delay, n) for delay in act_delays]
-			
-			for _ in range(n):
-				expression = 0
-				for delay,jac in zip(act_delays,jacs):
-					for k,entry in enumerate(next(jac)):
-						expression += entry * y(k+n, t-delay)
-				
-				yield sympy.simplify(expression, ratio=1.0)
-			
-			for _ in range(2*n*len(vectors)):
-				yield sympy.sympify(0)
+		if f_basic:
+			f_lyap = tangent_vector_f(f_basic, helpers, n, 1, delays)
+		else:
+			f_lyap = []
 		
 		super(jitcdde_lyap_tangential, self).__init__(
 			f_lyap,
 			helpers = helpers,
 			n = n*(2+2*len(vectors)),
+			delays = delays,
 			max_delay = max_delay,
-			control_pars = control_pars
+			control_pars = control_pars,
+			module_location = module_location
 			)
 		
 		self.n_basic = n
 		self.vectors = vectors
+		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 	
 	def add_past_point(self, time, state, derivative):
 		padding = len(self.vectors)*2*self.n_basic
