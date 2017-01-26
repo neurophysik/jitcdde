@@ -313,6 +313,6 @@ class remove_projection_test(unittest.TestCase):
 		
 		
 
-
-unittest.main(buffer=True)
+if __name__ == "__main__":
+	unittest.main(buffer=True)
 

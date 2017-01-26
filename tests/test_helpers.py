@@ -21,4 +21,5 @@ class TestCollectArguments(unittest.TestCase):
 				(sympy.Integer(46), sympy.Integer(47), sympy.Integer(48))}
 			)
 
-unittest.main(buffer=True)
+if __name__ == "__main__":
+	unittest.main(buffer=True)

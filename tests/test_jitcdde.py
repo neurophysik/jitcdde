@@ -256,5 +256,7 @@ class TestFindMaxDelay(unittest.TestCase):
 		with self.assertRaises(ValueError):
 			_find_max_delay(_get_delays(g))
 
-unittest.main(buffer=True)
+
+if __name__ == "__main__":
+	unittest.main(buffer=True)
 

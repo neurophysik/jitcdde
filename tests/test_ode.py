@@ -96,4 +96,5 @@ class blind_integration_and_tiny_delay(tiny_delay):
 
 
 
-unittest.main(buffer=True)
+if __name__ == "__main__":
+	unittest.main(buffer=True)
