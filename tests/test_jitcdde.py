@@ -96,6 +96,17 @@ class TestIntegrationLambda(TestIntegration):
 	def generator(self):
 		self.DDE.generate_f_lambda()
 
+class TestIntegrationSafeAndLoad(TestIntegration):
+	@classmethod
+	def setUpClass(self):
+		DDE_orig = jitcdde(f)
+		DDE_orig.save_compiled("compiled.so", overwrite=True)
+		self.DDE = jitcdde(n=6, module_location="compiled.so", delays=[delay])
+		self.DDE.set_integration_parameters(**test_parameters)
+	
+	def generator(self):
+		pass
+
 class TestIntegrationChunks(TestIntegration):
 	def generator(self):
 		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
