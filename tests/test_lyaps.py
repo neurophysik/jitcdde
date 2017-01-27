@@ -1,0 +1,100 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function
+from jitcdde import (
+	provide_advanced_symbols,
+	jitcdde_lyap,
+	UnsuccessfulIntegration,
+	_find_max_delay, _get_delays,
+	DEFAULT_COMPILE_ARGS
+	)
+
+import sympy
+import numpy as np
+from numpy.testing import assert_allclose
+import unittest
+from scipy.stats import sem
+
+compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+
+t, y, current_y, past_y, anchors = provide_advanced_symbols()
+
+omega = np.array([0.88167179, 0.87768425])
+delay = 4.5
+
+f = [
+	omega[0] * (-y(1) - y(2)),
+	omega[0] * (y(0) + 0.165 * y(1)),
+	omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
+	omega[1] * (-y(4) - y(5)) + 0.25 * (y(0,t-delay) - y(3)),
+	omega[1] * (y(3) + 0.165 * y(4)),
+	omega[1] * (0.2 + y(5) * (y(3) - 10.0))
+	]
+
+test_parameters = {
+	"raise_exception": True,
+	"rtol": 1e-7,
+	"atol": 1e-7,
+	"pws_rtol": 1e-3,
+	"pws_atol": 1e-3,
+	"first_step": 30,
+	"max_step": 100,
+	"min_step": 1e-30,
+	}
+
+lyap_controls = [0.0806, 0, -0.0368, -0.1184]
+
+class TestIntegration(unittest.TestCase):
+	def setUp(self):
+		self.DDE = jitcdde_lyap(f, n_lyap=len(lyap_controls))
+		self.DDE.add_past_point(-delay, np.random.random(6), np.random.random(6))
+		self.DDE.add_past_point(0.0, np.random.random(6), np.random.random(6))
+		self.DDE.set_integration_parameters(**test_parameters)
+	
+	def test_integrate_blindly(self):
+		self.DDE.integrate_blindly(100.0, 0.1)
+	
+	def test_step_on_discontinuities(self):
+		self.DDE.step_on_discontinuities(max_step=0.1)
+	
+	def tearDown(self):
+		lyaps = []
+		weights = []
+		for T in np.arange(self.DDE.t, self.DDE.t+1000, 10):
+			_, lyap, weight = self.DDE.integrate(T)
+			lyaps.append(lyap)
+			weights.append(weight)
+		lyaps = np.vstack(lyaps)
+		
+		lyap_start = 40
+		for i,lyap_control in enumerate(lyap_controls):
+			lyap = np.average(lyaps[lyap_start:,i], weights=weights[lyap_start:])
+			stderr = sem(lyaps[lyap_start:,i])
+			print(lyap,stderr)
+			self.assertAlmostEqual(lyap_control, lyap, delta=2*stderr)
+
+filename_index = 0
+def get_filename():
+	global filename_index
+	filename_index += 1
+	return "lyap_compiled%i.so" % filename_index
+
+class TestSaveAndLoad(TestIntegration):
+	def setUp(self):
+		DDE_orig = jitcdde_lyap(f, n_lyap=len(lyap_controls))
+		filename = get_filename()
+		DDE_orig.save_compiled(filename, overwrite=True)
+		self.DDE = jitcdde_lyap(
+			n=6,
+			module_location=filename,
+			delays=[delay],
+			n_lyap=len(lyap_controls)
+			)
+		self.DDE.add_past_point(-delay, np.random.random(6), np.random.random(6))
+		self.DDE.add_past_point(0.0, np.random.random(6), np.random.random(6))
+		self.DDE.set_integration_parameters(**test_parameters)
+
+if __name__ == "__main__":
+	unittest.main(buffer=True)
+
