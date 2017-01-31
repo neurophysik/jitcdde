@@ -842,7 +842,7 @@ class jitcdde(object):
 		"""
 		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped.
 		
-		This only makes sense if you just defined the past (via `add_past_point`) and start integrating or just reset the integrator.
+		This only makes sense if you just defined the past (via `add_past_point`) and start integrating, just reset the integrator, or changed control parameters.
 		
 		Parameters
 		----------
