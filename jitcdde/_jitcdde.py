@@ -909,26 +909,30 @@ def _jac(f, helpers, delay, n):
 
 
 def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0):
-	t,y = provide_basic_symbols()
-	
-	def f_lyap():
-		#Replace with yield from, once Python 2 is dead:
-		for entry in f():
-			yield entry
+	if f:
+		t,y = provide_basic_symbols()
 		
-		for i in range(n_lyap):
-			jacs = [_jac(f, helpers, delay, n) for delay in delays]
+		def f_lyap():
+			#Replace with yield from, once Python 2 is dead:
+			for entry in f():
+				yield entry
 			
-			for _ in range(n):
-				expression = 0
-				for delay,jac in zip(delays,jacs):
-					for k,entry in enumerate(next(jac)):
-						expression += entry * y(k+(i+1)*n, t-delay)
+			for i in range(n_lyap):
+				jacs = [_jac(f, helpers, delay, n) for delay in delays]
 				
-				yield sympy.simplify(expression, ratio=1.0)
-		
-		for _ in range(zero_padding):
-			yield sympy.sympify(0)
+				for _ in range(n):
+					expression = 0
+					for delay,jac in zip(delays,jacs):
+						for k,entry in enumerate(next(jac)):
+							expression += entry * y(k+(i+1)*n, t-delay)
+					
+					yield sympy.simplify(expression, ratio=1.0)
+			
+			for _ in range(zero_padding):
+				yield sympy.sympify(0)
+	
+	else:
+		return []
 	
 	return f_lyap
 
@@ -951,10 +955,7 @@ class jitcdde_lyap(jitcdde):
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		delays = delays or _get_delays(f_basic, helpers)
 		
-		if f_basic:
-			f_lyap = tangent_vector_f(f_basic, helpers, n, self._n_lyap, delays)
-		else:
-			f_lyap = []
+		f_lyap = tangent_vector_f(f_basic, helpers, n, self._n_lyap, delays)
 		
 		super(jitcdde_lyap, self).__init__(
 			f_lyap,
@@ -1074,10 +1075,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		delays = delays or _get_delays(f_basic, helpers)
 		
-		if f_basic:
-			f_lyap = tangent_vector_f(f_basic, helpers, n, 1, delays, zero_padding=2*n*len(vectors))
-		else:
-			f_lyap = []
+		f_lyap = tangent_vector_f(f_basic, helpers, n, 1, delays, zero_padding=2*n*len(vectors))
 		
 		super(jitcdde_lyap_tangential, self).__init__(
 			f_lyap,
