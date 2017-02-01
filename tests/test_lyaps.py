@@ -72,7 +72,7 @@ class TestIntegration(unittest.TestCase):
 			lyap = np.average(lyaps[lyap_start:,i], weights=weights[lyap_start:])
 			stderr = sem(lyaps[lyap_start:,i])
 			print(lyap,stderr)
-			self.assertAlmostEqual(lyap_control, lyap, delta=2*stderr)
+			self.assertAlmostEqual(lyap_control, lyap, delta=3*stderr)
 
 filename_index = 0
 def get_filename():
