@@ -5,7 +5,7 @@ from __future__ import print_function, absolute_import, division
 
 from inspect import isgeneratorfunction
 from warnings import warn
-from itertools import chain, count
+from itertools import count
 from traceback import format_exc
 import jitcdde._python_core as python_core
 import sympy
@@ -14,7 +14,6 @@ from os import path as path
 from setuptools import setup, Extension
 from sys import version_info, modules
 from tempfile import mkdtemp
-from jinja2 import Environment, FileSystemLoader
 from jitcdde._helpers import (
 	ensure_suffix, count_up,
 	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
@@ -23,7 +22,6 @@ from jitcdde._helpers import (
 	collect_arguments,
 	random_direction
 	)
-from numbers import Number
 import shutil
 
 _default_min_step = 1e-10
