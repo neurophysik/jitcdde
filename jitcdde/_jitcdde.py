@@ -687,12 +687,16 @@ class jitcdde(object):
 	
 	def _control_for_min_step(self):
 		if self.dt < self.min_step:
-			raise UnsuccessfulIntegration(
-				"""Could not integrate with the given tolerance parameters:
-				rtol: %e
-				atol: %e
-				min_step: %e
-				""" % (self.atol, self.rtol, self.min_step))
+			raise UnsuccessfulIntegration("\n"
+				"Could not integrate with the given tolerance parameters:\n\n"
+				"rtol: %e\n"
+				"atol: %e\n"
+				"min_step: %e\n\n"
+				"The most likely reasons for this are:\n"
+				"• You did not sufficiently address initial discontinuities.\n"
+				"• The DDE is ill-posed or stiff.\n"
+				"• You did not allow for an absolute error tolerance (atol) though your DDE calls for it."
+				% (self.atol, self.rtol, self.min_step))
 	
 	def _increase_chance(self, new_dt):
 		q = new_dt/self.last_pws
