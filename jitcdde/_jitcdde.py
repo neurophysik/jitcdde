@@ -164,7 +164,7 @@ class jitcdde(object):
 		The `i`-th element is the `i`-th component of the value of the DDE’s derivative :math:`f(t,y)`.
 	
 	helpers : list of length-two iterables, each containing a SymPy symbol and a SymPy expression
-		Each helper is a variable that will be calculated before evaluating the derivative and can be used in the latter’s computation. The first component of the tuple is the helper’s symbol as referenced in the derivative or other helpers, the second component describes how to compute it from `t`, `y` and other helpers. This is for example useful to realise a mean-field coupling, where the helper could look like `(mean, sympy.Sum(y(i),(i,0,99))/100)`. (See `example_2` for an example.)
+		Each helper is a variable that will be calculated before evaluating the derivative and can be used in the latter’s computation. The first component of the tuple is the helper’s symbol as referenced in the derivative or other helpers, the second component describes how to compute it from `t`, `y` and other helpers. This is for example useful to realise a mean-field coupling, where the helper could look like `(mean, sympy.Sum(y(i),(i,0,99))/100)`. (See TODO for an example.)
 	
 	n : integer
 		Length of `f_sym`. While JiTCDDE can easily determine this itself (and will, if necessary), this may take some time if `f_sym` is a generator function and `n` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
@@ -330,14 +330,14 @@ class jitcdde(object):
 			This is worthwile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input.
 		
 		chunk_size : integer
-			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. After the generation of each chunk, SymPy’s cache is cleared. See `large_systems` on why this is useful.
+			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. After the generation of each chunk, SymPy’s cache is cleared. See TODO: `large_systems` on why this is useful.
 			
 			If there is an obvious grouping of your :math:`f`, the group size suggests itself for `chunk_size`. For example, if you want to simulate the dynamics of three-dimensional oscillators coupled onto a 40×40 lattice and if the differential equations are grouped first by oscillator and then by lattice row, a chunk size of 120 suggests itself.
 			
 			If smaller than 1, no chunking will happen.
 		
 		extra_compile_args : list of strings
-			Arguments to be handed to the C compiler on top of what Setuptools chooses. In most situations, it’s best not to write your own list, but modify `DEFAULT_COMPILE_ARGS`, e.g., like this: `generate_f_C(extra_compile_args = DEFAULT_COMPILE_ARGS + ["--my-flag"])`. However, if your compiler cannot handle one of the DEFAULT_COMPILE_ARGS, you best write your own arguments.
+			Arguments to be handed to the C compiler on top of what Setuptools chooses. In most situations, it’s best not to write your own list, but modify `DEFAULT_COMPILE_ARGS`, e.g., like this: `generate_f_C(extra_compile_args = DEFAULT_COMPILE_ARGS + ["--my-flag"])`. However, if your compiler cannot handle one of the `DEFAULT_COMPILE_ARGS`, you best write your own arguments.
 
 		verbose : boolean
 			Whether the compiler commands shall be shown. This is the same as Setuptools’ `verbose` setting.
@@ -583,7 +583,7 @@ class jitcdde(object):
 		----------
 		atol : float
 		rtol : float
-			The tolerance of the estimated integration error is determined as :math:`\texttt{atol} + \texttt{rtol}·|y|`. The step-size adaption algorithm is the same as for the GSL. For details see `its documentation <http://www.gnu.org/software/gsl/manual/html_node/Adaptive-Step_002dsize-Control.html>`_.
+			The tolerance of the estimated integration error is determined as :math:`\\texttt{atol} + \\texttt{rtol}·|y|`. The step-size adaption algorithm is the same as for the GSL. For details see `its documentation <http://www.gnu.org/software/gsl/manual/html_node/Adaptive-Step_002dsize-Control.html>`_.
 		
 		first_step : float
 			The step-size adaption starts with this value.
@@ -608,7 +608,7 @@ class jitcdde(object):
 			The maximum and minimum factor by which the step size can be adapted in one adaption step.
 		
 		pws_factor : float
-			Factor of step-size adaptions due to a delay shorter than the time step. If dividing the step size by `pws_factor` moves the delay out of the time step, it is done. If this is not possible and the iterative algorithm does not converge within `pws_max_iterations` or converges within fewer iterations than `pws_factor`, the step size is decreased or increased, respectively, by this factor
+			Factor of step-size adaptions due to a delay shorter than the time step. If dividing the step size by `pws_factor` moves the delay out of the time step, it is done. If this is not possible and the iterative algorithm does not converge within `pws_max_iterations` or converges within fewer iterations than `pws_factor`, the step size is decreased or increased, respectively, by this factor.
 		
 		pws_atol : float
 		pws_rtol : float
@@ -687,7 +687,12 @@ class jitcdde(object):
 	
 	def _control_for_min_step(self):
 		if self.dt < self.min_step:
-			raise UnsuccessfulIntegration("Step size under min_step (%e)." % self.min_step)
+			raise UnsuccessfulIntegration(
+				"""Could not integrate with the given tolerance parameters:
+				rtol: %e
+				atol: %e
+				min_step: %e
+				""" % (self.atol, self.rtol, self.min_step))
 	
 	def _increase_chance(self, new_dt):
 		q = new_dt/self.last_pws
@@ -742,7 +747,7 @@ class jitcdde(object):
 		Returns
 		-------
 		state : NumPy array
-			the computed state of the system at `target_time`. If the integration fails and `raise_exception` is `True`, an array of NaNs is returned.
+			the computed state of the system at `target_time`. If the integration fails and `raise_exception` is `False`, an array of NaNs is returned.
 		"""
 		self._initiate()
 		
