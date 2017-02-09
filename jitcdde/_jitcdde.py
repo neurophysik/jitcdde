@@ -1003,7 +1003,7 @@ class jitcdde_lyap(jitcdde):
 			
 			If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all and the integration time is zero. In this case, the local Lyapunov exponents are returned as `0`, which is as nonsensical as any other result (except perhaps `nan`) but should not matter with a proper weighted averaging.
 			
-		It is essential that you choose `target_time` properly such that orthonormalisation neither happens too often nor too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
+		It is essential that you choose `target_time` properly such that orthonormalisation does not happen too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
 		"""
 		# TODO formula and citation like for JiTCODE?
 		
@@ -1123,7 +1123,7 @@ class jitcdde_lyap_tangential(jitcdde):
 			
 			If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all and the integration time is zero. In this case, the local Lyapunov exponents are returned as `0`, which is as nonsensical as any other result (except perhaps `nan`) but should not matter with a proper weighted averaging.
 		
-		It is essential that you choose `target_time` properly such that orthonormalisation neither happens too often nor too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
+		It is essential that you choose `target_time` properly such that orthonormalisation does not happen too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
 		"""
 		
 		self._initiate()
