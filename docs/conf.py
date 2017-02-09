@@ -15,7 +15,7 @@ MOCK_MODULES = [
 	'', 'jitcdde', 'jitcdde._helpers', 'jitcdde._python_core']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-#sys.path.insert(0,os.path.abspath("../examples"))
+sys.path.insert(0,os.path.abspath("../examples"))
 sys.path.insert(0,os.path.abspath("../jitcdde"))
 
 needs_sphinx = '1.3'

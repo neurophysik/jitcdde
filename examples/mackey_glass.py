@@ -2,14 +2,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Suppose we want to integrate the Mackey–Glass delay differential equation: :math:`\dot{y} = f(y)` with :math:`y∈ℝ`, 
+Suppose we want to integrate the Mackey–Glass delay differential equation: :math:`\\dot{y} = f(y)` with :math:`y∈ℝ`, 
 
 .. math::
 
-	f(y) = β\frac{y(t-τ)}{1+y(t-τ)^n} - γ·y(t),
+	f(y) = β \\frac{y(t-τ)}{1+y(t-τ)^n} - γ·y(t),
 	
 and with :math:`β = 0.25`, :math:`γ = 0.1`, and :math:`n = 10`.
 The following code integrates the above for 10000 time units, with :math:`y(t<0) = 1`, and writes the results to :code:`timeseries.dat`:
+
+.. literalinclude:: ../examples/mackey_glass.py
+	:linenos:
+	:dedent: 1
+	:start-after: exampl\x65-start
+	:lines: 4-7
 """
 
 if __name__ == "__main__":
