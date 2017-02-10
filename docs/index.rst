@@ -27,8 +27,8 @@ This approach has the following advantages
 
 If compilation fails to work for whatever reason, pure Python functions can be employed as a fallback.
 
-A brief and necessary overview of the mathematics
--------------------------------------------------
+A brief mathematic background
+-----------------------------
 
 This documentation assumes that the delay differential equation (DDE) you want to solve is:
 
@@ -51,6 +51,80 @@ A simple example
 .. automodule:: mackey_glass
 
 
+.. _discontinuities:
+
+Dealing with initial discontinuities
+------------------------------------
+
+As already examplified in `example`, :math:`\dot{y}` will usually be discontinuous at the start of the integration:
+Before that time, it is directly defined by an Hermite interpolation of the anchors that you supply; afterwards, it is determined via evaluating :math:`f`.
+As future values of :math:`f` depend on the past via the delay terms, it is also non-smooth at other times, namely :math:`τ_1, τ_2, …, 2τ_1, τ_1 + τ_2, 2τ_2, …`.
+If an integration step contains one of these points, this may violate the conditions of Runge–Kutta integrations (for a low-order discontinuity) and makes the error estimate be very high, no matter the step size.
+Fortunately, the discontinuities are quickly “smoothed out” (i.e., reduced in order) with time evolution and can then be ignored.
+To make this happen, you have three options:
+
+* `step_on_discontinuities` – This chooses the integration steps such that they fall on the discontinuities. In most cases, this is the easiest and fastest solution to this problem.
+
+* `integrate_blindly` – This integrates the system for some time with a fixed step size, ignoring the error estimate. You have to take care that all parameters are reasonable. This is a good choice if you have a lot of different delays or time- or state-dependent delays.
+
+* Carefully chosen initial conditions – of course, you can define the past such that the derivative for the last anchor is identical to the value of :math:`f` as determined with the anchors. To find such initial conditions, you usally have to solve a non-linear equation system. If you are not interested in the general dynamics of the system, but the evolution of a very particular initial condition, this may be given by default (otherwise your model is probably worthless).
+
+Delays within the step
+----------------------
+
+If the delay becomes shorter than the step size, we need a delayed state to evaluate `f` before we have a final result for the required interpolation anchors.
+With other words, the intergration step depends on its own result.
+
+JiTCDDE addresses this problem mainly in the same manner as Shampine and Thompson [ST01]_:
+
+* If reducing the step size by a small factor (`pws_factor`) makes it smaller than the delay, this is done.
+
+* Otherwise, the result of an intergration step is calculated iteratively as follows:
+	
+	1. Attempt an integration step and **extrapolate** the required delayed states from the existing results.
+	
+	2. Attempt the same step again and **interpolate** the required delayed states using the result of the previous attempt.
+	
+	3. If the results of the last two attempts are identical within an absolute tolerance of `pws_atol` and relative tolerance of `pws_rtol`, accept the result of the last attempt. Otherwise go to step 2. If no such convergence has happened within `pws_max_iterations`, reduce the step size by `pws_factor`.
+
+A problem of this approach is that as soon as it reduces the step size, the error estimates from the adaptive Runge–Kutta routines are not directly useful anymore since almost always insist on increasing the step size.
+Ignoring this may need to useless integration steps (and thus wasted time) due to the step size being adapted back and forth.
+Moreover, throttling step size increases (which is generally reasonable) may result in the step size being “trapped” at an unnecessary low value.
+As far as I can tell, Shampine and Thompson [ST01]_ offer no solution to this.
+
+To address this issue, JiTCDDE employs the following criteria for increasing the step size when the recommended step size (from the adaptive Runge–Kutta method) is larger than the current one:
+
+* If the shortest delay is larger than the recommended step size, the step size is increased.
+
+* If the calculating the next step took less than `pws_factor` iterations and the recommended step size is bigger than `pws_factor` times the shortest delay, the step size is increased.
+
+* In all other cases, the step size is increased with a chance of `pws_base_increase_chance`.
+
+To be precise, the above sharp criteria are intentionally blurred such that the probability to increase the step size continuously depends on the mentioned factors.
+Finally, the parameter `pws_fuzzy_increase` determines whether the increase is actually depends on chance or is deterministic (which may be useful for some applications).
+This parameter and the others mentioned above can be controlled with `set_integration_parameters`.
+
+Time- and state-dependent delays
+--------------------------------
+
+There is nothing in JiTCDDE’s implementation that keeps you from making delays time- or state-dependent.
+However, the error estimate is not accurate anymore as it does not take into account the inaccuracy caused by the changing delay.
+This should not be a problem if your delays change sufficiently slowly.
+
+Networks and large equations
+----------------------------
+
+JiTCDDE is specifically designed to be able to handle large delay differential equations, as they arise, e.g., in networks.
+See the documentation of JiTCODE on how to best do this, in particular the sections:
+
+* `Handling very large differential equations <http://jitcode.readthedocs.io/en/latest/#handling-very-large-differential-equations>`_
+* `A more complicated example <http://jitcode.readthedocs.io/en/latest/#module-SW_of_Roesslers>`_
+
+Lyapunov exponents
+------------------
+
+TODO
+
 Command reference
 -----------------
 
@@ -62,13 +136,13 @@ Command reference
 References
 ----------
 
-.. [ST01] L.F. Shampine, S. Thompson: Solving DDEs in Matlab, Applied Numerical Mathematics 37, pp. 441–458 (2001), `10.1016/S0168-9274(00)00055-6 <http://dx.doi.org/10.1016/S0168-9274(00)00055-6>`_.
+.. [ST01] L.F. Shampine, S. Thompson: Solving DDEs in Matlab, Applied Numerical Mathematics 37, pp. 441–458 (2001), `10.1016/S0168-9274(00)00055-6 <http://dx.doi.org/10.1016/S0168-9274(00)00055-6>`_.
 
-.. [BS89] P. Bogacki, L.F. Shampine: A 3(2) pair of Runge–Kutta formulas, Applied Mathematics Letters 2, pp. 321–325 (1989), `10.1016/0893-9659(89)90079-7 <http://dx.doi.org/10.1016/0893-9659(89)90079-7>`_.
+.. [BS89] P. Bogacki, L.F. Shampine: A 3(2) pair of Runge–Kutta formulas, Applied Mathematics Letters 2, pp. 321–325 (1989), `10.1016/0893-9659(89)90079-7 <http://dx.doi.org/10.1016/0893-9659(89)90079-7>`_.
 
-.. [F82] J. D. Farmer: Chaotic attractors of an infinite-dimensional dynamical system, Physica D 4, pp. 366–393 (1982), `10.1016/0167-2789(82)90042-2 <http://dx.doi.org/10.1016/0167-2789(82)90042-2>`_.
+.. [F82] J.D. Farmer: Chaotic attractors of an infinite-dimensional dynamical system, Physica D 4, pp. 366–393 (1982), `10.1016/0167-2789(82)90042-2 <http://dx.doi.org/10.1016/0167-2789(82)90042-2>`_.
 
-.. [BGGS80]  G. Benettin, L. Galgani, A. Giorgilli, and J.-M. Strelcyn: Lyapunov Characteristic Exponents for smooth dynamical systems and for Hamiltonian systems; A method for computing all of them. Meccanica 15, pp. 9–30 (1980), `10.1007/BF02128236 <http://dx.doi.org/10.1007/BF02128236>`_.
+.. [BGGS80]  G. Benettin, L. Galgani, A. Giorgilli, and J.-M. Strelcyn: Lyapunov Characteristic Exponents for smooth dynamical systems and for Hamiltonian systems; A method for computing all of them. Meccanica 15, pp. 9–30 (1980), `10.1007/BF02128236 <http://dx.doi.org/10.1007/BF02128236>`_.
 
 .. _JiTCODE: http://github.com/neurophysik/jitcode
 

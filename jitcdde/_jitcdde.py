@@ -34,6 +34,8 @@ def provide_basic_symbols():
 	"""
 	provides the basic symbols that must be used to define the differential equation.
 	
+	You may just as well define the respective symbols and functions directly with SymPy, but using this function is the best way to get the most of future versions of JiTCODE, in particular avoiding incompatibilities.
+	
 	Returns
 	-------
 	t : SymPy symbol
@@ -47,8 +49,8 @@ def provide_basic_symbols():
 def provide_advanced_symbols():
 	"""
 	provides all symbols that you may want to use to to define the differential equation.
-	
-	You may just as well define the respective symbols and functions directly with SymPy, but using this function is the best way to get the most of future versions of JiTCODE, in particular avoiding incompatibilities. If you wish to use other symbols for the dynamical variables, you can use `convert_to_required_symbols` for conversion.
+	An example where the additional symbols (in comparison to `provide_basic_symbols`) can come in handy is that you have many terms with the same delay and want to define helpers exploiting this.
+	To get an idea how to use these symbols, it may help to take a look at a how the basic symbols expand.
 	
 	Returns
 	-------
@@ -608,7 +610,7 @@ class jitcdde(object):
 			The maximum and minimum factor by which the step size can be adapted in one adaption step.
 		
 		pws_factor : float
-			Factor of step-size adaptions due to a delay shorter than the time step. If dividing the step size by `pws_factor` moves the delay out of the time step, it is done. If this is not possible and the iterative algorithm does not converge within `pws_max_iterations` or converges within fewer iterations than `pws_factor`, the step size is decreased or increased, respectively, by this factor.
+			Factor of step-size adaptions due to a delay shorter than the time step. If dividing the step size by `pws_factor` moves the delay out of the time step, it is done. If this is not possible, if the iterative algorithm does not converge within `pws_max_iterations`, or if it converges within fewer iterations than `pws_factor`, the step size is decreased or increased, respectively, by this factor.
 		
 		pws_atol : float
 		pws_rtol : float
