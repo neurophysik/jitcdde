@@ -468,7 +468,7 @@ class jitcdde(object):
 				self._modulename,
 				sources = [sourcefile],
 				extra_link_args = ["-lm"],
-				include_dirs = [get_include()],
+				include_dirs = [np.get_include()],
 				extra_compile_args = extra_compile_args,
 				)],
 			script_args = [
