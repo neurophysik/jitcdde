@@ -848,7 +848,6 @@ class jitcdde(object):
 		propagations = 1,
 		max_step = None,
 		min_distance = 1e-5,
-		delays = None
 		):
 		"""
 		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped.
