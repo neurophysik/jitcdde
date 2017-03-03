@@ -115,15 +115,40 @@ Networks and large equations
 ----------------------------
 
 JiTCDDE is specifically designed to be able to handle large delay differential equations, as they arise, e.g., in networks.
-See the documentation of JiTCODE on how to best do this, in particular the sections:
+The caveats, tools, and tricks when doing this are the same as for JiTCODE; so please refer to its documentation, in particular the sections:
 
 * `Handling very large differential equations <http://jitcode.readthedocs.io/en/latest/#handling-very-large-differential-equations>`_
 * `A more complicated example <http://jitcode.readthedocs.io/en/latest/#module-SW_of_Roesslers>`_
 
-Lyapunov exponents
-------------------
 
-TODO
+Calculating Lyapunov exponents with `jitcdde_lyap`
+--------------------------------------------------
+
+`jitcdde_lyap` is a simple extension of `jitcdde` that almost automatically handles calculating Lyapunov exponents by evolving separation functions.
+It works just like `jitcdde`, except that it generates and integrates additional differential equations for the separation functions.
+After every call of `integrate`, the separation functions are orthonormalised, and the “local” Lyapunov exponents for this integration step are returned alongside with the system’s state.
+These can then be further processed to obtain the Lyapunov exponents.
+The separation functions are intialised with random data, and you have to take care of the preiterations that the separation functions require to align themselves.
+
+The method employed here is similar to Farmer’s [F82]_, which in turn is an adaption of the method described by Benettin et al. [BGGS80]_ to delayed systems.
+As the state of delayed systems is also defined by their recent past, one has to consider the past of tangent vectors (as used in Benettin et. al.) as well, which are called separation functions.
+Farmer approximates these separation functions by fine equidistantly sampled recordings of the past on which he applies the standard scalar product for purposes of computing norms and orthonormalisation.
+This approach does not translate well to adaptive step sizes as JiTCDDE employs.
+Instead, JiTCDDE employs as a scalar product between two separation functions :math:`g` and :math:`h`:
+
+.. math::
+
+	\int_{t-τ_\text{max}}^t
+	\mathcal{H}_f(\mathfrak{t}) \;
+	\mathcal{H}_g(\mathfrak{t}) \;
+	\mathrm{d} \mathfrak{t},
+
+where :math:`\mathcal{H}` denotes the piecewise cubic Hermite interpolant (which is also used for obtaining past states).
+The matrix induced by this scalar product can largely be calculated beforehand and thus the scalar product itself can be evaluated efficiently.
+Note that for the limit of an infinitely fine sampling, this yields the same result as Farmer’s approach.
+
+
+
 
 Command reference
 -----------------
