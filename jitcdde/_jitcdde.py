@@ -306,6 +306,7 @@ class jitcdde(object):
 		assert len(self.past)>1, "You need to add at least two past points first."
 		
 		self.DDE = python_core.dde_integrator(self.f_sym, self.past, self.helpers, self.control_pars)
+		self.compile_attempt = False
 	
 	def generate_f_c(self, *args, **kwargs):
 		raise DeprecationWarning("You are very likely seeing this message because you ignored a warning. You should not do this. Warnings exist for a reason. Well, now it’s an exception. Use generate_f_C instead of generate_f_c.")
