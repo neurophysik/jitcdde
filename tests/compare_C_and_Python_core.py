@@ -170,7 +170,10 @@ for realisation in range(number_of_runs):
 	
 	def remove_projections():
 		d = np.random.uniform(0.1*delay, delay)
-		v = (np.random.random(2), np.random.random(2))
+		if np.random.randint(0,2):
+			v = tuple(np.random.uniform(-1,1,(2,2)))
+		else:
+			v = tuple(np.random.randint(-1,2,(2,2)))
 		
 		A = P.remove_projections(d,[v])
 		B = C.remove_projections(d,[v])
