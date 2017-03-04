@@ -270,8 +270,8 @@ class jitcdde(object):
 			the derivative at the anchor point. The dimension of the array must match the dimension of the differential equation.
 		"""
 		
-		state = np.copy(state)
-		derivative = np.copy(derivative)
+		state = np.array(state, copy=True, dtype=float)
+		derivative = np.array(derivative, copy=True, dtype=float)
 		
 		assert state.shape == (self.n,), "State has wrong shape."
 		assert derivative.shape == (self.n,), "Derivative has wrong shape."
@@ -1067,8 +1067,8 @@ class jitcdde_lyap_tangential(jitcdde):
 	
 	Parameters
 	----------
-	vectors : iterable of pair of vectors
-		A basis of the plane orthogonal to which the orthonormalisation shall happen. The first vector in each pair is component coresponding to the the state, the second vector corresponds to the derivative.
+	vectors : iterable of pairs of NumPy arrays
+		A basis of the plane orthogonal to which the orthonormalisation shall happen. The first vector in each pair is the component coresponding to the the state, the second vector corresponds to the derivative.
 	
 	delays : iterable of SymPy expressions
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
@@ -1099,7 +1099,11 @@ class jitcdde_lyap_tangential(jitcdde):
 			)
 		
 		self.n_basic = n
-		self.vectors = vectors
+		self.vectors = []
+		for vector in vectors:
+			state = np.array(vector[0], dtype=float, copy=True)
+			diff  = np.array(vector[1], dtype=float, copy=True)
+			self.vectors.append((state,diff))
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 	
 	def add_past_point(self, time, state, derivative):

@@ -429,6 +429,13 @@ static int initiate_past_from_list(dde_integrator * const self, PyObject * const
 			return 0;
 		}
 		
+		if ( (PyArray_TYPE(pystate) != NPY_DOUBLE) || (PyArray_TYPE(pydiff) != NPY_DOUBLE) )
+			{
+				PyErr_SetString(PyExc_ValueError,"Anchors must be float arrays.");
+				return 0;
+			}
+			
+		
 		double state[{{n}}];
 		for (int i=0; i<{{n}}; i++)
 			state[i] = * (double *) PyArray_GETPTR1(pystate,i);
@@ -721,6 +728,12 @@ static PyObject * remove_projections(dde_integrator const * const self, PyObject
 			if (!PyArg_ParseTuple(vector, "O!O!", &PyArray_Type, &pystate, &PyArray_Type, &pydiff))
 			{
 				PyErr_SetString(PyExc_ValueError,"Wrong input.");
+				return 0;
+			}
+			
+			if ( (PyArray_TYPE(pystate) != NPY_DOUBLE) || (PyArray_TYPE(pydiff) != NPY_DOUBLE) )
+			{
+				PyErr_SetString(PyExc_ValueError,"Vectors must be float arrays.");
 				return 0;
 			}
 			

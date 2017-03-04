@@ -171,12 +171,12 @@ for realisation in range(number_of_runs):
 	def remove_projections():
 		d = np.random.uniform(0.1*delay, delay)
 		if np.random.randint(0,2):
-			v = tuple(np.random.uniform(-1,1,(2,2)))
+			vector = tuple(np.random.uniform(-1,1,(2,2)))
 		else:
-			v = tuple(np.random.randint(-1,2,(2,2)))
+			vector = tuple(np.random.randint(-1,2,(2,2)).astype(float))
 		
-		A = P.remove_projections(d,[v])
-		B = C.remove_projections(d,[v])
+		A = P.remove_projections(d,[vector])
+		B = C.remove_projections(d,[vector])
 		compare(A , B)
 	
 	get_next_step()
