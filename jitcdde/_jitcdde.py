@@ -1085,19 +1085,41 @@ class jitcdde_lyap_tangential(jitcdde):
 		
 		f_basic, n = _handle_input(f_sym,n)
 		
-		for vector in vectors:
-			assert len(vector[0]) == n
-			assert len(vector[1]) == n
-		
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		delays = delays or _get_delays(f_basic, helpers)
 		
-		f_lyap = tangent_vector_f(f_basic, helpers, n, 1, delays, zero_padding=2*n*len(vectors))
+		self.vectors = []
+		self.state_components = []
+		self.diff_components = []
+		
+		for vector in vectors:
+			assert len(vector[0]) == n
+			assert len(vector[1]) == n
+			
+			if np.count_nonzero(vector[0])+np.count_nonzero(vector[1]) > 1:
+				state = np.array(vector[0], dtype=float, copy=True)
+				diff  = np.array(vector[1], dtype=float, copy=True)
+				self.vectors.append((state,diff))
+			elif np.count_nonzero(vector[0])==1 and np.count_nonzero(vector[1])==0:
+				self.state_components.append(vector[0].nonzero()[0][0])
+			elif np.count_nonzero(vector[1])==1 and np.count_nonzero(vector[0])==0:
+				self.diff_components.append(vector[1].nonzero()[0][0])
+			else:
+				raise ValueError("One vector contains only zeros.")
+		
+		f_lyap = tangent_vector_f(
+			f_basic,
+			helpers,
+			n,
+			1,
+			delays,
+			zero_padding = 2*n*len(self.vectors)
+			)
 		
 		super(jitcdde_lyap_tangential, self).__init__(
 			f_lyap,
 			helpers = helpers,
-			n = n*(2+2*len(vectors)),
+			n = n*(2+2*len(self.vectors)),
 			delays = delays,
 			max_delay = max_delay,
 			control_pars = control_pars,
@@ -1105,11 +1127,7 @@ class jitcdde_lyap_tangential(jitcdde):
 			)
 		
 		self.n_basic = n
-		self.vectors = []
-		for vector in vectors:
-			state = np.array(vector[0], dtype=float, copy=True)
-			diff  = np.array(vector[1], dtype=float, copy=True)
-			self.vectors.append((state,diff))
+		
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 	
 	def add_past_point(self, time, state, derivative):
@@ -1119,6 +1137,19 @@ class jitcdde_lyap_tangential(jitcdde):
 			np.hstack((state,      random_direction(self.n_basic), np.empty(padding))),
 			np.hstack((derivative, random_direction(self.n_basic), np.empty(padding)))
 			)
+	
+	def remove_projections(self):
+		for state_component in self.state_components:
+			self.DDE.remove_state_component(state_component)
+		for diff_component in self.diff_components:
+			self.DDE.remove_diff_component(diff_component)
+		norm = self.DDE.remove_projections(self.max_delay, self.vectors)
+		return norm
+	
+	def set_integration_parameters(self, *args, **kwargs):
+		super(jitcdde_lyap_tangential, self).set_integration_parameters(*args, **kwargs)
+		if (self.state_components or self.diff_components) and not self.atol:
+			warn("At least one of your vectors has only one component while your absolute error (atol) is 0. This may cause problems due to spuriously high relative errors. Consider setting atol to some small, non-zero value (e.g., 1e-10) to avoid this.")
 	
 	def integrate(self, target_time):
 		"""
@@ -1149,7 +1180,7 @@ class jitcdde_lyap_tangential(jitcdde):
 			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent; therefore I return 0 instead.")
 			lyap = 0
 		else:
-			norm = self.DDE.remove_projections(self.max_delay, self.vectors)
+			norm = self.remove_projections()
 			lyap = np.log(norm) / delta_t
 		return result, lyap, delta_t
 	
@@ -1166,9 +1197,10 @@ class jitcdde_lyap_tangential(jitcdde):
 			self.DDE.get_next_step(dt)
 			self.DDE.accept_step()
 			self.DDE.forget(self.max_delay)
-			norm = self.DDE.remove_projections(self.max_delay, self.vectors)
+			norm = self.remove_projections()
 			instantaneous_lyaps.append(np.log(norm)/dt)
 		
 		lyap = np.average(instantaneous_lyaps)
+		state = self.DDE.get_current_state()[:self.n_basic]
 		
-		return self.DDE.get_current_state()[:self.n_basic], lyap, total_integration_time
+		return state, lyap, total_integration_time
