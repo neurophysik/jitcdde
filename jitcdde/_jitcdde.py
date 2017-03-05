@@ -1075,6 +1075,8 @@ class jitcdde_lyap_tangential(jitcdde):
 	----------
 	vectors : iterable of pairs of NumPy arrays
 		A basis of the plane orthogonal to which the orthonormalisation shall happen. The first vector in each pair is the component coresponding to the the state, the second vector corresponds to the derivative.
+		
+		Vectors that are multiples of canonical base vectors (i.e., only have one non-zero component) are handled considerably faster. Consider transforming your differential equation to achieve this.
 	
 	delays : iterable of SymPy expressions
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
