@@ -169,15 +169,26 @@ for realisation in range(number_of_runs):
 		compare(P.orthonormalise(3, d), C.orthonormalise(3, d))
 	
 	def remove_projections():
-		d = np.random.uniform(0.1*delay, delay)
-		if np.random.randint(0,2):
-			vector = tuple(np.random.uniform(-1,1,(2,2)))
-		else:
-			vector = tuple(np.random.randint(-1,2,(2,2)).astype(float))
+		if np.random.random()>0.1:
+			
+			d = np.random.uniform(0.1*delay, delay)
+			if np.random.randint(0,2):
+				vector = tuple(np.random.uniform(-1,1,(2,2)))
+			else:
+				vector = tuple(np.random.randint(-1,2,(2,2)).astype(float))
+			
+			A = P.remove_projections(d,[vector])
+			B = C.remove_projections(d,[vector])
+			compare(A , B)
 		
-		A = P.remove_projections(d,[vector])
-		B = C.remove_projections(d,[vector])
-		compare(A , B)
+		else:
+			i = np.random.randint(0,2)
+			if np.random.randint(0,2):
+				P.remove_state_component(i)
+				C.remove_state_component(i)
+			else:
+				P.remove_diff_component(i)
+				C.remove_diff_component(i)
 	
 	get_next_step()
 	get_next_step()

@@ -786,6 +786,36 @@ static PyObject * remove_projections(dde_integrator const * const self, PyObject
 	return PyFloat_FromDouble(norm);
 }
 
+static PyObject * remove_state_component(dde_integrator const * const self, PyObject * args)
+{
+	unsigned int index;
+	if (!PyArg_ParseTuple(args, "I", &index))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
+	
+	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
+		ca->state[{{n_basic}}+index] = 0.0;
+	
+	Py_RETURN_NONE;
+}
+
+static PyObject * remove_diff_component(dde_integrator const * const self, PyObject * args)
+{
+	unsigned int index;
+	if (!PyArg_ParseTuple(args, "I", &index))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
+	
+	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
+		ca->diff[{{n_basic}}+index] = 0.0;
+	
+	Py_RETURN_NONE;
+}
+
 {% endif %}
 
 // ======================================================
@@ -810,6 +840,8 @@ static PyMethodDef dde_integrator_methods[] = {
 	{% if n_basic != n: %}
 	{"orthonormalise", (PyCFunction) orthonormalise, METH_VARARGS, NULL},
 	{"remove_projections", (PyCFunction) remove_projections, METH_VARARGS, NULL},
+	{"remove_state_component", (PyCFunction) remove_state_component, METH_VARARGS, NULL},
+	{"remove_diff_component", (PyCFunction) remove_diff_component, METH_VARARGS, NULL},
 	{% endif %}
 	{NULL, NULL, 0, NULL}
 };
