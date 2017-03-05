@@ -47,13 +47,11 @@ def norm_sq_interval(anchors, indizes):
 	anchors[1][2][indizes] * q, # d
 	])
 	
-	result = np.einsum(
+	return np.einsum(
 		vector, [0,2],
 		sp_matrix, [0,1],
 		vector, [1,2]
 		)*q
-	
-	return result
 
 def norm_sq_partial(anchors, indizes, start):
 	q = (anchors[1][0]-anchors[0][0])
@@ -65,13 +63,11 @@ def norm_sq_partial(anchors, indizes, start):
 		anchors[1][2][indizes] * q, # d
 	])
 	
-	result = np.einsum(
+	return np.einsum(
 		vector, [0,2],
 		partial_sp_matrix(z), [0,1],
 		vector, [1,2]
 		)*q
-	
-	return result
 
 def scalar_product_interval(anchors, indizes_1, indizes_2):
 	q = (anchors[1][0]-anchors[0][0])
@@ -238,7 +234,8 @@ class dde_integrator(object):
 			self.past[-1] = (new_t, new_y, new_diff)
 	
 	def get_p(self, atol, rtol):
-		return np.nanmax(np.abs(self.error)/(atol + rtol*np.abs(self.past[-1][1])))
+		with np.errstate(divide='ignore', invalid='ignore'):
+			return np.nanmax(np.abs(self.error)/(atol + rtol*np.abs(self.past[-1][1])))
 	
 	def check_new_y_diff(self, atol, rtol):
 		difference = np.abs(self.past[-1][1]-self.old_new_y)
@@ -330,10 +327,10 @@ class dde_integrator(object):
 		Remove projections of separation function to vectors and return norm after normalisation.
 		"""
 		
-		sep_func = np.split(np.arange(self.n, dtype=int), 2+2*len(vectors))[1]
+		sep_func = np.arange(self.n_basic, 2*self.n_basic, 1, dtype=int)
+		assert np.all(sep_func == np.split(np.arange(self.n, dtype=int), 2+2*len(vectors))[1])
+		assert self.n_basic == len(sep_func)
 		d = len(vectors)*2
-		if self.n_basic!=len(sep_func):
-			print(self.n_basic, len(sep_func))
 		
 		def get_dummy(index):
 			return np.arange((index+2)*self.n_basic, (index+3)*self.n_basic)
