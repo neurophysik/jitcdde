@@ -47,11 +47,13 @@ def norm_sq_interval(anchors, indizes):
 	anchors[1][2][indizes] * q, # d
 	])
 	
-	return np.einsum(
+	result = np.einsum(
 		vector, [0,2],
 		sp_matrix, [0,1],
 		vector, [1,2]
 		)*q
+	
+	return result
 
 def norm_sq_partial(anchors, indizes, start):
 	q = (anchors[1][0]-anchors[0][0])
@@ -63,11 +65,13 @@ def norm_sq_partial(anchors, indizes, start):
 		anchors[1][2][indizes] * q, # d
 	])
 	
-	return np.einsum(
+	result = np.einsum(
 		vector, [0,2],
 		partial_sp_matrix(z), [0,1],
 		vector, [1,2]
 		)*q
+	
+	return result
 
 def scalar_product_interval(anchors, indizes_1, indizes_2):
 	q = (anchors[1][0]-anchors[0][0])
@@ -123,11 +127,13 @@ class dde_integrator(object):
 				f,
 				past,
 				helpers = [],
-				control_pars = []
+				control_pars = [],
+				n_basic = None
 			):
 		self.past = past
 		self.t, self.y, self.diff = self.past[-1]
 		self.n = len(self.y)
+		self.n_basic = n_basic or self.n
 		self.last_garbage = -1
 		
 		self.parameters = []
@@ -326,10 +332,11 @@ class dde_integrator(object):
 		
 		sep_func = np.split(np.arange(self.n, dtype=int), 2+2*len(vectors))[1]
 		d = len(vectors)*2
-		n_basic = len(sep_func)
+		if self.n_basic!=len(sep_func):
+			print(self.n_basic, len(sep_func))
 		
 		def get_dummy(index):
-			return np.arange((index+2)*n_basic, (index+3)*n_basic)
+			return np.arange((index+2)*self.n_basic, (index+3)*self.n_basic)
 		
 		dummy_num = 0
 		len_dummies = 0
@@ -338,8 +345,8 @@ class dde_integrator(object):
 				# Setup dummy 
 				dummy = get_dummy(dummy_num)
 				for other_anchor in self.past:
-					other_anchor[1][dummy] = np.zeros(n_basic)
-					other_anchor[2][dummy] = np.zeros(n_basic)
+					other_anchor[1][dummy] = np.zeros(self.n_basic)
+					other_anchor[2][dummy] = np.zeros(self.n_basic)
 				anchor[1][dummy] = vector[0]
 				anchor[2][dummy] = vector[1]
 				
@@ -367,12 +374,21 @@ class dde_integrator(object):
 				len_dummies -= len(vectors)
 		
 		for anchor in self.past:
-			anchor[1][2*n_basic:] = 0.0
-			anchor[2][2*n_basic:] = 0.0
+			anchor[1][2*self.n_basic:] = 0.0
+			anchor[2][2*self.n_basic:] = 0.0
 		
 		# Normalise separation function
 		norm = self.norm(delay, sep_func)
 		self.scale_past(sep_func, 1./norm)
+		
 		return norm
+	
+	def remove_state_component(self, index):
+		for anchor in self.past:
+			anchor[1][self.n_basic+index] = 0.0
+	
+	def remove_diff_component(self, index):
+		for anchor in self.past:
+			anchor[2][self.n_basic+index] = 0.0
 	
 	

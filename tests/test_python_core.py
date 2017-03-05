@@ -260,7 +260,7 @@ class double_integration_test(unittest.TestCase):
 class remove_projection_test(unittest.TestCase):
 	def setUp(self):
 		self.n_basic = 3
-		self.n = 4*self.n_basic
+		self.n = 6*self.n_basic
 		
 		self.past = []
 		for i in range(np.random.randint(3,10)):
@@ -272,7 +272,7 @@ class remove_projection_test(unittest.TestCase):
 			diff  = np.random.random(self.n)
 			self.past.append((time, state, diff))
 		
-		self.DDE = dde_integrator(lambda: [], self.past)
+		self.DDE = dde_integrator(lambda: [], self.past, n_basic=self.n_basic)
 		self.DDE.n = self.n
 	
 	def test_remove_first_component(self):
@@ -281,14 +281,15 @@ class remove_projection_test(unittest.TestCase):
 			(empty(), empty()),
 			(empty(), empty())
 			]
-		vectors[0][0][0] = 1
-		vectors[1][1][0] = 1
+		component = np.random.randint(0,self.n_basic)
+		vectors[0][0][component] = 1
+		vectors[1][1][component] = 1
 		delay = self.past[-1][0]-self.past[0][0]
 		
 		self.DDE.remove_projections(delay, vectors)
 		for anchor in self.DDE.past:
-			self.assertAlmostEqual(anchor[1][2], 0.0)
-			self.assertAlmostEqual(anchor[2][2], 0.0)
+			self.assertAlmostEqual(anchor[1][self.n_basic+component], 0.0)
+			self.assertAlmostEqual(anchor[2][self.n_basic+component], 0.0)
 	
 	def test_double_removal(self):
 		random_vector = lambda: np.random.random(self.n_basic)

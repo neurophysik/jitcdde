@@ -82,7 +82,7 @@ for realisation in range(number_of_runs):
 	print(".", end="")
 	stdout.flush()
 	
-	P = py_dde_integrator(f, past())
+	P = py_dde_integrator(f, past(), n_basic=2)
 
 	set_dy = sympy.Function("set_dy")
 	render_and_write_code(
