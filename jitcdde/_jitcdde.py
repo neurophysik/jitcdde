@@ -166,7 +166,7 @@ class jitcdde(object):
 		The `i`-th element is the `i`-th component of the value of the DDE’s derivative :math:`f(t,y)`.
 	
 	helpers : list of length-two iterables, each containing a SymPy symbol and a SymPy expression
-		Each helper is a variable that will be calculated before evaluating the derivative and can be used in the latter’s computation. The first component of the tuple is the helper’s symbol as referenced in the derivative or other helpers, the second component describes how to compute it from `t`, `y` and other helpers. This is for example useful to realise a mean-field coupling, where the helper could look like `(mean, sympy.Sum(y(i),(i,0,99))/100)`. (See TODO for an example.)
+		Each helper is a variable that will be calculated before evaluating the derivative and can be used in the latter’s computation. The first component of the tuple is the helper’s symbol as referenced in the derivative or other helpers, the second component describes how to compute it from `t`, `y` and other helpers. This is for example useful to realise a mean-field coupling, where the helper could look like `(mean, sympy.Sum(y(i),(i,0,99))/100)`. (See `the JiTCODE documentation <http://jitcode.readthedocs.io/#module-SW_of_Roesslers>`_ for an example.)
 	
 	n : integer
 		Length of `f_sym`. While JiTCDDE can easily determine this itself (and will, if necessary), this may take some time if `f_sym` is a generator function and `n` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
@@ -339,7 +339,7 @@ class jitcdde(object):
 			This is worthwile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input.
 		
 		chunk_size : integer
-			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. After the generation of each chunk, SymPy’s cache is cleared. See TODO: `large_systems` on why this is useful.
+			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. After the generation of each chunk, SymPy’s cache is cleared. See `the JiTCODE documentation <http://jitcode.readthedocs.io/#handling-very-large-differential-equations>`_ on why this is useful.
 			
 			If there is an obvious grouping of your :math:`f`, the group size suggests itself for `chunk_size`. For example, if you want to simulate the dynamics of three-dimensional oscillators coupled onto a 40×40 lattice and if the differential equations are grouped first by oscillator and then by lattice row, a chunk size of 120 suggests itself.
 			
@@ -925,7 +925,7 @@ def _jac(f, helpers, delay, n):
 		yield line(f_entry)
 
 
-def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0):
+def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0, simplify=True):
 	if f:
 		t,y = provide_basic_symbols()
 		
@@ -943,7 +943,9 @@ def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0):
 						for k,entry in enumerate(next(jac)):
 							expression += entry * y(k+(i+1)*n, t-delay)
 					
-					yield sympy.simplify(expression, ratio=1.0)
+					if simplify:
+						expression = sympy.simplify(expression, ratio=1.0)
+					yield expression
 			
 			for _ in range(zero_padding):
 				yield sympy.sympify(0)
@@ -954,15 +956,18 @@ def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0):
 	return f_lyap
 
 class jitcdde_lyap(jitcdde):
-	"""Calculates the Lyapunov exponents of the dynamics. The handling is the same as that for `jitcdde` except for:
+	"""Calculates the Lyapunov exponents of the dynamics (see the documentation for more details). The handling is the same as that for `jitcdde` except for:
 	
 	Parameters
 	----------
 	n_lyap : integer
 		Number of Lyapunov exponents to calculate.
+	
+	simplify : boolean
+		Whether the differential equations for the tangent vector shall be subjected to SymPy’s `simplify`. Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
 	"""
 	
-	def __init__(self, f_sym=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], n_lyap=1, module_location=None):
+	def __init__(self, f_sym=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], n_lyap=1, module_location=None, simplify=True):
 		warn("The output of integrate for jitcdde_lyap was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
 		
 		f_basic, n = _handle_input(f_sym,n)
@@ -972,7 +977,7 @@ class jitcdde_lyap(jitcdde):
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
 		delays = delays or _get_delays(f_basic, helpers)
 		
-		f_lyap = tangent_vector_f(f_basic, helpers, n, self._n_lyap, delays)
+		f_lyap = tangent_vector_f(f_basic, helpers, n, self._n_lyap, delays, simplify)
 		
 		super(jitcdde_lyap, self).__init__(
 			f_lyap,
@@ -1015,7 +1020,6 @@ class jitcdde_lyap(jitcdde):
 			
 		It is essential that you choose `target_time` properly such that orthonormalisation does not happen too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
 		"""
-		# TODO formula and citation like for JiTCODE?
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
@@ -1069,7 +1073,7 @@ class jitcdde_lyap(jitcdde):
 		return self.DDE.get_current_state()[:self.n_basic], lyaps, total_integration_time
 
 class jitcdde_restricted_lyap(jitcdde):
-	"""Calculates the largest Lyapunov exponent in orthogonal direction to a predefined plane, i.e. the projection of separation function onto that plane vanishes. The handling is the same as that for `jitcdde` except for:
+	"""Calculates the largest Lyapunov exponent in orthogonal direction to a predefined plane, i.e. the projection of separation function onto that plane vanishes. The handling is the same as that for `jitcdde_lyap` except for:
 	
 	Parameters
 	----------
@@ -1079,7 +1083,7 @@ class jitcdde_restricted_lyap(jitcdde):
 		Vectors that are multiples of canonical base vectors (i.e., only have one non-zero component) are handled considerably faster. Consider transforming your differential equation to achieve this.
 	"""
 	
-	def __init__(self, f_sym=[], vectors=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], module_location=None):
+	def __init__(self, f_sym=[], vectors=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], module_location=None, simplify=True):
 		warn("The output of integrate for jitcdde_restricted_lyap was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
 		
 		f_basic, n = _handle_input(f_sym,n)
@@ -1112,7 +1116,8 @@ class jitcdde_restricted_lyap(jitcdde):
 			n,
 			1,
 			delays,
-			zero_padding = 2*n*len(self.vectors)
+			zero_padding = 2*n*len(self.vectors),
+			simplify = simplify
 			)
 		
 		super(jitcdde_restricted_lyap, self).__init__(
