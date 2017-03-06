@@ -34,14 +34,14 @@ def provide_basic_symbols():
 	"""
 	provides the basic symbols that must be used to define the differential equation.
 	
-	You may just as well define the respective symbols and functions directly with SymPy, but using this function is the best way to get the most of future versions of JiTCODE, in particular avoiding incompatibilities.
+	You may just as well define the respective symbols and functions manually with SymPy, but using this function is the best way to get the most of future versions of JiTCDDE, in particular avoiding incompatibilities.
 	
 	Returns
 	-------
 	t : SymPy symbol
 		represents time
 	y : SymPy function
-		represents the DDE’s state, with the first integer argument denoting the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands, so do not be surprised when you are looking at the output for some reason and it looks different than what you entered or expected (see `provide_advanced_symbols` for more details).
+		represents the DDE’s state, with the first integer argument denoting the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands, so do not be surprised when you look at the output for some reason and it is different than what you entered or expected (see `provide_advanced_symbols` for more details).
 	"""
 	
 	return provide_advanced_symbols()[:2]
@@ -148,7 +148,7 @@ class UnsuccessfulIntegration(Exception):
 	
 	pass
 
-#: A list with the default extra compile arguments. Use and modify these to get the most of future versions of JiTCODE. Note that without `-Ofast`, `-ffast-math`, or `-funsafe-math-optimizations` (if supported by your compiler), you may experience a considerable speed loss since SymPy uses the `pow` function for small integer powers (`SymPy Issue 8997`_).
+#: A list with the default extra compile arguments. Use and modify these to get the most of future versions of JiTCDDE. Note that without `-Ofast`, `-ffast-math`, or `-funsafe-math-optimizations` (if supported by your compiler), you may experience a considerable speed loss since SymPy uses the `pow` function for small integer powers (`SymPy Issue 8997`_).
 DEFAULT_COMPILE_ARGS = [
 			"-std=c11",
 			"-Ofast","-g0",
@@ -964,7 +964,7 @@ class jitcdde_lyap(jitcdde):
 		Number of Lyapunov exponents to calculate.
 	
 	simplify : boolean
-		Whether the differential equations for the tangent vector shall be subjected to SymPy’s `simplify`. Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
+		Whether the differential equations for the separation function shall be subjected to SymPy’s `simplify`. Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
 	"""
 	
 	def __init__(self, f_sym=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], n_lyap=1, module_location=None, simplify=True):

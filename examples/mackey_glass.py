@@ -31,7 +31,7 @@ As it is one-dimensional, the list contains only one element. We can then initia
 
 We want the initial condition and past to be :math:`y(t<0) = 1`.
 To achieve this, we use two anchors with a state of :math:`1` and a derivative of :math:`0`.
-As the past will be inter- or extrapolated with a constant function here, the distance of these anchors does not matter here.
+As the past will be inter- or extrapolated with a constant function here, the distance of these anchors does not matter.
 This automatically results in the integration starting at :math:`t=0` – the time of the youngest anchor.
 
 .. literalinclude:: ../examples/mackey_glass.py

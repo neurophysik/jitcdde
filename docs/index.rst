@@ -41,7 +41,7 @@ The differential equation is integrated adaptively with the Bogacki–Shampine p
 After every successful integration step, the state and derivative of the integration (which is an automatic by-product) are stored.
 Whenever the derivative :math:`(f)` is evaluated, the required past states :math:`\left ( y(t-τ_1), y(t-τ_2), … \right )` are obtained through piece-wise cubic `Hermite interpolation <http://en.wikipedia.org/wiki/Hermite_interpolation>`_, using previously stored pairs of state and derivative (“anchor”).
 In some extreme cases, they may also be extrapolated.
-Note that unlike for most other DDE software, you have to initiate the past in exactly this way, i.e., you have to give at least two such anchor points.
+Note that unlike most other DDE softwares, JiTCDDE requires you to initiate the past in exactly this way, i.e., you have to give at least two such anchor points.
 
 .. _example:
 
@@ -87,8 +87,8 @@ JiTCDDE addresses this problem mainly in the same manner as Shampine and Thompso
 	
 	3. If the results of the last two attempts are identical within an absolute tolerance of `pws_atol` and relative tolerance of `pws_rtol`, accept the result of the last attempt. Otherwise go to step 2. If no such convergence has happened within `pws_max_iterations`, reduce the step size by `pws_factor`.
 
-A problem of this approach is that as soon as it reduces the step size, the error estimates from the adaptive Runge–Kutta routines are not directly useful anymore since almost always insist on increasing the step size.
-Ignoring this may need to useless integration steps (and thus wasted time) due to the step size being adapted back and forth.
+A problem of this approach is that as soon as it reduces the step size, the error estimates from the adaptive Runge–Kutta routines are not directly useful anymore since they almost always insist on increasing the step size.
+Ignoring this may lead to useless integration steps (and thus wasted time) due to the step size being adapted back and forth.
 Moreover, throttling step size increases (which is generally reasonable) may result in the step size being “trapped” at an unnecessary low value.
 As far as I can tell, Shampine and Thompson [ST01]_ offer no solution to this.
 
@@ -120,6 +120,7 @@ The caveats, tools, and tricks when doing this are the same as for JiTCODE; so p
 * `Handling very large differential equations <http://jitcode.readthedocs.io/en/latest/#handling-very-large-differential-equations>`_
 * `A more complicated example <http://jitcode.readthedocs.io/en/latest/#module-SW_of_Roesslers>`_
 
+.. _lyapunov:
 
 Calculating Lyapunov exponents with `jitcdde_lyap`
 --------------------------------------------------
@@ -147,6 +148,10 @@ where :math:`\mathcal{H}` denotes the piecewise cubic Hermite interpolant (which
 The matrix induced by this scalar product can largely be calculated beforehand and thus the scalar product itself can be evaluated efficiently.
 Note that for the limit of an infinitely fine sampling, this yields the same result as Farmer’s approach.
 
+.. automodule:: mackey_glass_lyap
+
+As the Lyapunov vectors (separation functions) are quite difficult to interpret, they are not returned as of now (if you need them, please `make a feature request <http://github.com/neurophysik/jitcdde/issues>`_).
+There also is a class (`jitcdde_restricted_lyap`) that allows to calculate Lyapunov exponents for the dynamics transversal to some manifold (such as a synchronisation manifold).
 
 
 
@@ -170,6 +175,8 @@ References
 .. [BGGS80]  G. Benettin, L. Galgani, A. Giorgilli, and J.-M. Strelcyn: Lyapunov Characteristic Exponents for smooth dynamical systems and for Hamiltonian systems; A method for computing all of them. Meccanica 15, pp. 9–30 (1980), `10.1007/BF02128236 <http://dx.doi.org/10.1007/BF02128236>`_.
 
 .. _JiTCODE: http://github.com/neurophysik/jitcode
+
+.. _JiTCODE documentation: http://jitcode.readthedocs.io
 
 .. _SciPy’s ODE: http://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html
 
