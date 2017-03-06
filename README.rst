@@ -2,8 +2,6 @@ JiTCDDE stands for just-in-time compilation for delay differential equations (DD
 JiTCDDE is designed in analogy to `JiTCODE <http://github.com/neurophysik/jitcode>`_:
 It takes an iterable (or generator function) of `SymPy <http://www.sympy.org/>`_ expressions, translates them to C code, compiles them (and an integrator wrapped around them) on the fly, and allows you to operate this integrator from Python.
 
-`Here <http://jitcdde.readthedocs.io>`_ is a documentation automatically generated from docstrings (which will be extended soon).
-
 * `Documentation <http://jitcdde.readthedocs.io>`_
 
 * `Issue Tracker <http://github.com/neurophysik/jitcdde/issues>`_
