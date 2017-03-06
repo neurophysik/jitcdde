@@ -887,11 +887,14 @@ class jitcdde(object):
 		steps.remove(0)
 		steps.sort()
 		
-		start_time = self.t
-		for step in steps:
-			result = self.integrate_blindly(start_time+step, max_step)
-		
-		return result
+		if steps:
+			start_time = self.t
+			for step in steps:
+				result = self.integrate_blindly(start_time+step, max_step)
+			return result
+		else:
+			self._initiate()
+			return self.DDE.get_current_state()[:self.n_basic]
 	
 	def __del__(self):
 		try:
