@@ -1068,22 +1068,19 @@ class jitcdde_lyap(jitcdde):
 		
 		return self.DDE.get_current_state()[:self.n_basic], lyaps, total_integration_time
 
-class jitcdde_lyap_tangential(jitcdde):
-	"""Calculates the largest Lyapunov exponent tangential to a predefined plane. The handling is the same as that for `jitcdde` except for:
+class jitcdde_restricted_lyap(jitcdde):
+	"""Calculates the largest Lyapunov exponent in orthogonal direction to a predefined plane, i.e. the projection of separation function onto that plane vanishes. The handling is the same as that for `jitcdde` except for:
 	
 	Parameters
 	----------
 	vectors : iterable of pairs of NumPy arrays
-		A basis of the plane orthogonal to which the orthonormalisation shall happen. The first vector in each pair is the component coresponding to the the state, the second vector corresponds to the derivative.
+		A basis of the plane, whose projection shall be removed. The first vector in each pair is the component coresponding to the the state, the second vector corresponds to the derivative.
 		
 		Vectors that are multiples of canonical base vectors (i.e., only have one non-zero component) are handled considerably faster. Consider transforming your differential equation to achieve this.
-	
-	delays : iterable of SymPy expressions
-		The delays of the dynamics. If not given, JiTCDDE will determine these itself. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	"""
 	
 	def __init__(self, f_sym=[], vectors=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], module_location=None):
-		warn("The output of integrate for jitcdde_lyap_tangential was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
+		warn("The output of integrate for jitcdde_restricted_lyap was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
 		
 		f_basic, n = _handle_input(f_sym,n)
 		
@@ -1118,7 +1115,7 @@ class jitcdde_lyap_tangential(jitcdde):
 			zero_padding = 2*n*len(self.vectors)
 			)
 		
-		super(jitcdde_lyap_tangential, self).__init__(
+		super(jitcdde_restricted_lyap, self).__init__(
 			f_lyap,
 			helpers = helpers,
 			n = n*(2+2*len(self.vectors)),
@@ -1134,7 +1131,7 @@ class jitcdde_lyap_tangential(jitcdde):
 	
 	def add_past_point(self, time, state, derivative):
 		padding = len(self.vectors)*2*self.n_basic
-		super(jitcdde_lyap_tangential, self).add_past_point(
+		super(jitcdde_restricted_lyap, self).add_past_point(
 			time,
 			np.hstack((state,      random_direction(self.n_basic), np.empty(padding))),
 			np.hstack((derivative, random_direction(self.n_basic), np.empty(padding)))
@@ -1149,7 +1146,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		return norm
 	
 	def set_integration_parameters(self, *args, **kwargs):
-		super(jitcdde_lyap_tangential, self).set_integration_parameters(*args, **kwargs)
+		super(jitcdde_restricted_lyap, self).set_integration_parameters(*args, **kwargs)
 		if (self.state_components or self.diff_components) and not self.atol:
 			warn("At least one of your vectors has only one component while your absolute error (atol) is 0. This may cause problems due to spuriously high relative errors. Consider setting atol to some small, non-zero value (e.g., 1e-10) to avoid this.")
 	
@@ -1175,7 +1172,7 @@ class jitcdde_lyap_tangential(jitcdde):
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
-		result = super(jitcdde_lyap_tangential, self).integrate(target_time)[:self.n_basic]
+		result = super(jitcdde_restricted_lyap, self).integrate(target_time)[:self.n_basic]
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t==0:
@@ -1188,7 +1185,7 @@ class jitcdde_lyap_tangential(jitcdde):
 	
 	def integrate_blindly(self, target_time, step=None):
 		"""
-		Like `jitcdde`’s `integrate_blindly`, except for normalising and aligning the separation function after each step and the output being analogous to `jitcdde_lyap_tangential`’s `integrate`.
+		Like `jitcdde`’s `integrate_blindly`, except for normalising and aligning the separation function after each step and the output being analogous to `jitcdde_restricted_lyap`’s `integrate`.
 		"""
 		
 		dt,number,total_integration_time = self._prepare_blind_int(target_time, step)
