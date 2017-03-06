@@ -184,7 +184,7 @@ class jitcdde(object):
 		Whether JiTCDDE shall give progress reports on the processing steps.
 	
 	module_location : string
-		location of a module file from which functions are to be loaded (see `save_compiled`). If you use this, you need not give `f_sym` as an argument, but if you do, you must give `n` and `max_delay`. Also note that the integrator may lake some functionalities, depending on the arguments you provide.
+		location of a module file from which functions are to be loaded (see `save_compiled`). If you use this, you need not give `f_sym` as an argument, but if you do, you must give `n` and `max_delay`. Also note that the integrator may lack some functionalities, depending on the arguments you provide.
 	"""
 	
 	def __init__(
@@ -263,7 +263,7 @@ class jitcdde(object):
 		Parameters
 		----------
 		time : float
-			the time of the anchor point. Must be later than the time of all previously added points.
+			the time of the anchor point.
 		state : iterable of floats
 			the position of the anchor point. The dimension of the array must match the dimension of the differential equation.
 		derivative : NumPy array of floats
@@ -286,7 +286,7 @@ class jitcdde(object):
 	
 	def purge_past(self):
 		"""
-		Cleans the past and resets the integrator. You need to add a new past after this.
+		Cleans the past and resets the integrator. You need to define a new past (using `add_past_point`) after this.
 		"""
 		
 		self.past = []
@@ -514,14 +514,14 @@ class jitcdde(object):
 	
 	def save_compiled(self, destination="", overwrite=False):
 		"""
-		saves the module file with the compiled functions for later use (see `dde_from_module_file`). If no compiled derivative exists, it tries to compile it first using `generate_f_C`. In most circumstances, you should not rename this file, as the filename is needed to determine the module name.
+		saves the module file with the compiled functions for later use (see the `module_location` argument of `jitcdde`). If no compiled derivative exists, it tries to compile it first using `generate_f_C`. In most circumstances, you should not rename this file, as the filename is needed to determine the module name.
 		
 		Parameters
 		----------
 		destination : string specifying a path
 			If this specifies only a directory (don’t forget the trailing `/` or similar), the module will be saved to that directory. If empty (default), the module will be saved to the current working directory. Otherwise, the functions will be (re)compiled to match that filename. The ending `.so` will be appended, if needed.
 		overwrite : boolean
-			Whether to overwrite the specified target, if it already exists.
+			Whether to overwrite the specified target if it already exists.
 		"""
 		
 		folder, filename = path.split(destination)
@@ -623,7 +623,7 @@ class jitcdde(object):
 		
 		pws_atol : float
 		pws_rtol : float
-			If the difference between two successive iterations is below the tolerance determined with these factors, the iterations are considered to have converged.
+			If the difference between two successive iterations is below the tolerance determined with these parameters, the iterations are considered to have converged.
 		
 		pws_max_iterations : integer
 			The maximum number of iterations before the step size is decreased.
@@ -632,7 +632,7 @@ class jitcdde(object):
 			If the normal step-size adaption calls for an increase and the step size was adapted due to the past lying within the step, there is at least this chance that the step size is increased.
 			
 		pws_fuzzy_increase : boolean
-			Whether the decision to try to increase the step size shall depend on chance. The upside of this is that it is less likely that the step size gets locked at a unnecessarily low value. The downside is that the integration is not deterministic anymore. If False, increase probabilities will be added up until they exceed 1, in which case an increase happens.
+			Whether the decision to try to increase the step size shall depend on chance. The upside of this is that it is less likely that the step size gets locked at a unnecessarily low value. The downside is that the integration is not deterministic anymore. If False, increase probabilities will be added up until they exceed 0.9, in which case an increase happens.
 		
 		raise_exception : boolean,
 			Whether (`UnsuccessfulIntegration`) shall be raised if the integration fails. You can deal with this by catching this exception. If `False`, there is only a warning and `self.successful` is set to `False`.
@@ -687,7 +687,7 @@ class jitcdde(object):
 			self.increase_credit = 0.0
 			def do_increase(p):
 				self.increase_credit += p
-				if self.increase_credit >= 0.98:
+				if self.increase_credit >= 0.9:
 					self.increase_credit = 0.0
 					return True
 				else:
@@ -823,9 +823,7 @@ class jitcdde(object):
 	
 	def integrate_blindly(self, target_time, step=None):
 		"""
-		Evolves the dynamics with a fixed step size ignoring any accuracy concerns. If a delay is smaller than the time step, the state is extrapolated from the previous step.
-		
-		For many systems, arbitrary initial conditions inevitably lead to high integration errors due to the disagreement of state and derivative. Evolving the system for a while should solves this issue.
+		Evolves the dynamics with a fixed step size ignoring any accuracy concerns. See `discontinuities` as to why you may want to use this. If a delay is smaller than the time step, the state is extrapolated from the previous step.
 		
 		Parameters
 		----------
@@ -857,7 +855,7 @@ class jitcdde(object):
 		min_distance = 1e-5,
 		):
 		"""
-		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped.
+		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped. See `discontinuities` as to why you may want to use this.
 		
 		This only makes sense if you just defined the past (via `add_past_point`) and start integrating, just reset the integrator, or changed control parameters.
 		
@@ -1165,7 +1163,7 @@ class jitcdde_restricted_lyap(jitcdde):
 			The state of the system. Same as the output of `jitcdde`’s `integrate`.
 		
 		lyap : float
-			The “local” largest tangential Lyapunov exponent as estimated from the growth or shrinking of the separation function during the integration time of this very `integrate` command.
+			The “local” largest transversal Lyapunov exponent as estimated from the growth or shrinking of the separation function during the integration time of this very `integrate` command.
 			
 		integration time : float
 			The actual integration time during to which the local Lyapunov exponents apply. Note that this is not necessarily difference between `target_time` and the previous `target_time`, as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. When averaging the Lyapunov exponents, you almost always want to weigh them with the integration time.
