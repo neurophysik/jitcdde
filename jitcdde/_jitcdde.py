@@ -314,9 +314,6 @@ class jitcdde(object):
 			)
 		self.compile_attempt = True
 	
-	def generate_f_c(self, *args, **kwargs):
-		raise DeprecationWarning("You are very likely seeing this message because you ignored a warning. You should not do this. Warnings exist for a reason. Well, now it’s an exception. Use generate_f_C instead of generate_f_c.")
-	
 	def generate_f_C(
 		self,
 		simplify = True,
@@ -969,8 +966,6 @@ class jitcdde_lyap(jitcdde):
 	"""
 	
 	def __init__(self, f_sym=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], n_lyap=1, module_location=None, simplify=True):
-		warn("The output of integrate for jitcdde_lyap was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
-		
 		f_basic, n = _handle_input(f_sym,n)
 		
 		assert n_lyap>=0, "n_lyap negative"
@@ -1085,8 +1080,6 @@ class jitcdde_restricted_lyap(jitcdde):
 	"""
 	
 	def __init__(self, f_sym=[], vectors=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], module_location=None, simplify=True):
-		warn("The output of integrate for jitcdde_restricted_lyap was changed recently; it is now separated to several members of a tuple. If your old code doesn’t work anymore, this is why. Sorry about that, but rather sanitise early than never.")
-		
 		f_basic, n = _handle_input(f_sym,n)
 		
 		helpers = _sort_helpers(_sympify_helpers(helpers or []))
