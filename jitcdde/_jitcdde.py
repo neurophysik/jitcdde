@@ -453,7 +453,7 @@ class jitcdde(object):
 			raise OSError("Module file already exists.")
 		
 		if not self.past_calls:
-			warn("Differential equation does not inclued a delay term.")
+			warn("Differential equation does not include a delay term.")
 		
 		render_template(
 			"jitced_template.c",
