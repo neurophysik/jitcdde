@@ -706,7 +706,7 @@ class jitcdde(object):
 				"The most likely reasons for this are:\n"
 				"• You did not sufficiently address initial discontinuities.\n"
 				"• The DDE is ill-posed or stiff.\n"
-				"• You did not allow for an absolute error tolerance (atol) though your DDE calls for it."
+				"• You did not allow for an absolute error tolerance (atol) though your DDE calls for it. Even a very small absolute tolerance (1e-16) may sometimes help."
 				% (self.atol, self.rtol, self.min_step))
 	
 	def _increase_chance(self, new_dt):
