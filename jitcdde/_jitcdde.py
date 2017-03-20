@@ -700,8 +700,8 @@ class jitcdde(object):
 		if self.dt < self.min_step:
 			raise UnsuccessfulIntegration("\n"
 				"Could not integrate with the given tolerance parameters:\n\n"
-				"rtol: %e\n"
 				"atol: %e\n"
+				"rtol: %e\n"
 				"min_step: %e\n\n"
 				"The most likely reasons for this are:\n"
 				"• You did not sufficiently address initial discontinuities.\n"
