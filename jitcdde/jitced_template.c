@@ -1,7 +1,10 @@
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wpedantic"
 # define NPY_NO_DEPRECATED_API NPY_1_8_API_VERSION
 # include <Python.h>
 # include <numpy/arrayobject.h>
-# include <structmember.h>
+# pragma GCC diagnostic pop
+#include <structmember.h>
 
 # include <math.h>
 # include <assert.h>
@@ -180,7 +183,7 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 	
 	npy_intp dims[1] = { {{n}} };
 	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-pedantic"
+	# pragma GCC diagnostic ignored "-Wpedantic"
 	PyArrayObject * result = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
 	# pragma GCC diagnostic pop
 	
@@ -201,7 +204,7 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 	}
 	
 	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-pedantic"
+	# pragma GCC diagnostic ignored "-Wpedantic"
 	return (PyObject *) result;
 	# pragma GCC diagnostic pop
 }
@@ -212,7 +215,7 @@ static PyObject * get_current_state(dde_integrator const * const self)
 	
 	npy_intp dims[1] = { {{n}} };
 	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-pedantic"
+	# pragma GCC diagnostic ignored "-Wpedantic"
 	PyArrayObject * result = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
 	# pragma GCC diagnostic pop
 	
@@ -220,7 +223,7 @@ static PyObject * get_current_state(dde_integrator const * const self)
 		* (double *) PyArray_GETPTR1(result, index) = self->last_anchor->state[index];
 	
 	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-pedantic"
+	# pragma GCC diagnostic ignored "-Wpedantic"
 	return (PyObject *) result;
 	# pragma GCC diagnostic pop
 }
@@ -666,7 +669,7 @@ static PyObject * orthonormalise(dde_integrator const * const self, PyObject * a
 	
 	npy_intp dims[1] = { n_lyap };
 	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-pedantic"
+	# pragma GCC diagnostic ignored "-Wpedantic"
 	PyArrayObject * norms = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
 	# pragma GCC diagnostic pop
 	
@@ -684,7 +687,7 @@ static PyObject * orthonormalise(dde_integrator const * const self, PyObject * a
 	}
 	
 	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-pedantic"
+	# pragma GCC diagnostic ignored "-Wpedantic"
 	return (PyObject *) norms;
 	# pragma GCC diagnostic pop
 }
