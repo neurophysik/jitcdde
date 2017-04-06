@@ -269,21 +269,40 @@ class jitcdde(object):
 		derivative : NumPy array of floats
 			the derivative at the anchor point. The dimension of the array must match the dimension of the differential equation.
 		"""
-		
-		state = np.array(state, copy=True, dtype=float)
-		derivative = np.array(derivative, copy=True, dtype=float)
-		
-		assert state.shape == (self.n,), "State has wrong shape."
-		assert derivative.shape == (self.n,), "Derivative has wrong shape."
-		
+		self.add_past_points([(time,state,derivative)])
+
+	def add_past_points(self, list_of_anchors):
+		"""
+		adds multiple anchors from which the past of the DDE is interpolated.
+
+		Parameters
+		----------
+		list_of_anchors : list of tuples
+			the anchors. Each tuple must have components corresponding to the arguments of `add_past_points.
+		"""
 		self.reset_integrator()
+
+		for time, state, derivative in list_of_anchors:
+			state = np.array(state, copy=True, dtype=float)
+			derivative = np.array(derivative, copy=True, dtype=float)
+			
+			assert state.shape == (self.n,), "State has wrong shape."
+			assert derivative.shape == (self.n,), "Derivative has wrong shape."
 		
-		if time in [anchor[0] for anchor in self.past]:
-			raise ValueError("There already is an anchor with that time.")
+			if time in [anchor[0] for anchor in self.past]:
+				raise ValueError("There already is an anchor with that time.")
 		
-		self.past.append((time, state, derivative))
+			self.past.append((time, state, derivative))
+		
 		self.past.sort(key = lambda anchor: anchor[0])
 	
+	def get_state(self):
+		"""
+		obtains a list of all anchors currently used by the integrator, which compeletely define the current state. The format is such that it can be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents.
+		"""
+		self.DDE.forget(self.max_delay)
+		return self.DDE.get_full_state()
+
 	def purge_past(self):
 		"""
 		Cleans the past and resets the integrator. You need to define a new past (using `add_past_point`) after this.
@@ -294,13 +313,13 @@ class jitcdde(object):
 	
 	def reset_integrator(self):
 		"""
-			Resets the integrator, forgetting all integration progress and forcing re-initiation when it is needed next.
+		Resets the integrator, forgetting all integration progress and forcing re-initiation when it is needed next.
 		"""
 		self.DDE = None
 	
 	def generate_f_lambda(self):
 		"""
-			Explicitly initiates a purely Python-based integrator.
+		Explicitly initiates a purely Python-based integrator.
 		"""
 		
 		assert len(self.past)>1, "You need to add at least two past points first."

@@ -210,6 +210,9 @@ class dde_integrator(object):
 	def get_current_state(self):
 		return self.past[-1][1]
 	
+	def get_full_state(self):
+		return self.past
+	
 	def eval_f(self, t, y):
 		self.anchor_mem_index = 0
 		return self.f(t, y)

@@ -4,7 +4,7 @@
 # include <Python.h>
 # include <numpy/arrayobject.h>
 # pragma GCC diagnostic pop
-#include <structmember.h>
+# include <structmember.h>
 
 # include <math.h>
 # include <assert.h>
@@ -227,6 +227,27 @@ static PyObject * get_current_state(dde_integrator const * const self)
 	return (PyObject *) result;
 	# pragma GCC diagnostic pop
 }
+
+static PyObject * get_full_state(dde_integrator const * const self)
+{
+	PyObject * py_past = PyList_New(0);
+    npy_intp dim[1] = { {{n}} };
+	# pragma GCC diagnostic push
+	# pragma GCC diagnostic ignored "-Wpedantic"
+	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
+		PyList_Append(
+			py_past,
+			PyTuple_Pack(
+				3,
+				PyFloat_FromDouble(ca->time),
+				PyArray_SimpleNewFromData(1, dim, TYPE_INDEX, ca->state),
+				PyArray_SimpleNewFromData(1, dim, TYPE_INDEX, ca->diff ) 
+				)
+			);
+	# pragma GCC diagnostic pop
+	return py_past;
+}
+
 
 # define set_dy(i, value) (dY[i] = value)
 # define current_y(i) (y[i])
@@ -831,8 +852,9 @@ static PyMethodDef dde_integrator_methods[] = {
 	{"set_parameters", (PyCFunction) set_parameters, METH_VARARGS, NULL},
 	{% endif %}
 	{"get_recent_state", (PyCFunction) get_recent_state, METH_VARARGS, NULL},
-	{"get_current_state", (PyCFunction) get_current_state, METH_NOARGS, NULL},
 	{"get_next_step", (PyCFunction) get_next_step, METH_VARARGS, NULL},
+	{"get_current_state", (PyCFunction) get_current_state, METH_NOARGS, NULL},
+	{"get_full_state", (PyCFunction) get_full_state, METH_NOARGS, NULL},
 	{"get_p", (PyCFunction) get_p, METH_VARARGS, NULL},
 	{"check_new_y_diff", (PyCFunction) check_new_y_diff, METH_VARARGS, NULL},
 	{"accept_step", (PyCFunction) accept_step, METH_NOARGS, NULL},
