@@ -278,7 +278,7 @@ class jitcdde(object):
 		Parameters
 		----------
 		list_of_anchors : list of tuples
-			the anchors. Each tuple must have components corresponding to the arguments of `add_past_points.
+			the anchors. Each tuple must have components corresponding to the arguments of `add_past_point`.
 		"""
 		self.reset_integrator()
 
