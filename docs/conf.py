@@ -1,19 +1,18 @@
 import sys
 import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock as Mock
 from setuptools_scm import get_version
-
-class Mock(MagicMock):
-	@classmethod
-	def __getattr__(cls, name):
-		return MagicMock()
 
 MOCK_MODULES = [
 	#'numpy', 'numpy.testing', 'numpy.random',
-	#'scipy', 'scipy.integrate', 'scipy.integrate._ode', 'scipy.stats',
 	'sympy',
-	'', 'jitcdde', 'jitcdde._helpers', 'jitcdde._python_core']
+	'jitcdde', 'jitcdde._helpers', 'jitcdde._python_core']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+class Symbol(object):
+	def __init__(*args, **kwargs):
+		pass
+sys.modules['sympy'] = Mock(Function=Symbol, Symbol=Symbol)
 
 sys.path.insert(0,os.path.abspath("../examples"))
 sys.path.insert(0,os.path.abspath("../jitcdde"))
@@ -25,7 +24,6 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
     'numpydoc',
-    #'sphinx.ext.graphviz'
 ]
 
 source_suffix = '.rst'

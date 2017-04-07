@@ -30,55 +30,43 @@ _default_min_step = 1e-10
 #sigmoid = lambda x: 1 if x>0 else 0
 sigmoid = lambda x: (np.tanh(x)+1)/2
 
+#: the symbol for time for defining the differential equation. You may just as well define the an analogous symbol directly with SymPy, but using this function is the best way to get the most of future versions of JiTCDDE, in particular avoiding incompatibilities.
+t = sympy.Symbol("t", real=True)
+
+class y(sympy.Function):
+	"""
+	the symbol representing the DDE’s past and present states used for defining the differential equation. It is a function with the first integer argument denoting the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected.
+	"""
+	def __init__(self):
+		pass
+	
+	@classmethod
+	def eval(cls, index, time=t):
+		if time == t:
+			return current_y(index)
+		else:
+			return past_y(time, index, anchors(time))
+
+
+#: the symbol for the current state for defining the differential equation. It is a function and the integer argument denotes the component. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead.
+current_y = sympy.Function("current_y")
+
+#: the symbol for DDE’s past state for defining differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead.
+past_y = sympy.Function("past_y")
+
+#: the symbol representing two anchors for defining the differential equation. It is a function and the float argument denotes the time point to which the anchors pertain. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead.
+anchors = sympy.Function("anchors")
+
 def provide_basic_symbols():
 	"""
-	provides the basic symbols that must be used to define the differential equation.
-	
-	You may just as well define the respective symbols and functions manually with SymPy, but using this function is the best way to get the most of future versions of JiTCDDE, in particular avoiding incompatibilities.
-	
-	Returns
-	-------
-	t : SymPy symbol
-		represents time
-	y : SymPy function
-		represents the DDE’s state, with the first integer argument denoting the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands, so do not be surprised when you look at the output for some reason and it is different than what you entered or expected (see `provide_advanced_symbols` for more details).
+	This function is provided for backwards compatibility only. Use `from jitcdde import y, t` or similar instead.
 	"""
-	
-	return provide_advanced_symbols()[:2]
+	return t, y
 
 def provide_advanced_symbols():
 	"""
-	provides all symbols that you may want to use to to define the differential equation.
-	An example where the additional symbols (in comparison to `provide_basic_symbols`) can come in handy is that you have many terms with the same delay and want to define helpers exploiting this.
-	To get an idea how to use these symbols, it may help to take a look at a how the basic symbols expand.
-	
-	Returns
-	-------
-	t : SymPy symbol
-		represents time
-	y : SymPy function
-		same as for `provide_basic_symbols`.
-	current_y : SymPy function
-		represents the DDE’s current state, with the integer argument denoting the component
-	past_y : SymPy function
-		represents the DDE’s past state, with the integer argument denoting the component and the second argument being a pair of past points (anchors) from which the past state is interpolated (or, in rare cases, extrapolated).
-	anchors : SymPy function
-		represents the pair of anchors pertaining to a specific time point with the symbolic argument denoting that time point.
+	This function is provided for backwards compatibility only. Use `from jitcdde import y, t, current_y, past_y, anchors` or similar instead.
 	"""
-	
-	t = sympy.Symbol("t", real=True)
-	current_y = sympy.Function("current_y")
-	anchors = sympy.Function("anchors")
-	past_y = sympy.Function("past_y")
-	
-	class y(sympy.Function):
-		@classmethod
-		def eval(cls, index, time=t):
-			if time == t:
-				return current_y(index)
-			else:
-				return past_y(time, index, anchors(time))
-	
 	return t, y, current_y, past_y, anchors
 
 def _handle_input(f_sym,n):
@@ -116,7 +104,6 @@ def _sympify_helpers(helpers):
 	return [(helper[0], sympy.sympify(helper[1]).doit()) for helper in helpers]
 
 def _get_delays(f, helpers=[]):
-	t, _, _, _, anchors = provide_advanced_symbols()
 	delay_terms = set().union(*(collect_arguments(entry, anchors) for entry in f()))
 	delay_terms.update(*(collect_arguments(helper[1], anchors) for helper in helpers))
 	
@@ -374,8 +361,6 @@ class jitcdde(object):
 		"""
 		
 		self.compile_attempt = False
-		
-		t, y, current_y, past_y, anchors = provide_advanced_symbols()
 		
 		f_sym_wc = self.f_sym()
 		helpers_wc = list(self.helpers) # list is here for copying
@@ -922,8 +907,6 @@ class jitcdde(object):
 
 
 def _jac(f, helpers, delay, n):
-	t,y = provide_basic_symbols()
-	
 	dependent_helpers = [[] for i in range(n)]
 	for i in range(n):
 		for helper in helpers:
@@ -946,8 +929,6 @@ def _jac(f, helpers, delay, n):
 
 def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0, simplify=True):
 	if f:
-		t,y = provide_basic_symbols()
-		
 		def f_lyap():
 			#Replace with yield from, once Python 2 is dead:
 			for entry in f():
