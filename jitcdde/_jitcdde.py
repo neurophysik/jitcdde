@@ -299,6 +299,8 @@ class jitcdde(object):
 	def get_state(self):
 		"""
 		obtains a list of all anchors currently used by the integrator, which compeletely define the current state. The format is such that it can be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents.
+
+		The states and derivatives are just NumPy wrappers around the C arrays used by the integrator. Therefore changing their content affects the integrator and should not be done unless you do not want to continue using this integrator or know exactly what you’re doing.
 		"""
 		self.DDE.forget(self.max_delay)
 		return self.DDE.get_full_state()
