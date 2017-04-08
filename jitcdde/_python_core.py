@@ -3,8 +3,6 @@
 
 from __future__ import print_function, division
 
-import jitcdde._jitcdde
-
 import sympy
 import numpy as np
 from itertools import count, chain
@@ -134,7 +132,7 @@ class dde_integrator(object):
 		
 		self.parameters = []
 		
-		t, y, current_y, past_y, anchors = jitcdde._jitcdde.provide_advanced_symbols()
+		from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 		Y = sympy.symarray("Y", self.n)
 		substitutions = helpers[::-1] + [(y(i),Y[i]) for i in range(self.n)]
 		

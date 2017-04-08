@@ -14,9 +14,10 @@ from os import path as path
 from setuptools import setup, Extension
 from sys import version_info, modules
 from tempfile import mkdtemp
-from jitcdde._helpers import (
+from jitcxde_common import (
 	ensure_suffix, count_up,
 	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
+	handle_input, sort_helpers, sympify_helpers,
 	render_and_write_code,
 	render_template,
 	collect_arguments,
@@ -68,40 +69,6 @@ def provide_advanced_symbols():
 	This function is provided for backwards compatibility only. Use `from jitcdde import y, t, current_y, past_y, anchors` or similar instead.
 	"""
 	return t, y, current_y, past_y, anchors
-
-def _handle_input(f_sym,n):
-	if isgeneratorfunction(f_sym):
-		n = n or sum(1 for _ in f_sym())
-		return f_sym, n
-	elif f_sym == []:
-		return f_sym, n
-	else:
-		len_f = len(f_sym)
-		if (n is not None) and (len_f != n):
-			raise ValueError("len(f_sym) and n do not match.")
-		return (lambda: (entry.doit() for entry in f_sym)), len_f
-
-def _depends_on_any(helper, other_helpers):
-	for other_helper in other_helpers:
-		if helper[1].has(other_helper[0]):
-			return True
-	return False
-
-def _sort_helpers(helpers):
-	if len(helpers)>1:
-		for j,helper in enumerate(helpers):
-			if not _depends_on_any(helper, helpers):
-				helpers.insert(0,helpers.pop(j))
-				break
-		else:
-			raise ValueError("Helpers have cyclic dependencies.")
-		
-		helpers[1:] = _sort_helpers(helpers[1:])
-	
-	return helpers
-
-def _sympify_helpers(helpers):
-	return [(helper[0], sympy.sympify(helper[1]).doit()) for helper in helpers]
 
 def _get_delays(f, helpers=[]):
 	delay_terms = set().union(*(collect_arguments(entry, anchors) for entry in f()))
@@ -192,9 +159,9 @@ class jitcdde(object):
 			self.jitced = None
 			self.compile_attempt = None
 		
-		self.f_sym, self.n = _handle_input(f_sym,n)
+		self.f_sym, self.n = handle_input(f_sym,n)
 		self.n_basic = self.n
-		self.helpers = _sort_helpers(_sympify_helpers(helpers or []))
+		self.helpers = sort_helpers(sympify_helpers(helpers or []))
 		self._tmpdir = None
 		self._modulename = "jitced"
 		self.control_pars = control_pars
@@ -968,11 +935,11 @@ class jitcdde_lyap(jitcdde):
 	"""
 	
 	def __init__(self, f_sym=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], n_lyap=1, module_location=None, simplify=True):
-		f_basic, n = _handle_input(f_sym,n)
+		f_basic, n = handle_input(f_sym,n)
 		
 		assert n_lyap>=0, "n_lyap negative"
 		self._n_lyap = n_lyap
-		helpers = _sort_helpers(_sympify_helpers(helpers or []))
+		helpers = sort_helpers(sympify_helpers(helpers or []))
 		delays = delays or _get_delays(f_basic, helpers)
 		
 		f_lyap = tangent_vector_f(f_basic, helpers, n, self._n_lyap, delays, simplify)
@@ -1082,9 +1049,9 @@ class jitcdde_restricted_lyap(jitcdde):
 	"""
 	
 	def __init__(self, f_sym=[], vectors=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], module_location=None, simplify=True):
-		f_basic, n = _handle_input(f_sym,n)
+		f_basic, n = handle_input(f_sym,n)
 		
-		helpers = _sort_helpers(_sympify_helpers(helpers or []))
+		helpers = sort_helpers(sympify_helpers(helpers or []))
 		delays = delays or _get_delays(f_basic, helpers)
 		
 		self.vectors = []

@@ -1,5 +1,12 @@
-from . import _helpers
-from ._jitcdde import jitcdde, jitcdde_lyap, jitcdde_restricted_lyap, t, y, current_y, past_y, anchors, provide_basic_symbols, provide_advanced_symbols, UnsuccessfulIntegration, _find_max_delay, _get_delays, DEFAULT_COMPILE_ARGS
+from __future__ import absolute_import
+from ._jitcdde import (
+		jitcdde, jitcdde_lyap, jitcdde_restricted_lyap,
+		t, y, current_y, past_y, anchors,
+		provide_basic_symbols, provide_advanced_symbols,
+		UnsuccessfulIntegration,
+		_find_max_delay, _get_delays,
+		DEFAULT_COMPILE_ARGS,
+		)
 
 try:
     from . import version

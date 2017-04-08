@@ -6,7 +6,7 @@ from setuptools_scm import get_version
 MOCK_MODULES = [
 	#'numpy', 'numpy.testing', 'numpy.random',
 	'sympy',
-	'jitcdde', 'jitcdde._helpers', 'jitcdde._python_core']
+	'jitcdde', 'jitcxde_common', 'jitcdde._python_core']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 class Symbol(object):
