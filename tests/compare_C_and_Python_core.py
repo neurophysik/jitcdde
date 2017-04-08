@@ -9,8 +9,8 @@ The argument is the number of runs.
 
 from __future__ import print_function
 from jitcdde._python_core import dde_integrator as py_dde_integrator
-from jitcdde._jitcdde import provide_advanced_symbols
-from jitcdde._helpers import (
+from jitcdde._jitcdde import t, y, current_y, past_y, anchors
+from jitcxde_common import (
 	ensure_suffix, count_up,
 	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
 	render_and_write_code,
@@ -36,8 +36,6 @@ def compare(x,y):
 		raise error
 
 number_of_runs = int(argv[1])
-
-t, y, current_y, past_y, anchors = provide_advanced_symbols()
 
 omega = np.array([0.88167179, 0.87768425])
 k = 0.25
@@ -104,6 +102,7 @@ for realisation in range(number_of_runs):
 	render_template(
 		"jitced_template.c",
 		tmpfile(modulename + ".c"),
+		folder = path.join(path.dirname(__file__),"..","jitcdde"),
 		n = n,
 		module_name = modulename,
 		Python_version = version_info[0],

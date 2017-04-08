@@ -9,8 +9,8 @@ The argument is the number of runs.
 
 from __future__ import print_function
 from jitcdde._python_core import dde_integrator as py_dde_integrator
-from jitcdde._jitcdde import provide_advanced_symbols
-from jitcdde._helpers import (
+from jitcdde._jitcdde import t, y, current_y, past_y, anchors
+from jitcxde_common import (
 	ensure_suffix, count_up,
 	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
 	render_and_write_code,
@@ -31,8 +31,6 @@ compare = lambda x,y: assert_allclose(x,y,rtol=1e-7,atol=1e-7)
 
 number_of_runs = int(argv[1])
 
-t, y, current_y, past_y, anchors = provide_advanced_symbols()
-
 past = [
 	( 0.0, np.array([random.random()]), np.array([random.random()]) ),
 	( 0.5, np.array([random.random()]), np.array([random.random()]) ),
@@ -42,7 +40,6 @@ past = [
 tau = 15
 p = 10
 
-t, y, current_y, past_y, anchors = provide_advanced_symbols()
 tiny_delay = 1e-30
 def f():
 	yield 0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t-tiny_delay)
@@ -86,6 +83,7 @@ for realisation in range(number_of_runs):
 	render_template(
 		"jitced_template.c",
 		tmpfile(modulename + ".c"),
+		folder = path.join(path.dirname(__file__),"..","jitcdde"),
 		n = 1,
 		module_name = modulename,
 		Python_version = version_info[0],

@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 from jitcdde import (
-	provide_advanced_symbols,
+	t, y, current_y, past_y, anchors,
 	jitcdde_lyap,
 	UnsuccessfulIntegration,
 	_find_max_delay, _get_delays,
@@ -17,8 +17,6 @@ import unittest
 from scipy.stats import sem
 
 compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
-
-t, y, current_y, past_y, anchors = provide_advanced_symbols()
 
 omega = np.array([0.88167179, 0.87768425])
 delay = 4.5

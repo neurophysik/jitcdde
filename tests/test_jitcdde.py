@@ -3,8 +3,8 @@
 
 from __future__ import print_function
 from jitcdde import (
-	provide_advanced_symbols,
 	jitcdde,
+	t, y, current_y, past_y, anchors,
 	UnsuccessfulIntegration,
 	_find_max_delay, _get_delays,
 	DEFAULT_COMPILE_ARGS
@@ -16,8 +16,6 @@ from numpy.testing import assert_allclose
 import unittest
 
 compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
-
-t, y, current_y, past_y, anchors = provide_advanced_symbols()
 
 omega = np.array([0.88167179, 0.87768425])
 delay = 4.5

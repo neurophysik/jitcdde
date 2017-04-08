@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from jitcdde import (
-	provide_basic_symbols,
+        t, y,
 	jitcdde,
 	UnsuccessfulIntegration,
 	_find_max_delay,
@@ -39,8 +39,6 @@ b1 =  0.0065
 b2 =  0.0135
 c  =  0.02
 k  =  0.128
-
-t, y = provide_basic_symbols()
 
 f = [
 	y(0) * ( a-y(0) ) * ( y(0)-1.0 ) - y(1) + k * (y(2) - y(0)),

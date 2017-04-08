@@ -3,7 +3,7 @@
 
 from __future__ import print_function, division
 from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial
-from jitcdde._jitcdde import provide_advanced_symbols
+from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 
 import sympy
 import numpy as np
@@ -178,7 +178,6 @@ class metrics_test(unittest.TestCase):
 tau = 15
 p = 10
 
-t, y, current_y, past_y, anchors = provide_advanced_symbols()
 def f():
 	yield 0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t)
 
