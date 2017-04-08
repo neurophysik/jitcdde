@@ -7,3 +7,6 @@ It takes an iterable (or generator function) of `SymPy <http://www.sympy.org/>`_
 * `Issue Tracker <http://github.com/neurophysik/jitcdde/issues>`_
 
 * Download from `PyPI <http://pypi.python.org/pypi/jitcdde>`_ or just ``pip install jitcdde``.
+
+This work was supported by the Volkswagen Foundation (Grant No. 88463).
+
