@@ -3,17 +3,17 @@
 
 from __future__ import print_function, absolute_import, division
 
-from inspect import isgeneratorfunction
 from warnings import warn
 from itertools import count
 from traceback import format_exc
-import jitcdde._python_core as python_core
-import sympy
-import numpy as np
 from os import path as path
 from setuptools import setup, Extension
 from sys import version_info, modules
 from tempfile import mkdtemp
+import sympy
+import numpy as np
+import shutil
+import jitcdde._python_core as python_core
 from jitcxde_common import (
 	ensure_suffix, count_up,
 	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
@@ -23,7 +23,6 @@ from jitcxde_common import (
 	collect_arguments,
 	random_direction
 	)
-import shutil
 
 _default_min_step = 1e-10
 
@@ -70,7 +69,7 @@ def provide_advanced_symbols():
 	"""
 	return t, y, current_y, past_y, anchors
 
-def _get_delays(f, helpers=[]):
+def _get_delays(f, helpers=()):
 	delay_terms = set().union(*(collect_arguments(entry, anchors) for entry in f()))
 	delay_terms.update(*(collect_arguments(helper[1], anchors) for helper in helpers))
 	
@@ -143,12 +142,12 @@ class jitcdde(object):
 	
 	def __init__(
 		self,
-		f_sym = [],
+		f_sym = (),
 		helpers = None,
 		n = None,
 		delays = None,
 		max_delay = None,
-		control_pars = [],
+		control_pars = (),
 		verbose = True,
 		module_location = None
 		):
@@ -788,7 +787,7 @@ class jitcdde(object):
 		number = int(round(total_integration_time/step))
 		
 		dt = total_integration_time/number
-		assert(number*dt == total_integration_time)
+		assert number*dt==total_integration_time
 		return dt, number, total_integration_time
 	
 	def integrate_blindly(self, target_time, step=None):
@@ -847,7 +846,7 @@ class jitcdde(object):
 		"""
 		
 		assert min_distance > 0, "min_distance must be positive."
-		assert type(propagations) == int, "Non-integer number of propagations."
+		assert isinstance(propagations,int), "Non-integer number of propagations."
 		
 		if not all(sympy.sympify(delay).is_Number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
@@ -934,7 +933,7 @@ class jitcdde_lyap(jitcdde):
 		Whether the differential equations for the separation function shall be subjected to SymPy’s `simplify`. Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
 	"""
 	
-	def __init__(self, f_sym=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], n_lyap=1, module_location=None, simplify=True):
+	def __init__(self, f_sym=(), helpers=(), n=None, delays=None, max_delay=None, control_pars=(), n_lyap=1, module_location=None, simplify=True):
 		f_basic, n = handle_input(f_sym,n)
 		
 		assert n_lyap>=0, "n_lyap negative"
@@ -1048,7 +1047,7 @@ class jitcdde_restricted_lyap(jitcdde):
 		Vectors that are multiples of canonical base vectors (i.e., only have one non-zero component) are handled considerably faster. Consider transforming your differential equation to achieve this.
 	"""
 	
-	def __init__(self, f_sym=[], vectors=[], helpers=[], n=None, delays=None, max_delay=None, control_pars=[], module_location=None, simplify=True):
+	def __init__(self, f_sym=(), vectors=(), helpers=(), n=None, delays=None, max_delay=None, control_pars=(), module_location=None, simplify=True):
 		f_basic, n = handle_input(f_sym,n)
 		
 		helpers = sort_helpers(sympify_helpers(helpers or []))

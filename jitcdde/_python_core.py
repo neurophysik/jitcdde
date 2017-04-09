@@ -3,9 +3,9 @@
 
 from __future__ import print_function, division
 
+from itertools import chain
 import sympy
 import numpy as np
-from itertools import count, chain
 
 MIN_GARBAGE = 10
 NORM_THRESHOLD = 1e-30
@@ -113,15 +113,13 @@ def scalar_product_partial(anchors, indizes_1, indizes_2, start):
 		partial_sp_matrix(z), [0,1],
 		vector_2, [1,2]
 		)*q
-	
-	return result
 
 class dde_integrator(object):
 	def __init__(self,
 				f,
 				past,
-				helpers = [],
-				control_pars = [],
+				helpers = (),
+				control_pars = (),
 				n_basic = None
 			):
 		self.past = past
@@ -134,7 +132,7 @@ class dde_integrator(object):
 		
 		from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 		Y = sympy.symarray("Y", self.n)
-		substitutions = helpers[::-1] + [(y(i),Y[i]) for i in range(self.n)]
+		substitutions = list(helpers[::-1]) + [(y(i),Y[i]) for i in range(self.n)]
 		
 		past_calls = 0
 		f_wc = []
@@ -144,7 +142,7 @@ class dde_integrator(object):
 			f_wc.append(new_entry)
 		
 		F = self.F = sympy.lambdify(
-			[t]+[Yentry for Yentry in Y]+control_pars,
+			[t]+[Yentry for Yentry in Y]+list(control_pars),
 			f_wc,
 			[
 				{
@@ -229,8 +227,10 @@ class dde_integrator(object):
 		if self.past[-1][0]==self.t:
 			self.past.append((new_t, new_y, new_diff))
 		else:
-			try: self.old_new_y = self.past[-1][1]
-			except AttributeError: pass
+			try:
+				self.old_new_y = self.past[-1][1]
+			except AttributeError:
+				pass
 			
 			self.past[-1] = (new_t, new_y, new_diff)
 	
