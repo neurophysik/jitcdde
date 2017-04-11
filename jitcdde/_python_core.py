@@ -131,7 +131,7 @@ class dde_integrator(object):
 		self.parameters = []
 		
 		from jitcdde._jitcdde import t, y, current_y, past_y, anchors
-		Y = sympy.symarray("Y", self.n)
+		Y = sympy.DeferredVector("Y")
 		substitutions = list(helpers[::-1]) + [(y(i),Y[i]) for i in range(self.n)]
 		
 		past_calls = 0
@@ -141,8 +141,8 @@ class dde_integrator(object):
 			past_calls += new_entry.count(anchors)
 			f_wc.append(new_entry)
 		
-		F = self.F = sympy.lambdify(
-			[t]+[Yentry for Yentry in Y]+list(control_pars),
+		F = sympy.lambdify(
+			[t, Y] + list(control_pars),
 			f_wc,
 			[
 				{
@@ -153,7 +153,7 @@ class dde_integrator(object):
 			]
 			)
 		
-		self.f = lambda T,ypsilon: np.array(F(T,*chain(ypsilon,self.parameters))).flatten()
+		self.f = lambda *args: np.array(F(*args)).flatten()
 		
 		self.anchor_mem = (len(past)-1)*np.ones(past_calls, dtype=int)
 	
@@ -211,7 +211,7 @@ class dde_integrator(object):
 	
 	def eval_f(self, t, y):
 		self.anchor_mem_index = 0
-		return self.f(t, y)
+		return self.f(t, y, *self.parameters)
 	
 	def get_next_step(self, delta_t):
 		self.past_within_step = False
