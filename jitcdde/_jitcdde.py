@@ -137,7 +137,7 @@ class jitcdde(object):
 		Whether JiTCDDE shall give progress reports on the processing steps.
 	
 	module_location : string
-		location of a module file from which functions are to be loaded (see `save_compiled`). If you use this, you need not give `f_sym` as an argument, but if you do, you must give `n` and `max_delay`. Also note that the integrator may lack some functionalities, depending on the arguments you provide.
+		location of a module file from which functions are to be loaded (see `save_compiled`). If you use this, you need not give `f_sym` as an argument, but in this case you must give `n` and `max_delay`. Also note that the integrator may lack some functionalities, depending on the arguments you provide.
 	"""
 	
 	def __init__(
