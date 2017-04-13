@@ -731,7 +731,7 @@ class jitcdde(object):
 		Returns
 		-------
 		state : NumPy array
-			the computed state of the system at `target_time`. If the integration fails and `raise_exception` is `False`, an array of NaNs is returned.
+			the computed state of the system at `target_time`. If the integration fails and `raise_exception` is `False`, an extra- or interpolation of the desired state is returned – which may be blatantly wrong.
 		"""
 		self._initiate()
 		
@@ -768,7 +768,7 @@ class jitcdde(object):
 				raise error
 			else:
 				warn(str(error))
-				return np.nan*np.ones(self.n)
+				return self.DDE.get_recent_state(target_time)
 		
 		else:
 			result = self.DDE.get_recent_state(target_time)
