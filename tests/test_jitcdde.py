@@ -62,6 +62,8 @@ class TestIntegration(unittest.TestCase):
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
 		self.y_10 = None
+		if self.DDE.f_sym():
+			self.DDE.check()
 		self.generator()
 	
 	def assert_consistency_with_previous(self, value):
@@ -265,6 +267,22 @@ class TestFindMaxDelay(unittest.TestCase):
 		with self.assertRaises(ValueError):
 			_find_max_delay(_get_delays(g))
 
+class TestCheck(unittest.TestCase):
+	def test_check_index_negative(self):
+		DDE = jitcdde([y(-1)])
+		with self.assertRaises(ValueError):
+			DDE.check()
+	
+	def test_check_index_too_high(self):
+		DDE = jitcdde([y(1)])
+		with self.assertRaises(ValueError):
+			DDE.check()
+	
+	def test_check_undefined_variable(self):
+		x = sympy.symbols("x")
+		DDE = jitcdde([x])
+		with self.assertRaises(ValueError):
+			DDE.check()
 
 if __name__ == "__main__":
 	unittest.main(buffer=True)

@@ -209,6 +209,51 @@ class jitcdde(object):
 		if self.verbose:
 			print(message)
 	
+	def check(self, fail_fast=True):
+		"""
+		Checks for the following mistakes:
+		
+		* negative arguments of `y`
+		* arguments of `y` that are higher than the system’s dimension `n`
+		* unused variables
+		
+		For large systems, this may take some time (which is why it is not run by default).
+		
+		Parameters
+		----------
+		fail_fast : boolean
+			whether to abort on the first failure. If false, an error is raised only after all problems are printed.
+		"""
+		
+		failed = False
+
+		def problem(message):
+			failed = True
+			if fail_fast:
+				raise ValueError(message)
+			else:
+				print(message)
+		
+		valid_symbols = [t] + [helper[0] for helper in self.helpers] + list(self.control_pars)
+		
+		assert self.f_sym(), "f_sym is empty."
+		
+		for i,entry in enumerate(self.f_sym()):
+			indizes  = [argument[0] for argument in collect_arguments(entry,current_y)]
+			indizes += [argument[1] for argument in collect_arguments(entry,past_y   )]
+			for index in indizes:
+				if index < 0:
+					problem("y is called with a negative argument (%i) in equation %i." % (index, i))
+				if index >= self.n:
+					problem("y is called with an argument (%i) higher than the system’s dimension (%i) in equation %i."  % (index, self.n, i))
+			
+			for symbol in entry.atoms(sympy.Symbol):
+				if symbol not in valid_symbols:
+					problem("Invalid symbol (%s) in equation %i."  % (symbol.name, i))
+		
+		if failed:
+			raise ValueError("Check failed.")
+	
 	def add_past_point(self, time, state, derivative):
 		"""
 		adds an anchor point from which the past of the DDE is interpolated.
