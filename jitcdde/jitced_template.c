@@ -264,7 +264,7 @@ static PyObject * get_full_state(dde_integrator const * const self)
 # include "helpers_definitions.c"
 {% endif %}
 # include "f_definitions.c"
-static PyObject * eval_f(
+void eval_f(
 	dde_integrator * const self,
 	double const t,
 	double y[{{n}}],
@@ -285,8 +285,6 @@ static PyObject * eval_f(
 	# include "helpers.c"
 	{% endif %}
 	# include "f.c"
-	
-	Py_RETURN_NONE;
 }
 
 static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
