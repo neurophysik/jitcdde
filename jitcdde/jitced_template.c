@@ -41,7 +41,7 @@ typedef struct
 	anchor ** current_anchor;
 	{% endif %}
 	double past_within_step;
-	double old_new_y[{{n}}];
+	anchor * old_new;
 	double error[{{n}}];
 	double last_actual_step_start;
 	{% for control_par in control_pars %}
@@ -49,17 +49,8 @@ typedef struct
 	{% endfor %}
 } dde_integrator;
 
-void append_anchor(
-	dde_integrator * const self,
-	double const time,
-	double state[{{n}}],
-	double diff[{{n}}])
+void append_anchor(dde_integrator * const self, anchor * const new_anchor)
 {
-	anchor * new_anchor = malloc(sizeof(anchor));
-	assert(new_anchor!=NULL);
-	new_anchor->time = time;
-	memcpy(new_anchor->state, state, {{n}}*sizeof(double));
-	memcpy(new_anchor->diff, diff, {{n}}*sizeof(double));
 	new_anchor->next = NULL;
 	new_anchor->previous = self->last_anchor;
 	
@@ -90,17 +81,14 @@ void remove_first_anchor(dde_integrator * const self)
 	free(old_first_anchor);
 }
 
-void replace_last_anchor(
-	dde_integrator * const self,
-	double const time,
-	double state[{{n}}],
-	double diff[{{n}}]
-)
+void replace_last_anchor(dde_integrator * const self, anchor * const new_anchor)
 {
-	memcpy(self->old_new_y , self->last_anchor->state, {{n}}*sizeof(double));
-	self->last_anchor->time = time;
-	memcpy(self->last_anchor->state, state, {{n}}*sizeof(double));
-	memcpy(self->last_anchor->diff, diff, {{n}}*sizeof(double));
+	free(self->old_new);
+	self->old_new = self->last_anchor;
+	self->old_new->previous->next = new_anchor;
+	new_anchor->previous = self->old_new->previous;
+	self->last_anchor = new_anchor;
+	new_anchor->next = NULL;
 }
 
 {% if control_pars|length %}
@@ -301,6 +289,9 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 	
 	self->last_actual_step_start = self->current->time;
 	
+	anchor * new = malloc(sizeof(anchor));
+	assert(new!=NULL);
+	
 	self->past_within_step = 0.0;
 	# define k_1 self->current->diff
 	double argument[{{n}}];
@@ -315,23 +306,21 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 		argument[i] = self->current->state[i] + 0.75*delta_t*k_2[i];
 	eval_f(self, self->current->time+0.75*delta_t, argument, k_3);
 	
-	double new_y[{{n}}];
 	for (int i=0; i<{{n}}; i++)
-		new_y[i] = self->current->state[i] + (delta_t/9.) * (2*k_1[i]+3*k_2[i]+4*k_3[i]);
+		new->state[i] = self->current->state[i] + (delta_t/9.) * (2*k_1[i]+3*k_2[i]+4*k_3[i]);
 	
-	double new_t = self->current->time + delta_t;
+	new->time = self->current->time + delta_t;
 	
-	double k_4[{{n}}];
-	# define new_diff k_4
-	eval_f(self, new_t, new_y, new_diff);
+	# define k_4 new->diff
+	eval_f( self, new->time, new->state, new->diff );
 	
 	for (int i=0; i<{{n}}; i++)
 		self->error[i] = (5*k_1[i]-6*k_2[i]-8*k_3[i]+9*k_4[i]) * (1/72.);
 	
 	if (self->last_anchor == self->current)
-		append_anchor(self, new_t, new_y, new_diff);
+		append_anchor(self,new);
 	else
-		replace_last_anchor(self, new_t, new_y, new_diff);
+		replace_last_anchor(self,new);
 	
 	assert(self->first_anchor);
 	assert(self->last_anchor);
@@ -379,7 +368,7 @@ static PyObject * check_new_y_diff(dde_integrator const * const self, PyObject *
 	bool result = true;
 	for (int i=0; i<{{n}}; i++)
 	{
-		double difference = fabs(self->last_anchor->state[i] - self->old_new_y[i]);
+		double difference = fabs(self->last_anchor->state[i] - self->old_new->state[i]);
 		double tolerance = atol + fabs(rtol*self->last_anchor->state[i]);
 		result &= (tolerance >= difference);
 	}
@@ -438,32 +427,30 @@ static int initiate_past_from_list(dde_integrator * const self, PyObject * const
 {
 	for (Py_ssize_t i=0; i<PyList_Size(past); i++)
 	{
+		anchor * new = malloc(sizeof(anchor));
+		
 		PyObject * pyanchor = PyList_GetItem(past,i);
-		double time;
 		PyArrayObject * pystate;
 		PyArrayObject * pydiff;
-		if (!PyArg_ParseTuple(pyanchor, "dO!O!", &time, &PyArray_Type, &pystate, &PyArray_Type, &pydiff))
+		if (!PyArg_ParseTuple(pyanchor, "dO!O!", &new->time, &PyArray_Type, &pystate, &PyArray_Type, &pydiff))
 		{
 			PyErr_SetString(PyExc_ValueError,"Wrong input.");
 			return 0;
 		}
 		
 		if ( (PyArray_TYPE(pystate) != NPY_DOUBLE) || (PyArray_TYPE(pydiff) != NPY_DOUBLE) )
-			{
-				PyErr_SetString(PyExc_ValueError,"Anchors must be float arrays.");
-				return 0;
-			}
-			
+		{
+			PyErr_SetString(PyExc_ValueError,"Anchors must be float arrays.");
+			return 0;
+		}
 		
-		double state[{{n}}];
 		for (int i=0; i<{{n}}; i++)
-			state[i] = * (double *) PyArray_GETPTR1(pystate,i);
+			new->state[i] = * (double *) PyArray_GETPTR1(pystate,i);
 		
-		double diff[{{n}}];
 		for (int i=0; i<{{n}}; i++)
-			diff[i] = * (double *) PyArray_GETPTR1(pydiff,i);
+			new->diff[i] = * (double *) PyArray_GETPTR1(pydiff,i);
 		
-		append_anchor(self, time, state, diff);
+		append_anchor(self, new);
 	}
 	
 	return 1;
@@ -488,6 +475,7 @@ static int dde_integrator_init(dde_integrator * self, PyObject * args)
 	assert(self->first_anchor != NULL);
 	assert(self->last_anchor != NULL);
 	self->last_actual_step_start = self->first_anchor->time;
+	self->old_new = NULL;
 	
 	{% if anchor_mem_length: %}
 	self->anchor_mem = malloc({{anchor_mem_length}}*sizeof(anchor *));
