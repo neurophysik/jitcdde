@@ -342,7 +342,7 @@ static PyObject * get_p(dde_integrator const * const self, PyObject * args)
 	{
 		double error = fabs(self->error[i]);
 		double tolerance = atol+rtol*fabs(self->last_anchor->state[i]);
-		if (error!=0.0 && tolerance!=0.0)
+		if (error!=0.0 || tolerance!=0.0)
 		{
 			double x = error/tolerance;
 			if (x>p)
