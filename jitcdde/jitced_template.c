@@ -38,7 +38,7 @@ typedef struct
 	anchor * last_anchor;
 	{% if anchor_mem_length: %}
 	anchor ** anchor_mem;
-	anchor ** current_anchor;
+	anchor ** anchor_mem_cursor;
 	{% endif %}
 	double past_within_step;
 	anchor * old_new;
@@ -120,7 +120,7 @@ static PyObject * get_t(dde_integrator const * const self)
 {% if anchor_mem_length: %}
 anchor get_past_anchors(dde_integrator * const self, double const t)
 {
-	anchor * ca = *(self->current_anchor);
+	anchor * ca = *(self->anchor_mem_cursor);
 	
 	while ( (ca->time > t) && (ca->previous) )
 		ca = ca->previous;
@@ -133,8 +133,8 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 	if (t > self->current->time)
 		self->past_within_step = fmax(self->past_within_step,t-self->current->time);
 	
-	*(self->current_anchor) = ca;
-	self->current_anchor++;
+	*(self->anchor_mem_cursor) = ca;
+	self->anchor_mem_cursor++;
 	return *ca;
 }
 {% endif %}
@@ -259,7 +259,7 @@ void eval_f(
 	double dY[{{n}}])
 {
 	{% if anchor_mem_length: %}
-		self->current_anchor = self->anchor_mem;
+		self->anchor_mem_cursor = self->anchor_mem;
 	{% endif %}
 	
 	{% if number_of_helpers>0: %}
@@ -501,7 +501,7 @@ void calculate_sp_matrix(
 	double cq = q/420.;
 	double cqq = cq*q;
 	double cqqq = cqq*q;
-	memcpy(v->sp_matrix, (double[4][4]){  
+	memcpy(v->sp_matrix, (double[4][4]){
 		{ 156*cq  ,22*cqq  , 54*cq  ,-13*cqq  },
 		{  22*cqq , 4*cqqq , 13*cqq , -3*cqqq },
 		{  54*cq  ,13*cqq  ,156*cq  ,-22*cqq  },
@@ -536,7 +536,7 @@ void calculate_partial_sp_matrix(
 	double const h_5 = (2*h_2 + 3*h_4)/q;
 	double const h_8 = - h_5 + h_7*q - h_6 - 0.5*(z*q)*(z*q);
 	
-	memcpy(v->sp_matrix, (double[4][4]){  
+	memcpy(v->sp_matrix, (double[4][4]){
 		{  2*h_3   , h_1    , h_7-2*h_3      , h_5                },
 		{    h_1   , h_2    , h_6-h_1        , h_2+h_4            },
 		{ h_7-2*h_3, h_6-h_1, 2*h_3-2*h_7-z*q, h_8                },
