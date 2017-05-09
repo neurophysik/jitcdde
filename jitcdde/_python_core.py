@@ -127,6 +127,7 @@ class dde_integrator(object):
 		self.n = len(self.y)
 		self.n_basic = n_basic or self.n
 		self.last_garbage = -1
+		self.old_new_y = None
 		
 		self.parameters = []
 		
@@ -239,12 +240,16 @@ class dde_integrator(object):
 			return np.nanmax(np.abs(self.error)/(atol + rtol*np.abs(self.past[-1][1])))
 	
 	def check_new_y_diff(self, atol, rtol):
-		difference = np.abs(self.past[-1][1]-self.old_new_y)
-		tolerance = atol + np.abs(rtol*self.past[-1][1])
-		return np.all(difference <= tolerance)
+		if self.old_new_y is not None:
+			difference = np.abs(self.past[-1][1]-self.old_new_y)
+			tolerance = atol + np.abs(rtol*self.past[-1][1])
+			return np.all(difference <= tolerance)
+		else:
+			return False
 	
 	def accept_step(self):
 		self.t, self.y, self.diff = self.past[-1]
+		self.old_new_y = None
 
 	def forget(self, delay):
 		threshold = self.t - delay

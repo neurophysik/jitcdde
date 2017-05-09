@@ -41,7 +41,7 @@ typedef struct
 	anchor ** anchor_mem_cursor;
 	{% endif %}
 	double past_within_step;
-	anchor * old_new;
+	anchor * old_last;
 	double error[{{n}}];
 	double last_actual_step_start;
 	{% for control_par in control_pars %}
@@ -83,10 +83,10 @@ void remove_first_anchor(dde_integrator * const self)
 
 void replace_last_anchor(dde_integrator * const self, anchor * const new_anchor)
 {
-	free(self->old_new);
-	self->old_new = self->last_anchor;
-	self->old_new->previous->next = new_anchor;
-	new_anchor->previous = self->old_new->previous;
+	free(self->old_last);
+	self->old_last = self->last_anchor;
+	new_anchor->previous = self->old_last->previous;
+	new_anchor->previous->next = new_anchor;
 	self->last_anchor = new_anchor;
 	new_anchor->next = NULL;
 }
@@ -366,12 +366,15 @@ static PyObject * check_new_y_diff(dde_integrator const * const self, PyObject *
 	}
 	
 	bool result = true;
-	for (int i=0; i<{{n}}; i++)
-	{
-		double difference = fabs(self->last_anchor->state[i] - self->old_new->state[i]);
-		double tolerance = atol + fabs(rtol*self->last_anchor->state[i]);
-		result &= (tolerance >= difference);
-	}
+	if (self->old_last == NULL)
+		result = false;
+	else
+		for (int i=0; i<{{n}}; i++)
+		{
+			double difference = fabs(self->last_anchor->state[i] - self->old_last->state[i]);
+			double tolerance = atol + fabs(rtol*self->last_anchor->state[i]);
+			result &= (tolerance >= difference);
+		}
 	
 	return PyBool_FromLong(result);
 }
@@ -379,6 +382,8 @@ static PyObject * check_new_y_diff(dde_integrator const * const self, PyObject *
 static PyObject * accept_step(dde_integrator * const self)
 {
 	self->current = self->last_anchor;
+	free(self->old_last);
+	self->old_last = NULL;
 	Py_RETURN_NONE;
 }
 
@@ -475,7 +480,7 @@ static int dde_integrator_init(dde_integrator * self, PyObject * args)
 	assert(self->first_anchor != NULL);
 	assert(self->last_anchor != NULL);
 	self->last_actual_step_start = self->first_anchor->time;
-	self->old_new = NULL;
+	self->old_last = NULL;
 	
 	{% if anchor_mem_length: %}
 	self->anchor_mem = malloc({{anchor_mem_length}}*sizeof(anchor *));
