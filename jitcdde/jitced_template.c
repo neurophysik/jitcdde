@@ -421,6 +421,7 @@ static void dde_integrator_dealloc(dde_integrator * const self)
 {
 	while (self->first_anchor)
 		remove_first_anchor(self);
+	free(self->old_last);
 	{% if anchor_mem_length: %}
 	free(self->anchor_mem);
 	{% endif %}
