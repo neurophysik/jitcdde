@@ -9,23 +9,12 @@ The argument is the number of runs.
 
 from __future__ import print_function
 from jitcdde._python_core import dde_integrator as py_dde_integrator
-from jitcdde._jitcdde import t, y, current_y, past_y, anchors
-from jitcxde_common import (
-	ensure_suffix, count_up,
-	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
-	render_and_write_code,
-	render_template,
-	)
+from jitcdde import jitcdde, t, y
 
-import sympy
 import numpy as np
 from numpy.testing import assert_allclose
 import random
-from setuptools import setup, Extension
-from sys import version_info, modules, argv, stdout
-from os import path as path
-from tempfile import mkdtemp
-from jinja2 import Environment, FileSystemLoader
+from sys import argv, stdout
 
 compare = lambda x,y: assert_allclose(x,y,rtol=1e-7,atol=1e-7)
 
@@ -48,19 +37,6 @@ past_calls = 3
 def past_points():
 	return [anchor for anchor in past]
 
-
-tmpdir = None
-def tmpfile(filename=None):
-	global tmpdir
-	tmpdir = tmpdir or mkdtemp()
-	
-	if filename is None:
-		return tmpdir
-	else:
-		return path.join(tmpdir, filename)
-
-modulename = "jitced"
-
 errors = 0
 
 for realisation in range(number_of_runs):
@@ -68,45 +44,10 @@ for realisation in range(number_of_runs):
 	stdout.flush()
 	
 	P = py_dde_integrator(f, past_points())
-
-	set_dy = sympy.Function("set_dy")
-	render_and_write_code(
-		(set_dy(i,entry) for i,entry in enumerate(f())),
-		tmpfile,
-		"f",
-		["set_dy","current_y","past_y","anchors"],
-		chunk_size = 100,
-		)
-		
-	modulename = count_up(modulename)
-
-	render_template(
-		"jitced_template.c",
-		tmpfile(modulename + ".c"),
-		folder = path.join(path.dirname(__file__),"..","jitcdde"),
-		n = 1,
-		module_name = modulename,
-		Python_version = version_info[0],
-		has_any_helpers = False,
-		number_of_helpers = 0,
-		number_of_anchor_helpers = 0,
-		anchor_mem_length = past_calls,
-		n_basic = 1
-		)
-
-	setup(
-		name = modulename,
-		ext_modules = [Extension(
-			modulename,
-			sources = [tmpfile(modulename + ".c")],
-			extra_compile_args = ["-g", "-UNDEBUG", "-Wno-unknown-pragmas", "-O2", "-std=c11"]
-			)],
-		script_args = ["build_ext","--build-lib",tmpfile(),"--build-temp",tmpfile(),"--force",],
-		verbose = False
-		)
 	
-	jitced = find_and_load_module(modulename,tmpfile())
-	C = jitced.dde_integrator(past_points())
+	DDE = jitcdde(f)
+	DDE.generate_f_C()
+	C = DDE.jitced.dde_integrator(past_points())
 	
 	def get_next_step():
 		r = random.uniform(1e-5,1)
