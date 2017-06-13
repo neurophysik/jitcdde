@@ -35,7 +35,7 @@ This documentation assumes that the delay differential equation (DDE) you want t
 
 .. math::
 
-	\dot{y} = f(y, y(t-τ_1), y(t-τ_2), …)
+	\dot{y} = f(t, y, y(t-τ_1), y(t-τ_2), …)
 
 The gist of Shampine’s and Thompson’s method [ST01]_ is this:
 The differential equation is integrated adaptively with the Bogacki–Shampine pair [BS89]_, like an ODE.
