@@ -8,7 +8,7 @@ JiTCDDE (just-in-time compilation for delay differential equations) is a standal
 JiTCDDE is designed in analogy to `JiTCODE`_ (which is handled very similarly to `SciPy’s ODE`_ (`scipy.integrate.ode`)):
 It takes an iterable (or generator function) of `SymPy <http://www.sympy.org/>`_ expressions, translates them to C code, compiles them and an integrator wrapped around them on the fly, and allows you to operate this integrator from Python.
 
-This approach has the following advantages
+This approach has the following advantages:
 
 *	**Speed boost through compilation**
 	Evaluating the derivative and the core operations of the Runge–Kutta integration happen in compiled C code and thus very efficiently.
@@ -23,7 +23,8 @@ This approach has the following advantages
 	As the derivative is provided symbolically, SymPy’s automatic derivation routines can be employed to calculate the Jacobian required for the DDE for the tangent vector required for calculating the Lyapunov expontents (see `lyapunov`).
 
 *	**SymPy interface**
-	If you are working with SymPy anyway – e.g., to calculate fixed points –, you do not need to bother much with translating your equations.
+	You can enter your differential equations almost like you would on paper.
+	Also, if you are working with SymPy anyway – e.g., to calculate fixed points –, you do not need to bother much with translating your equations.
 
 If compilation fails to work for whatever reason, pure Python functions can be employed as a fallback (which is much slower, however).
 
