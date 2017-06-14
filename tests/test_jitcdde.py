@@ -96,12 +96,12 @@ class TestIntegrationLambda(TestIntegration):
 	def generator(self):
 		self.DDE.generate_f_lambda()
 
-class TestIntegrationSafeAndLoad(TestIntegration):
+class TestIntegrationSaveAndLoad(TestIntegration):
 	@classmethod
 	def setUpClass(self):
 		DDE_orig = jitcdde(f)
-		DDE_orig.save_compiled("compiled.so", overwrite=True)
-		self.DDE = jitcdde(n=6, module_location="compiled.so", delays=[delay])
+		filename = DDE_orig.save_compiled(overwrite=True)
+		self.DDE = jitcdde(n=6, module_location=filename, delays=[delay])
 		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def generator(self):

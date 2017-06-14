@@ -536,6 +536,11 @@ class jitcdde(object):
 			If this specifies only a directory (don’t forget the trailing `/` or similar), the module will be saved to that directory. If empty (default), the module will be saved to the current working directory. Otherwise, the functions will be (re)compiled to match that filename. The ending `.so` will be appended, if needed.
 		overwrite : boolean
 			Whether to overwrite the specified target if it already exists.
+		
+		Returns
+		-------
+		filename : string
+			The destination that was actually used.
 		"""
 		
 		folder, filename = path.split(destination)
@@ -562,6 +567,8 @@ class jitcdde(object):
 			raise OSError("Target File already exists and \"overwrite\" is set to False")
 		else:
 			shutil.copy(sourcefile, destination)
+		
+		return destination
 	
 	def set_parameters(self, *parameters):
 		"""

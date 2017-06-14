@@ -72,17 +72,11 @@ class TestIntegration(unittest.TestCase):
 			print(lyap,stderr)
 			self.assertAlmostEqual(lyap_control, lyap, delta=3*stderr)
 
-filename_index = 0
-def get_filename():
-	global filename_index
-	filename_index += 1
-	return "lyap_compiled%i.so" % filename_index
-
 class TestSaveAndLoad(TestIntegration):
 	def setUp(self):
 		DDE_orig = jitcdde_lyap(f, n_lyap=len(lyap_controls))
-		filename = get_filename()
-		DDE_orig.save_compiled(filename, overwrite=True)
+		filename = DDE_orig.save_compiled(overwrite=True)
+		print(filename)
 		self.DDE = jitcdde_lyap(
 			n=6,
 			module_location=filename,
