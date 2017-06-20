@@ -9,12 +9,12 @@ from traceback import format_exc
 from os import path as path
 from setuptools import setup, Extension
 from sys import version_info, modules
-from tempfile import mkdtemp
 import sympy
 import numpy as np
 import shutil
 import jitcdde._python_core as python_core
 from jitcxde_common import (
+	jitcxde,
 	ensure_suffix, count_up,
 	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
 	handle_input, sort_helpers, sympify_helpers,
@@ -111,7 +111,7 @@ DEFAULT_COMPILE_ARGS = [
 			"-Wno-unknown-pragmas",
 			]
 
-class jitcdde(object):
+class jitcdde(jitcxde):
 	"""
 	Parameters
 	----------
@@ -151,6 +151,9 @@ class jitcdde(object):
 		verbose = True,
 		module_location = None
 		):
+		
+		super(jitcdde,self).__init__(verbose)
+		
 		if module_location is not None:
 			self.jitced = module_from_path(module_location)
 			self.compile_attempt = True
@@ -161,7 +164,6 @@ class jitcdde(object):
 		self.f_sym, self.n = handle_input(f_sym,n)
 		self.n_basic = self.n
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
-		self._tmpdir = None
 		self._modulename = "jitced"
 		self.control_pars = control_pars
 		self.past = []
@@ -195,19 +197,6 @@ class jitcdde(object):
 		if new_max_delay is not None:
 			assert new_max_delay >= 0.0, "Negative maximum delay."
 		self._max_delay = new_max_delay
-	
-	def _tmpfile(self, filename=None):
-		if self._tmpdir is None:
-			self._tmpdir = mkdtemp()
-		
-		if filename is None:
-			return self._tmpdir
-		else:
-			return path.join(self._tmpdir, filename)
-	
-	def report(self, message):
-		if self.verbose:
-			print(message)
 	
 	def check(self, fail_fast=True):
 		"""
@@ -318,6 +307,9 @@ class jitcdde(object):
 		self.DDE = None
 	
 	def generate_f_lambda(self):
+		self.generate_lambdas()
+	
+	def generate_lambdas(self):
 		"""
 		Explicitly initiates a purely Python-based integrator.
 		"""
@@ -331,9 +323,15 @@ class jitcdde(object):
 			self.control_pars,
 			self.n_basic
 			)
-		self.compile_attempt = True
+		self.compile_attempt = False
 	
-	def generate_f_C(
+	def generate_f_C(self, *args, **kwargs):
+		self.compile_C(*args, **kwargs)
+	
+	def _compile_C(self, *args, **kwargs):
+		self.compile_C(*args, **kwargs)
+	
+	def compile_C(
 		self,
 		simplify = True,
 		do_cse = True,
@@ -362,7 +360,7 @@ class jitcdde(object):
 			If smaller than 1, no chunking will happen.
 		
 		extra_compile_args : list of strings
-			Arguments to be handed to the C compiler on top of what Setuptools chooses. In most situations, it’s best not to write your own list, but modify `DEFAULT_COMPILE_ARGS`, e.g., like this: `generate_f_C(extra_compile_args = DEFAULT_COMPILE_ARGS + ["--my-flag"])`. However, if your compiler cannot handle one of the `DEFAULT_COMPILE_ARGS`, you best write your own arguments.
+			Arguments to be handed to the C compiler on top of what Setuptools chooses. In most situations, it’s best not to write your own list, but modify `DEFAULT_COMPILE_ARGS`, e.g., like this: `compile_C(extra_compile_args = DEFAULT_COMPILE_ARGS + ["--my-flag"])`. However, if your compiler cannot handle one of the `DEFAULT_COMPILE_ARGS`, you best write your own arguments.
 
 		verbose : boolean
 			Whether the compiler commands shall be shown. This is the same as Setuptools’ `verbose` setting.
@@ -507,9 +505,9 @@ class jitcdde(object):
 	
 	def _initiate(self):
 		if self.compile_attempt is None:
+			self.report("Generating, compiling, and loading C code.")
 			try:
-				self.report("Generating, compiling, and loading C code.")
-				self.generate_f_C()
+				self.compile_C()
 			except:
 				warn(format_exc())
 				warn("Generating compiled integrator failed; resorting to lambdified functions.")
@@ -522,53 +520,9 @@ class jitcdde(object):
 			if self.compile_attempt:
 				self.DDE = self.jitced.dde_integrator(self.past)
 			else:
-				self.generate_f_lambda()
+				self.generate_lambdas()
 		
 		self._set_integration_parameters()
-	
-	def save_compiled(self, destination="", overwrite=False):
-		"""
-		saves the module file with the compiled functions for later use (see the `module_location` argument of `jitcdde`). If no compiled derivative exists, it tries to compile it first using `generate_f_C`. In most circumstances, you should not rename this file, as the filename is needed to determine the module name.
-		
-		Parameters
-		----------
-		destination : string specifying a path
-			If this specifies only a directory (don’t forget the trailing `/` or similar), the module will be saved to that directory. If empty (default), the module will be saved to the current working directory. Otherwise, the functions will be (re)compiled to match that filename. The ending `.so` will be appended, if needed.
-		overwrite : boolean
-			Whether to overwrite the specified target if it already exists.
-		
-		Returns
-		-------
-		filename : string
-			The destination that was actually used.
-		"""
-		
-		folder, filename = path.split(destination)
-		
-		if filename:
-			destination = ensure_suffix(destination, ".so")
-			modulename = modulename_from_path(filename)
-			if modulename != self._modulename:
-				self.generate_f_C(modulename=modulename)
-				self.report("compiled C code")
-			else:
-				self.generate_f_C()
-			sourcefile = get_module_path(self._modulename, self._tmpfile())
-		else:
-			self.generate_f_C()
-			sourcefile = get_module_path(self._modulename, self._tmpfile())
-			destination = path.join(folder, ensure_suffix(self._modulename, ".so"))
-			self.report("saving file to " + destination)
-		
-		if not self.compile_attempt:
-			raise RuntimeError("Compilation failed. Cannot save module file.")
-		
-		if path.isfile(destination) and not overwrite:
-			raise OSError("Target File already exists and \"overwrite\" is set to False")
-		else:
-			shutil.copy(sourcefile, destination)
-		
-		return destination
 	
 	def set_parameters(self, *parameters):
 		"""
