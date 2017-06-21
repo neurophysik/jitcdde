@@ -161,8 +161,23 @@ Command reference
 
 .. automodule:: _jitcdde
 	:members:
+	:exclude-members: jitcdde, jitcdde_lyap, jitcdde_restricted_lyap
 
-.. _reference:
+The main class
+^^^^^^^^^^^^^^
+
+.. autoclass:: jitcdde
+	:members:
+	:inherited-members:
+
+Lyapunov exponents
+^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: jitcdde_lyap
+	:members:
+
+.. autoclass:: jitcdde_restricted_lyap
+	:members:
 
 References
 ----------

@@ -1,18 +1,12 @@
 import sys
 import os
-from unittest.mock import MagicMock as Mock
 from setuptools_scm import get_version
 
-MOCK_MODULES = [
-	#'numpy', 'numpy.testing', 'numpy.random',
-	'sympy',
-	'jitcdde', 'jitcxde_common', 'jitcdde._python_core']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
-
-class Symbol(object):
-	def __init__(*args, **kwargs):
-		pass
-sys.modules['sympy'] = Mock(Function=Symbol, Symbol=Symbol)
+# Mocking to make RTD autobuild the documentation.
+autodoc_mock_imports = [
+	'numpy', 'numpy.testing', 'numpy.random',
+	'jitcdde._python_core'
+	]
 
 sys.path.insert(0,os.path.abspath("../examples"))
 sys.path.insert(0,os.path.abspath("../jitcdde"))

@@ -6,20 +6,13 @@ from __future__ import print_function, absolute_import, division
 from warnings import warn
 from itertools import count
 from traceback import format_exc
-from os import path as path
-from setuptools import setup, Extension
-from sys import version_info, modules
 import sympy
 import numpy as np
-import shutil
 import jitcdde._python_core as python_core
 from jitcxde_common import (
 	jitcxde,
-	ensure_suffix, count_up,
-	get_module_path, modulename_from_path, find_and_load_module, module_from_path,
 	handle_input, sort_helpers, sympify_helpers,
 	render_and_write_code,
-	render_template,
 	collect_arguments,
 	random_direction
 	)
@@ -73,7 +66,7 @@ def _get_delays(f, helpers=()):
 	delay_terms = set().union(*(collect_arguments(entry, anchors) for entry in f()))
 	delay_terms.update(*(collect_arguments(helper[1], anchors) for helper in helpers))
 	
-	return [0]+list(map(lambda delay_term: t-delay_term[0], delay_terms))
+	return [0]+[t-delay_term[0] for delay_term in delay_terms]
 
 def _find_max_delay(delays):
 	if all(sympy.sympify(delay).is_Number for delay in delays):
@@ -358,7 +351,7 @@ class jitcdde(jitcxde):
 			Whether the compiler commands shall be shown. This is the same as Setuptools’ `verbose` setting.
 
 		modulename : string or `None`
-			The name used for the compiled module. If `None` or empty, the filename will be chosen by JiTCDDE based on previously used filenames or default to `jitced.so`. The only reason why you may want to change this is if you want to save the module file for later use (with`save_compiled`). It is not possible to re-use a modulename for a given instance of Python (due to the limitations of Python’s import machinery).
+			The name used for the compiled module. If `None` or empty, the filename will be chosen by JiTCDDE based on previously used filenames or default to `jitced.so`. The only reason why you may want to change this is if you want to save the module file for later use (with `save_compiled`). It is not possible to re-use a modulename for a given instance of Python (due to the limitations of Python’s import machinery).
 		"""
 		
 		self.compile_attempt = False
@@ -812,7 +805,7 @@ class jitcdde(jitcxde):
 		
 		if not all(sympy.sympify(delay).is_Number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
-		self.delays = list(map(float, self.delays))
+		self.delays = [float(delay) for delay in self.delays]
 		
 		steps = _propagate_delays(self.delays, propagations, min_distance)
 		steps.remove(0)
