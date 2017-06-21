@@ -152,19 +152,11 @@ class jitcdde(jitcxde):
 		module_location = None
 		):
 		
-		super(jitcdde,self).__init__(verbose)
-		
-		if module_location is not None:
-			self.jitced = module_from_path(module_location)
-			self.compile_attempt = True
-		else:
-			self.jitced = None
-			self.compile_attempt = None
+		super(jitcdde,self).__init__(verbose,module_location)
 		
 		self.f_sym, self.n = handle_input(f_sym,n)
 		self.n_basic = self.n
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
-		self._modulename = "jitced"
 		self.control_pars = control_pars
 		self.past = []
 		self.integration_parameters_set = False
@@ -450,29 +442,13 @@ class jitcdde(jitcxde):
 			arguments = arguments + [("dY", "double", self.n)]
 			)
 		
-		if modulename:
-			if modulename in modules.keys():
-				raise NameError("Module name has already been used in this instance of Python.")
-			self._modulename = modulename
-		else:
-			while self._modulename in modules.keys():
-				self._modulename = count_up(self._modulename)
-		
-		sourcefile = self._tmpfile(self._modulename + ".c")
-		modulefile = self._tmpfile(self._modulename + ".so")
-		
-		if path.isfile(modulefile):
-			raise OSError("Module file already exists.")
-		
 		if not self.past_calls:
 			warn("Differential equation does not include a delay term.")
 		
-		render_template(
-			"jitced_template.c",
-			sourcefile,
+		self.process_modulename(modulename)
+		
+		self.render_template(
 			n = self.n,
-			module_name = self._modulename,
-			Python_version = version_info[0],
 			number_of_helpers = helper_i,
 			number_of_anchor_helpers = anchor_i,
 			has_any_helpers = anchor_i or helper_i,
@@ -481,27 +457,7 @@ class jitcdde(jitcxde):
 			control_pars = [par.name for par in self.control_pars]
 			)
 		
-		setup(
-			name = self._modulename,
-			ext_modules = [Extension(
-				self._modulename,
-				sources = [sourcefile],
-				extra_link_args = ["-lm"],
-				include_dirs = [np.get_include()],
-				extra_compile_args = extra_compile_args,
-				)],
-			script_args = [
-				"build_ext",
-				"--build-lib", self._tmpfile(),
-				"--build-temp", self._tmpfile(),
-				"--force",
-				#"clean" #, "--all"
-				],
-			verbose = verbose
-			)
-		
-		self.jitced = find_and_load_module(self._modulename,self._tmpfile())
-		self.compile_attempt = True
+		self._compile_and_load(verbose,extra_compile_args)
 	
 	def _initiate(self):
 		if self.compile_attempt is None:
@@ -870,13 +826,6 @@ class jitcdde(jitcxde):
 		else:
 			self._initiate()
 			return self.DDE.get_current_state()[:self.n_basic]
-	
-	def __del__(self):
-		try:
-			shutil.rmtree(self._tmpdir)
-		except (OSError, AttributeError, TypeError):
-			pass
-
 
 def _jac(f, helpers, delay, n):
 	dependent_helpers = [[] for i in range(n)]
