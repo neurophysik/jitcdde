@@ -438,9 +438,9 @@ class jitcdde(jitcxde):
 		if not self.past_calls:
 			warn("Differential equation does not include a delay term.")
 		
-		self.process_modulename(modulename)
+		self._process_modulename(modulename)
 		
-		self.render_template(
+		self._render_template(
 			n = self.n,
 			number_of_helpers = helper_i,
 			number_of_anchor_helpers = anchor_i,
