@@ -454,14 +454,7 @@ class jitcdde(jitcxde):
 	
 	def _initiate(self):
 		if self.compile_attempt is None:
-			self.report("Generating, compiling, and loading C code.")
-			try:
-				self.compile_C()
-			except:
-				warn(format_exc())
-				warn("Generating compiled integrator failed; resorting to lambdified functions.")
-			else:
-				self.reset_integrator()
+			self._attempt_compilation()
 		
 		if self.DDE is None:
 			assert len(self.past)>1, "You need to add at least two past points first."
