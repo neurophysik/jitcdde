@@ -551,7 +551,7 @@ class jitcdde(jitcxde):
 		pws_fuzzy_increase : boolean
 			Whether the decision to try to increase the step size shall depend on chance. The upside of this is that it is less likely that the step size gets locked at a unnecessarily low value. The downside is that the integration is not deterministic anymore. If False, increase probabilities will be added up until they exceed 0.9, in which case an increase happens.
 		
-		raise_exception : boolean,
+		raise_exception : boolean
 			Whether (`UnsuccessfulIntegration`) shall be raised if the integration fails. You can deal with this by catching this exception. If `False`, there is only a warning and `self.successful` is set to `False`.
 		"""
 		
