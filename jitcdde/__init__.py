@@ -5,7 +5,6 @@ from ._jitcdde import (
 		provide_basic_symbols, provide_advanced_symbols,
 		UnsuccessfulIntegration,
 		_find_max_delay, _get_delays,
-		DEFAULT_COMPILE_ARGS,
 		)
 
 try:

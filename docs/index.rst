@@ -28,6 +28,8 @@ This approach has the following advantages:
 
 If compilation fails to work for whatever reason, pure Python functions can be employed as a fallback (which is much slower, however).
 
+If you face issues with the compiler, want to optimise the speed, or wish to integrate network dynamics, also take a look at the `common JiTC*DE documentation`_.
+
 A brief mathematic background
 -----------------------------
 
@@ -181,6 +183,8 @@ Lyapunov exponents
 
 References
 ----------
+
+.. _common JiTC*DE documentation: https://jitcde-common.readthedocs.io
 
 .. [ST01] L.F. Shampine, S. Thompson: Solving DDEs in Matlab, Applied Numerical Mathematics 37, pp. 441–458 (2001), `10.1016/S0168-9274(00)00055-6 <http://dx.doi.org/10.1016/S0168-9274(00)00055-6>`_.
 
