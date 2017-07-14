@@ -7,9 +7,9 @@ from jitcdde import (
 	jitcdde_lyap,
 	UnsuccessfulIntegration,
 	_find_max_delay, _get_delays,
-	DEFAULT_COMPILE_ARGS
 	)
 
+from jitcxde_common import DEFAULT_COMPILE_ARGS
 import sympy
 import numpy as np
 from numpy.testing import assert_allclose

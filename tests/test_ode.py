@@ -6,12 +6,12 @@ from jitcdde import (
 	jitcdde,
 	UnsuccessfulIntegration,
 	_find_max_delay,
-	DEFAULT_COMPILE_ARGS
 	)
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
 from sympy import symbols
+from jitcxde_common import DEFAULT_COMPILE_ARGS
 
 compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
 
