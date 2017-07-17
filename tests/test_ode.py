@@ -11,9 +11,10 @@ import numpy as np
 from numpy.testing import assert_allclose
 import unittest
 from sympy import symbols
-from jitcxde_common import DEFAULT_COMPILE_ARGS
 
-compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+if platform.system() != "Windows":
+	from jitcxde_common import DEFAULT_COMPILE_ARGS
+	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
 
 # control values:
 

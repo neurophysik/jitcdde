@@ -9,14 +9,15 @@ from jitcdde import (
 	_find_max_delay, _get_delays,
 	)
 
-from jitcxde_common import DEFAULT_COMPILE_ARGS
 import sympy
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
 from scipy.stats import sem
 
-compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+if platform.system() != "Windows":
+	from jitcxde_common import DEFAULT_COMPILE_ARGS
+	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
 
 omega = np.array([0.88167179, 0.87768425])
 delay = 4.5
