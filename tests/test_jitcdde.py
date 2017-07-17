@@ -8,7 +8,7 @@ from jitcdde import (
 	UnsuccessfulIntegration,
 	_find_max_delay, _get_delays,
 	)
-
+import platform
 import sympy
 import numpy as np
 from numpy.testing import assert_allclose
