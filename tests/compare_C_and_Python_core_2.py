@@ -13,8 +13,15 @@ from jitcdde import jitcdde, t, y
 
 import numpy as np
 from numpy.testing import assert_allclose
+import platform
 import random
 from sys import argv, stdout
+
+if platform.system() == "Windows":
+	compile_args = None
+else:
+	from jitcxde_common import DEFAULT_COMPILE_ARGS
+	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG","-O0"]
 
 compare = lambda x,y: assert_allclose(x,y,rtol=1e-7,atol=1e-7)
 
