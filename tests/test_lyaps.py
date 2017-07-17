@@ -16,7 +16,9 @@ from numpy.testing import assert_allclose
 import unittest
 from scipy.stats import sem
 
-if platform.system() != "Windows":
+if platform.system() == "Windows":
+	compile_args = None
+else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
 	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
 
