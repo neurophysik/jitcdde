@@ -311,8 +311,8 @@ class jitcdde(jitcxde):
 		simplify = True,
 		do_cse = True,
 		chunk_size = 100,
-		extra_compile_args = [],
-		extra_link_args = [],
+		extra_compile_args = None,
+		extra_link_args = None,
 		verbose = False,
 		modulename = None,
 		):
