@@ -28,7 +28,7 @@ This approach has the following advantages:
 
 If compilation fails to work for whatever reason, pure Python functions can be employed as a fallback (which is much slower, however).
 
-If you face issues with the compiler, want to optimise the speed, or wish to integrate network dynamics, also take a look at the `common JiTC*DE documentation`_.
+For installation instructions, if you face issues with the compiler, want to optimise the speed, or wish to integrate network dynamics, take a look at the `common JiTC*DE documentation`_.
 
 A brief mathematic background
 -----------------------------
