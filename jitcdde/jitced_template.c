@@ -18,6 +18,14 @@
 
 # define NORM_THRESHOLD (1e-30)
 
+static inline void * safe_malloc(size_t size)
+{
+	void * pointer = malloc(size);
+	if (pointer == NULL)
+		PyErr_SetString(PyExc_MemoryError,"Could not allocate memory.");
+	return pointer;
+}
+
 typedef struct anchor
 {
 	double time;
@@ -289,7 +297,7 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 	
 	self->last_actual_step_start = self->current->time;
 	
-	anchor * new = malloc(sizeof(anchor));
+	anchor * new = safe_malloc(sizeof(anchor));
 	assert(new!=NULL);
 	
 	self->past_within_step = 0.0;
@@ -433,7 +441,7 @@ static int initiate_past_from_list(dde_integrator * const self, PyObject * const
 {
 	for (Py_ssize_t i=0; i<PyList_Size(past); i++)
 	{
-		anchor * new = malloc(sizeof(anchor));
+		anchor * new = safe_malloc(sizeof(anchor));
 		
 		PyObject * pyanchor = PyList_GetItem(past,i);
 		PyArrayObject * pystate;
@@ -484,7 +492,7 @@ static int dde_integrator_init(dde_integrator * self, PyObject * args)
 	self->old_last = NULL;
 	
 	{% if anchor_mem_length: %}
-	self->anchor_mem = malloc({{anchor_mem_length}}*sizeof(anchor *));
+	self->anchor_mem = safe_malloc({{anchor_mem_length}}*sizeof(anchor *));
 	assert(self->anchor_mem != NULL);
 	for (int i=0; i<{{anchor_mem_length}}; i++)
 		self->anchor_mem[i] = self->last_anchor->previous;
