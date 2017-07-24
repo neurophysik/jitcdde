@@ -128,6 +128,7 @@ static PyObject * get_t(dde_integrator const * const self)
 {% if anchor_mem_length: %}
 anchor get_past_anchors(dde_integrator * const self, double const t)
 {
+	assert (self->anchor_mem_cursor <= &( self->anchor_mem[{{anchor_mem_length}}-1] ));
 	anchor * ca = *(self->anchor_mem_cursor);
 	
 	while ( (ca->time > t) && (ca->previous) )
