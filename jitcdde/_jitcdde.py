@@ -872,7 +872,7 @@ class jitcdde_lyap(jitcdde):
 		helpers = sort_helpers(sympify_helpers(helpers or []))
 		delays = delays or _get_delays(f_basic, helpers)
 		
-		f_lyap = tangent_vector_f(f_basic, helpers, n, self._n_lyap, delays, simplify)
+		f_lyap = tangent_vector_f(f_basic, helpers, n, self._n_lyap, delays, 0, simplify)
 		
 		super(jitcdde_lyap, self).__init__(
 			f_lyap,
