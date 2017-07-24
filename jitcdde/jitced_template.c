@@ -733,10 +733,10 @@ static PyObject * remove_projections(dde_integrator const * const self, PyObject
 	
 	unsigned int const sep_func = {{n_basic}};
 	
-	unsigned int len_vectors = PyList_Size(vectors);
-	unsigned int d = 2*len_vectors;
+	Py_ssize_t len_vectors = PyList_Size(vectors);
+	Py_ssize_t d = 2*len_vectors;
 	unsigned int dummy_num = 0;
-	unsigned int len_dummies = 0;
+	Py_ssize_t len_dummies = 0;
 	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
 	{
 		for (Py_ssize_t vi=0; vi<len_vectors; vi++)
