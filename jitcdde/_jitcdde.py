@@ -111,7 +111,7 @@ class jitcdde(jitcxde):
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself if needed. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	
 	max_delay : number
-		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
+		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is not too small – if it is, you will not get a helpful error message. If this value is too large, you may run into memory issues for long integration times and calculating Lyapunov exponents (with `jitcdde_lyap`) may take forever.
 	
 	control_pars : list of SymPy symbols
 		Each symbol corresponds to a control parameter that can be used when defining the equations and set after compilation with `set_parameters`. Using this makes sense if you need to do a parameter scan with short integrations for each parameter and you are spending a considerable amount of time compiling.
