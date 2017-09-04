@@ -10,7 +10,7 @@ For instance, we can calculate and print the Lyapunov exponents for the Mackeyâ€
 	:emphasize-lines: 11-12, 20-21, 23, 25-26, 31-34
 	:linenos:
 
-Note that `integrate` does not only return local Lyapunov exponents but also the length of the time interval to which they apply (which differs from the time spanned by the `integrate` command and may even be zero). This length should be used to weigh the local Lyapunov exponents for statistical processing, like in line 34.
+Note that `integrate` does not only return local Lyapunov exponents but also the length of the time interval to which they apply (which differs from the time spanned by the `integrate` command and may even be zero). This length should be used to weigh the local Lyapunov exponents for statistical processing, like in line 32.
 """
 
 if __name__ == "__main__":
