@@ -7,7 +7,7 @@ For instance, we can calculate and print the Lyapunov exponents for the Mackeyâ€
 .. literalinclude:: ../examples/mackey_glass_lyap.py
 	:dedent: 1
 	:lines: 17-52
-	:emphasize-lines: 11-12, 20-21, 23, 25-26, 31-34
+	:emphasize-lines: 11-12, 20-21, 23, 25-26, 30-33
 	:linenos:
 
 Note that `integrate` does not only return local Lyapunov exponents but also the length of the time interval to which they apply (which differs from the time spanned by the `integrate` command and may even be zero). This length should be used to weigh the local Lyapunov exponents for statistical processing, like in line 32.
@@ -27,8 +27,7 @@ if __name__ == "__main__":
 	n_lyap = 4
 	DDE = jitcdde_lyap(f, n_lyap=n_lyap)
 	
-	DDE.add_past_point(-1.0, [1.0], [0.0])
-	DDE.add_past_point( 0.0, [1.0], [0.0])
+	DDE.constant_past([1.0])
 	
 	DDE.step_on_discontinuities(max_step=1.0)
 	
