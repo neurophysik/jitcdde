@@ -111,7 +111,7 @@ class jitcdde(jitcxde):
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself if needed. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	
 	max_delay : number
-		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large. Take care that this value is not too small – if it is, you will not get a helpful error message. If this value is too large, you may run into memory issues for long integration times and calculating Lyapunov exponents (with `jitcdde_lyap`) may take forever.
+		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large and `delays` is not given. Take care that this value is not too small – if it is, you will not get a helpful error message. If this value is too large, you may run into memory issues for long integration times and calculating Lyapunov exponents (with `jitcdde_lyap`) may take forever.
 	
 	control_pars : list of SymPy symbols
 		Each symbol corresponds to a control parameter that can be used when defining the equations and set after compilation with `set_parameters`. Using this makes sense if you need to do a parameter scan with short integrations for each parameter and you are spending a considerable amount of time compiling.
@@ -190,7 +190,7 @@ class jitcdde(jitcxde):
 		"""
 		
 		failed = False
-
+		
 		def problem(message):
 			failed = True
 			if fail_fast:
@@ -220,43 +220,121 @@ class jitcdde(jitcxde):
 	
 	def add_past_point(self, time, state, derivative):
 		"""
-		adds an anchor point from which the past of the DDE is interpolated.
+		adds an anchor from which the initial past of the DDE is interpolated.
 		
 		Parameters
 		----------
 		time : float
-			the time of the anchor point.
+			the temporal position of the anchor.
 		state : iterable of floats
-			the position of the anchor point. The dimension of the array must match the dimension of the differential equation.
-		derivative : NumPy array of floats
-			the derivative at the anchor point. The dimension of the array must match the dimension of the differential equation.
+			the state of the anchor. The dimension of the array must match the dimension of the differential equation (`n`).
+		derivative : iterable of floats
+			the derivative at the anchor. The dimension of the array must match the dimension of the differential equation (`n`).
 		"""
 		self.add_past_points([(time,state,derivative)])
 
 	def add_past_points(self, list_of_anchors):
 		"""
 		adds multiple anchors from which the past of the DDE is interpolated.
-
+		
 		Parameters
 		----------
 		list_of_anchors : list of tuples
 			the anchors. Each tuple must have components corresponding to the arguments of `add_past_point`.
 		"""
 		self.reset_integrator()
-
+		
 		for time, state, derivative in list_of_anchors:
 			state = np.array(state, copy=True, dtype=float)
 			derivative = np.array(derivative, copy=True, dtype=float)
 			
 			assert state.shape == (self.n,), "State has wrong shape."
 			assert derivative.shape == (self.n,), "Derivative has wrong shape."
-		
+			
 			if time in [anchor[0] for anchor in self.past]:
 				raise ValueError("There already is an anchor with that time.")
-		
+			
 			self.past.append((time, state, derivative))
 		
 		self.past.sort(key = lambda anchor: anchor[0])
+	
+	def constant_past(self,state,start_time=0):
+		"""
+		initialises the past with a constant state.
+		
+		Parameters
+		----------
+		state : iterable of floats
+			The length must match the dimension of the differential equation (`n`).
+		start_time : float
+			The time at which the integration starts.
+		"""
+		
+		self.add_past_points([
+			( start_time-1., state, np.zeros(self.n) ),
+			( start_time   , state, np.zeros(self.n) ),
+			])
+	
+	def past_from_function(self,function,times_of_interest=None,max_anchors=100,tolerance=0.1):
+		"""
+		automatically determines anchors describing the past of the DDE from a given function, i.e., a piecewise cubic Hermite interpolation of the function at automatically selected time points will be the initial past. As this process involves heuristics, it is not perfect. For a better control of the initial conditions, use `add_past_point`.
+		
+		Parameters
+		----------
+		function : callable or iterable of SymPy expressions
+			If callable, this takes the time as an argument and returns an iterable of floats that is the initial state of the past at that time.
+			If an iterable of SymPy expressions, each expression represents how initial past of the respective component depends on `t`.
+			In both cases, the lengths of the iterable must match the dimension of the differential equation (`n`).
+			
+		times_of_interest : iterable of numbers or `None`
+			Initial set of time points considered for the interpolation. The highest value will be the starting point of the integration. Further interpolation anchors may be added in between the given anchors depending on heuristic criteria.
+			If `None`, these will be automatically chosen depending on the maximum delay and the integration will start at :math:`t=0`.
+		
+		max_anchors : positive integer
+			The maximum number of anchors that this routine will create (including those for the times_of_interest).
+		
+		tolerance : non-negative float
+			This is a parameter for the heuristics.
+			If the relative difference between a newly added anchor and the interpolant of the neighbouring anchors at this point is less than this value, no further anchors will be added in its vicinity.
+			The lower this value, the more likely it is that the heuristic adds anchors.
+		"""
+		
+		assert tolerance>=0, "tolerance must be non-negative."
+		assert max_anchors>0, "Maximum number of anchors must be positive."
+		
+		if self.past:
+			warn("You already added past points in some manner. This routine will ignore them, but not remove them. Be sure that you really want this.")
+		
+		if times_of_interest is None:
+			times_of_interest = np.linspace(-self.max_delay,0,10)
+		else:
+			times_of_interest = sorted(times_of_interest)
+		
+		def get_anchor(function,time):
+			value = function(time)
+			derivative = differentiate(function,time)
+			return [time,value,derivative,None]
+		
+		anchors = [get_anchor(function,time) for time in times_of_interest]
+		anchors[0][3] = anchors[-1][3] = True
+		
+		while not all(anchor[3] for anchor in anchors):
+			for i in range(len(anchors)-2,-1,-1):
+				# Check whether anchors are already sufficiently interpolated by their neighbours.
+				if not anchors[i][3]:
+					guess = interpolate(t,anchors[i-1],anchors[i+1])
+					anchors[i][3] = norm(guess-anchors[i][1])/norm(guess) < tolerance
+				
+				# Add new anchors, if needed
+				if not (anchors[i] and anchors[i+1]):
+					time = np.mean((anchors[i][0],anchors[i+1][0]))
+					anchors.insert(i+1,get_anchor(function,time))
+					if len(anchors)>max_anchors:
+						break
+		
+		self.add_past_points(anchors)
+		# TODO Avoid too close points
+		# TODO Remove anchors that are perfect matches
 	
 	def get_state(self):
 		"""
