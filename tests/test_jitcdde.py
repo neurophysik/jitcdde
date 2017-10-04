@@ -13,6 +13,7 @@ import sympy
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
+from jitcdde._python_core import dde_integrator, interpolate_vec
 
 if platform.system() == "Windows":
 	compile_args = None
@@ -114,6 +115,17 @@ class TestIntegrationChunks(TestIntegration):
 	def generator(self):
 		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
+class TestPastFromFunction(TestIntegration):
+	def setUp(self):
+		def function(time):
+			dummy = dde_integrator(lambda:[y(i,-t) for i in range(len(f))],list(get_past_points()))
+			dummy.past_within_step = False
+			return dummy.eval_f(-time,np.zeros(len(f)))
+		
+		self.DDE.past_from_function(function)
+		
+		self.y_10 = None
+		self.generator()
 
 tiny_delay = 1e-30
 f_with_tiny_delay = [

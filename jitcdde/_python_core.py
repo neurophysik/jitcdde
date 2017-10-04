@@ -20,6 +20,16 @@ def interpolate(t,i,anchors):
 	
 	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
 
+def interpolate_vec(t,anchors):
+	q = (anchors[1][0]-anchors[0][0])
+	x = (t-anchors[0][0]) / q
+	a = anchors[0][1]
+	b = anchors[0][2] * q
+	c = anchors[1][1]
+	d = anchors[1][2] * q
+	
+	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
+
 sumsq = lambda x: np.sum(x**2)
 
 sp_matrix = np.array([
@@ -193,14 +203,7 @@ class dde_integrator(object):
 	
 	def get_recent_state(self, t):
 		anchors = self.past[-2], self.past[-1]
-		q = (anchors[1][0]-anchors[0][0])
-		x = (t-anchors[0][0]) / q
-		a = anchors[0][1]
-		b = anchors[0][2] * q
-		c = anchors[1][1]
-		d = anchors[1][2] * q
-		
-		output = (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
+		output = interpolate_vec(t,anchors)
 		assert type(output) == np.ndarray
 		return output
 	

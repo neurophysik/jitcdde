@@ -14,7 +14,7 @@ from jitcxde_common import (
 	handle_input, sort_helpers, sympify_helpers,
 	render_and_write_code,
 	collect_arguments,
-	random_direction
+	random_direction, rel_dist
 	)
 
 _default_min_step = 1e-10
@@ -233,18 +233,18 @@ class jitcdde(jitcxde):
 		"""
 		self.add_past_points([(time,state,derivative)])
 
-	def add_past_points(self, list_of_anchors):
+	def add_past_points(self, anchors):
 		"""
 		adds multiple anchors from which the past of the DDE is interpolated.
 		
 		Parameters
 		----------
-		list_of_anchors : list of tuples
-			the anchors. Each tuple must have components corresponding to the arguments of `add_past_point`.
+		anchors : iterable of tuples
+			Each tuple must have components corresponding to the arguments of `add_past_point`.
 		"""
 		self.reset_integrator()
 		
-		for time, state, derivative in list_of_anchors:
+		for time, state, derivative in anchors:
 			state = np.array(state, copy=True, dtype=float)
 			derivative = np.array(derivative, copy=True, dtype=float)
 			
@@ -270,12 +270,15 @@ class jitcdde(jitcxde):
 			The time at which the integration starts.
 		"""
 		
+		if self.past:
+			warn("You already added past points in some manner. This routine will ignore them, but not remove them. Be sure that you really want this.")
+		
 		self.add_past_points([
 			( start_time-1., state, np.zeros(self.n) ),
 			( start_time   , state, np.zeros(self.n) ),
 			])
 	
-	def past_from_function(self,function,times_of_interest=None,max_anchors=100,tolerance=0.1):
+	def past_from_function(self,function,times_of_interest=None,max_anchors=100,tol=5):
 		"""
 		automatically determines anchors describing the past of the DDE from a given function, i.e., a piecewise cubic Hermite interpolation of the function at automatically selected time points will be the initial past. As this process involves heuristics, it is not perfect. For a better control of the initial conditions, use `add_past_point`.
 		
@@ -293,13 +296,12 @@ class jitcdde(jitcxde):
 		max_anchors : positive integer
 			The maximum number of anchors that this routine will create (including those for the times_of_interest).
 		
-		tolerance : non-negative float
-			This is a parameter for the heuristics.
-			If the relative difference between a newly added anchor and the interpolant of the neighbouring anchors at this point is less than this value, no further anchors will be added in its vicinity.
-			The lower this value, the more likely it is that the heuristic adds anchors.
+		tol : integer
+			This is a parameter for the heuristics, more precisely the number of digits considered for precision in several places.
+			The higher this value, the more likely it is that the heuristic adds anchors.
 		"""
 		
-		assert tolerance>=0, "tolerance must be non-negative."
+		assert tol>=0, "tol must be non-negative."
 		assert max_anchors>0, "Maximum number of anchors must be positive."
 		
 		if self.past:
@@ -310,31 +312,46 @@ class jitcdde(jitcxde):
 		else:
 			times_of_interest = sorted(times_of_interest)
 		
-		def get_anchor(function,time):
-			value = function(time)
-			derivative = differentiate(function,time)
-			return [time,value,derivative,None]
+		if callable(function):
+			array_function = lambda time: np.asarray(function(time))
+			def get_anchor(time):
+				value = array_function(time)
+				eps = time*10**-tol or 10**-tol
+				derivative = (array_function(time+eps)-value)/eps
+				return [time,value,derivative,None]
+		else:
+			def get_anchor(time):
+				value = np.fromfunction(
+					lambda i: function[i].evalf(tol,subs={t:time}),
+					[self.n]
+					)
+				derivative = np.fromfunction(
+					lambda i: function[i].diff(t).evalf(tol,subs={t:time}),
+					[self.n]
+					)
+				return [time,value,derivative,None]
 		
-		anchors = [get_anchor(function,time) for time in times_of_interest]
+		anchors = [get_anchor(time) for time in times_of_interest]
 		anchors[0][3] = anchors[-1][3] = True
 		
 		while not all(anchor[3] for anchor in anchors):
 			for i in range(len(anchors)-2,-1,-1):
-				# Check whether anchors are already sufficiently interpolated by their neighbours.
+				# Check whether anchors are already sufficiently interpolated by their neighbours or temporally close.
 				if not anchors[i][3]:
-					guess = interpolate(t,anchors[i-1],anchors[i+1])
-					anchors[i][3] = norm(guess-anchors[i][1])/norm(guess) < tolerance
+					guess = python_core.interpolate_vec(t,(anchors[i-1],anchors[i+1]))
+					anchors[i][3] = any((
+						rel_dist(guess,anchors[i][1]) < 10**-tol,
+						rel_dist(anchors[i+1][0],anchors[i-1][0]) < 10**-tol
+						))
 				
 				# Add new anchors, if needed
 				if not (anchors[i] and anchors[i+1]):
 					time = np.mean((anchors[i][0],anchors[i+1][0]))
-					anchors.insert(i+1,get_anchor(function,time))
+					anchors.insert(i+1,get_anchor(time))
 					if len(anchors)>max_anchors:
 						break
 		
-		self.add_past_points(anchors)
-		# TODO Avoid too close points
-		# TODO Remove anchors that are perfect matches
+		self.add_past_points(anchor[:3] for anchor in anchors)
 	
 	def get_state(self):
 		"""
@@ -964,6 +981,18 @@ class jitcdde_lyap(jitcdde):
 		
 		self.n_basic = n
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
+	
+	def add_past_points(self, anchors):
+		def new_anchors():
+			for time,state,derivative in anchors:
+				new_state = [state]
+				new_derivative = [derivative]
+				for _ in range(self._n_lyap):
+					new_state.append(random_direction(self.n_basic))
+					new_derivative.append(random_direction(self.n_basic))
+				yield time, np.hstack(new_state), np.hstack(new_derivative)
+		
+		super(jitcdde_lyap,self).add_past_points(new_anchors())
 	
 	def add_past_point(self, time, state, derivative):
 		new_state = [state]
