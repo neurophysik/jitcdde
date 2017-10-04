@@ -114,6 +114,8 @@ There is nothing in JiTCDDE’s implementation that keeps you from making delays
 However, the error estimate is not accurate anymore as it does not take into account the inaccuracy caused by the changing delay.
 This should not be a problem if your delays change sufficiently slowly.
 
+Note that if you want to make use of this, you must provide the maximum delay manually.
+
 Networks and large equations
 ----------------------------
 
