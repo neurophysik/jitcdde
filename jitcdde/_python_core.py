@@ -10,6 +10,16 @@ import numpy as np
 MIN_GARBAGE = 10
 NORM_THRESHOLD = 1e-30
 
+def interpolate(t,i,anchors):
+	q = (anchors[1][0]-anchors[0][0])
+	x = (t-anchors[0][0]) / q
+	a = anchors[0][1][i]
+	b = anchors[0][2][i] * q
+	c = anchors[1][1][i]
+	d = anchors[1][2][i] * q
+	
+	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
+
 sumsq = lambda x: np.sum(x**2)
 
 sp_matrix = np.array([
@@ -148,7 +158,7 @@ class dde_integrator(object):
 			[
 				{
 					anchors.__name__: self.get_past_anchors,
-					past_y .__name__: self.get_past_value
+					past_y .__name__: interpolate
 				},
 				"math"
 			]
@@ -180,16 +190,6 @@ class dde_integrator(object):
 		self.anchor_mem_index += 1
 		
 		return (self.past[s], self.past[s+1])
-	
-	def get_past_value(self, t, i, anchors):
-		q = (anchors[1][0]-anchors[0][0])
-		x = (t-anchors[0][0]) / q
-		a = anchors[0][1][i]
-		b = anchors[0][2][i] * q
-		c = anchors[1][1][i]
-		d = anchors[1][2][i] * q
-		
-		return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
 	
 	def get_recent_state(self, t):
 		anchors = self.past[-2], self.past[-1]

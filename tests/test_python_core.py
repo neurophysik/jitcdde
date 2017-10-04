@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function, division
-from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial
+from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate
 from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 
 import sympy
@@ -39,23 +39,19 @@ past = [
 	]
 
 class interpolation_test(unittest.TestCase):
-	@classmethod
-	def setUpClass(self):
-		self.DDE = dde_integrator(lambda: [], past)
-	
 	def test_anchors(self):
 		for s in range(len(past)-1):
 			t = past[s][0]
 			anchors = (past[s],past[s+1])
 			for j in range(m):
-				value = self.DDE.get_past_value(t, j, anchors)
+				value = interpolate(t, j, anchors)
 				self.assertAlmostEqual(past[s][1][j], value)
 	
 	def test_interpolation(self):
 		anchors = (past[0], past[1])
 		for t in np.linspace(past[0][0],past[1][0],100):
 			for j in range(m):
-				value = self.DDE.get_past_value(t, j, anchors)
+				value = interpolate(t, j, anchors)
 				self.assertAlmostEqual(poly[j](t), value)
 
 class get_anchors_test(unittest.TestCase):
@@ -110,7 +106,7 @@ class metrics_test(unittest.TestCase):
 			self.DDE.anchor_mem_index = 0
 			anchors = self.DDE.get_past_anchors(t)
 			for j in range(m):
-				bf_norm_sq += self.DDE.get_past_value(t, j, anchors)**2*factor
+				bf_norm_sq += interpolate(t, j, anchors)**2*factor
 		
 		norm = self.DDE.norm(delay, np.array(range(m)))
 		
@@ -129,12 +125,12 @@ class metrics_test(unittest.TestCase):
 			self.DDE.anchor_mem_index = 0
 			anchors = self.DDE.get_past_anchors(t)
 			bf_sp_sq += (
-				  self.DDE.get_past_value(t, 0, anchors)
-				* self.DDE.get_past_value(t, 2, anchors)
+				  interpolate(t, 0, anchors)
+				* interpolate(t, 2, anchors)
 				* factor)
 			bf_sp_sq += (
-				  self.DDE.get_past_value(t, 1, anchors)
-				* self.DDE.get_past_value(t, 3, anchors)
+				  interpolate(t, 1, anchors)
+				* interpolate(t, 3, anchors)
 				* factor)
 		
 		sp = self.DDE.scalar_product(delay, [0,1], [2,3])
