@@ -997,15 +997,6 @@ class jitcdde_lyap(jitcdde):
 		
 		super(jitcdde_lyap,self).add_past_points(new_anchors())
 	
-	def add_past_point(self, time, state, derivative):
-		new_state = [state]
-		new_derivative = [derivative]
-		for _ in range(self._n_lyap):
-			new_state.append(random_direction(self.n_basic))
-			new_derivative.append(random_direction(self.n_basic))
-		
-		super(jitcdde_lyap, self).add_past_point(time, np.hstack(new_state), np.hstack(new_derivative))
-	
 	def integrate(self, target_time):
 		"""
 		Like `jitcdde`’s `integrate`, except for orthonormalising the separation functions and:
