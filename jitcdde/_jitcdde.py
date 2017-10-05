@@ -247,7 +247,6 @@ class jitcdde(jitcxde):
 		for time, state, derivative in anchors:
 			state = np.array(state, copy=True, dtype=float)
 			derivative = np.array(derivative, copy=True, dtype=float)
-			
 			assert state.shape == (self.n,), "State has wrong shape."
 			assert derivative.shape == (self.n,), "Derivative has wrong shape."
 			
@@ -321,35 +320,39 @@ class jitcdde(jitcxde):
 				return [time,value,derivative,None]
 		else:
 			def get_anchor(time):
-				value = np.fromfunction(
-					lambda i: function[i].evalf(tol,subs={t:time}),
-					[self.n]
+				evaluate = lambda expr: expr.evalf(tol,subs={t:time})
+				value = np.fromiter(
+					(evaluate(function[i]) for i in count()),
+					dtype = float,
+					count = self.n
 					)
-				derivative = np.fromfunction(
-					lambda i: function[i].diff(t).evalf(tol,subs={t:time}),
-					[self.n]
+				derivative = np.fromiter(
+					(evaluate(function[i].diff(t)) for i in count()),
+					dtype = float,
+					count = self.n
 					)
 				return [time,value,derivative,None]
 		
 		anchors = [get_anchor(time) for time in times_of_interest]
 		anchors[0][3] = anchors[-1][3] = True
 		
-		while not all(anchor[3] for anchor in anchors):
+		while not all(anchor[3] for anchor in anchors) and len(anchors)<=max_anchors:
 			for i in range(len(anchors)-2,-1,-1):
 				# Check whether anchors are already sufficiently interpolated by their neighbours or temporally close.
 				if not anchors[i][3]:
-					guess = python_core.interpolate_vec(t,(anchors[i-1],anchors[i+1]))
+					guess = python_core.interpolate_vec(anchors[i][0],(anchors[i-1],anchors[i+1]))
 					anchors[i][3] = any((
 						rel_dist(guess,anchors[i][1]) < 10**-tol,
 						rel_dist(anchors[i+1][0],anchors[i-1][0]) < 10**-tol
 						))
 				
 				# Add new anchors, if needed
-				if not (anchors[i] and anchors[i+1]):
+				if not (anchors[i][3] and anchors[i+1][3]):
 					time = np.mean((anchors[i][0],anchors[i+1][0]))
 					anchors.insert(i+1,get_anchor(time))
-					if len(anchors)>max_anchors:
-						break
+				
+				if len(anchors)>max_anchors:
+					break
 		
 		self.add_past_points(anchor[:3] for anchor in anchors)
 	

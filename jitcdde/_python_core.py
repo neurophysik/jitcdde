@@ -191,7 +191,7 @@ class dde_integrator(object):
 			s = len(self.past)-2
 			self.past_within_step = max(self.past_within_step,t-self.t)
 		else:
-			while self.past[s][0]>t and s>0:
+			while self.past[s][0]>=t and s>0:
 				s -= 1
 			while self.past[s+1][0]<t:
 				s += 1
