@@ -7,10 +7,10 @@ For instance, we can calculate and print the Lyapunov exponents for the Mackeyâ€
 .. literalinclude:: ../examples/mackey_glass_lyap.py
 	:dedent: 1
 	:lines: 17-52
-	:emphasize-lines: 11-12, 20-21, 23, 25-26, 30-33
+	:emphasize-lines: 11-12, 19-20, 22, 28, 30-33
 	:linenos:
 
-Note that `integrate` does not only return local Lyapunov exponents but also the length of the time interval to which they apply (which differs from the time spanned by the `integrate` command and may even be zero). This length should be used to weigh the local Lyapunov exponents for statistical processing, like in line 32.
+Note that `integrate` does not only return local Lyapunov exponents but also the length of the time interval to which they apply (which differs from the time spanned by the `integrate` command and may even be zero). This length should be used to weigh the local Lyapunov exponents for statistical processing, like in lineÂ 31.
 """
 
 if __name__ == "__main__":

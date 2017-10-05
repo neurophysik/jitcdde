@@ -44,7 +44,10 @@ The differential equation is integrated adaptively with the Bogacki–Shampine p
 After every successful integration step, the state and derivative of the integration (which is an automatic by-product) are stored.
 Whenever the derivative :math:`(f)` is evaluated, the required past states :math:`\left ( y(t-τ_1), y(t-τ_2), … \right )` are obtained through piece-wise cubic `Hermite interpolation <http://en.wikipedia.org/wiki/Hermite_interpolation>`_, using previously stored pairs of state and derivative (“anchor”).
 In some extreme cases, they may also be extrapolated.
-Note that unlike most other DDE softwares, JiTCDDE requires you to initiate the past in exactly this way, i.e., you have to give at least two such anchor points.
+
+Note that unlike most other DDE softwares, JiTCDDE stores and accesses the initial past in exactly this way, i.e., as anchor points.
+Thus, if you want to have maximum control, you have to initiate the past in exactly this way, i.e., you have to give at least two such anchor points (via `add_past_point`).
+If you do not want or need this, there are utility function available that automatically determine the anchors from a given function (`past_from_function`) or just set it to a fixed value (`constant_past`).
 
 .. _example:
 
