@@ -273,8 +273,8 @@ class jitcdde(jitcxde):
 			warn("You already added past points in some manner. This routine will ignore them, but not remove them. Be sure that you really want this.")
 		
 		self.add_past_points([
-			( start_time-1., state, np.zeros(self.n) ),
-			( start_time   , state, np.zeros(self.n) ),
+			( start_time-1., state, np.zeros_like(state) ),
+			( start_time   , state, np.zeros_like(state) ),
 			])
 	
 	def past_from_function(self,function,times_of_interest=None,max_anchors=100,tol=5):
@@ -322,14 +322,12 @@ class jitcdde(jitcxde):
 			def get_anchor(time):
 				evaluate = lambda expr: expr.evalf(tol,subs={t:time})
 				value = np.fromiter(
-					(evaluate(function[i]) for i in count()),
+					(evaluate(comp) for comp in function),
 					dtype = float,
-					count = self.n
 					)
 				derivative = np.fromiter(
-					(evaluate(function[i].diff(t)) for i in count()),
+					(evaluate(comp.diff(t)) for comp in function),
 					dtype = float,
-					count = self.n
 					)
 				return [time,value,derivative,None]
 		
