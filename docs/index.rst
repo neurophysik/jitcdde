@@ -148,8 +148,8 @@ Instead, JiTCDDE employs as a scalar product between two separation functions :m
 .. math::
 
 	\int_{t-τ_\text{max}}^t
-	\mathcal{H}_f(\mathfrak{t}) \;
 	\mathcal{H}_g(\mathfrak{t}) \;
+	\mathcal{H}_h(\mathfrak{t}) \;
 	\mathrm{d} \mathfrak{t},
 
 where :math:`\mathcal{H}` denotes the piecewise cubic Hermite interpolant (which is also used for obtaining past states).
