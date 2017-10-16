@@ -52,7 +52,7 @@ Taking everything together, our code is:
 
 .. literalinclude:: ../examples/mackey_glass.py
 	:dedent: 1
-	:lines: 59-78
+	:lines: 60-78
 """
 
 
