@@ -571,7 +571,7 @@ class jitcdde(jitcxde):
 			self.set_integration_parameters()
 	
 	def set_integration_parameters(self,
-			atol = 0.0,
+			atol = 1e-10,
 			rtol = 1e-5,
 			first_step = 1.0,
 			min_step = _default_min_step,
@@ -903,17 +903,17 @@ def _jac(f, helpers, delay, n):
 	dependent_helpers = [[] for i in range(n)]
 	for i in range(n):
 		for helper in helpers:
-			derivative = sympy.diff(helper[1], y(i,t-delay))
+			derivative = helper[1].diff(y(i,t-delay))
 			for other_helper in dependent_helpers[i]:
-				derivative += sympy.diff(helper[1],other_helper[0]) * other_helper[1]
+				derivative += helper[1].diff(other_helper[0]) * other_helper[1]
 			if derivative:
 				dependent_helpers[i].append( (helper[0], derivative) )
 	
 	def line(f_entry):
 		for j in range(n):
-			entry = sympy.diff( f_entry, y(j,t-delay) )
+			entry = f_entry.diff(y(j,t-delay))
 			for helper in dependent_helpers[j]:
-				entry += sympy.diff(f_entry,helper[0]) * helper[1]
+				entry += f_entry.diff(helper[0]) * helper[1]
 			yield entry
 	
 	for f_entry in f():
@@ -937,7 +937,7 @@ def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0, simplify=Tru
 							expression += entry * y(k+(i+1)*n, t-delay)
 					
 					if simplify:
-						expression = sympy.simplify(expression, ratio=1.0)
+						expression = expression.simplify(ratio=1.0)
 					yield expression
 			
 			for _ in range(zero_padding):
