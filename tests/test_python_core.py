@@ -1,11 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function, division
 from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate
 from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 
-import sympy
+import symengine
 import numpy as np
 from numpy.testing import assert_allclose
 from itertools import chain
@@ -208,7 +208,7 @@ class integration_test(unittest.TestCase):
 		self.assertAlmostEqual(self.DDE.y[0], expected_y)
 		self.assertEqual(self.DDE.t, 1.0)
 
-delayed_y = sympy.Symbol("delayed_y")
+delayed_y = symengine.Symbol("delayed_y")
 f_alt_helpers = [(delayed_y, y(0,t-tau))]
 def f_alt():
 	yield 0.25 * delayed_y / (1.0 + delayed_y**p) - 0.1*y(0,t)
