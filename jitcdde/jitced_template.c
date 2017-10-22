@@ -897,9 +897,6 @@ static PyMethodDef {{module_name}}_methods[] = {
 {NULL, NULL, 0, NULL}
 };
 
-
-{% if Python_version==3: %}
-
 static struct PyModuleDef moduledef =
 {
         PyModuleDef_HEAD_INIT,
@@ -931,27 +928,3 @@ PyMODINIT_FUNC PyInit_{{module_name}}(void)
 	
 	return module;
 }
-
-{% elif Python_version==2: %}
-
-#ifndef PyMODINIT_FUNC
-#define PyMODINIT_FUNC void
-#endif
-PyMODINIT_FUNC init{{module_name}}(void)
-{
-	dde_integrator_type.tp_new = PyType_GenericNew;
-	if (PyType_Ready(&dde_integrator_type) < 0)
-		return;
-	
-	PyObject * module = Py_InitModule("{{module_name}}", {{module_name}}_methods);
-	
-	if (module == NULL)
-		return;
-	
-	Py_INCREF(&dde_integrator_type);
-	PyModule_AddObject(module, "dde_integrator", (PyObject*) &dde_integrator_type);
-	
-	import_array();
-}
-
-{% endif %}
