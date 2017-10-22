@@ -9,7 +9,7 @@ from jitcdde import (
 	_find_max_delay, _get_delays,
 	)
 import platform
-import sympy
+import symengine
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
@@ -115,6 +115,10 @@ class TestIntegrationChunks(TestIntegration):
 	def generator(self):
 		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
+class TestIntegrationCSE(TestIntegration):
+	def generator(self):
+		self.DDE.generate_f_C(do_cse=True, extra_compile_args=compile_args)
+
 tiny_delay = 1e-30
 f_with_tiny_delay = [
 	omega[0] * (-y(1) - y(2)),
@@ -169,7 +173,7 @@ class TestGeneratorChunking(TestGenerator):
 		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
 
-delayed_y, y3m10, coupling_term = sympy.symbols("delayed_y y3m10 coupling_term")
+delayed_y, y3m10, coupling_term = symengine.symbols("delayed_y y3m10 coupling_term")
 f_alt_helpers = [
 	(delayed_y, y(0,t-delay)),
 	(coupling_term, 0.25 * (delayed_y - y(3))),
@@ -200,7 +204,7 @@ class TestHelpersChunking(TestHelpers):
 		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
 
 
-a,b,c,k = sympy.symbols("a b c k")
+a,b,c,k = symengine.symbols("a b c k")
 f_params = [
 	omega[0] * (-y(1) - y(2)),
 	omega[0] * (y(0) + a * y(1)),
@@ -282,7 +286,7 @@ class TestCheck(unittest.TestCase):
 			DDE.check()
 	
 	def test_check_undefined_variable(self):
-		x = sympy.symbols("x")
+		x = symengine.symbols("x")
 		DDE = jitcdde([x])
 		with self.assertRaises(ValueError):
 			DDE.check()

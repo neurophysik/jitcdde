@@ -404,7 +404,6 @@ static PyObject * forget(dde_integrator * const self, PyObject * args)
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
 		return NULL;
 	}
-	
 	double threshold = fmin(
 		self->current->time - delay,
 		self->last_actual_step_start

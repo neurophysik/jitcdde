@@ -1,19 +1,18 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function, absolute_import, division
-
 from warnings import warn
 from itertools import count
 from traceback import format_exc
+from inspect import signature
 import sympy
+import symengine
 import numpy as np
 import jitcdde._python_core as python_core
 from jitcxde_common import (
 	jitcxde,
-	handle_input, sort_helpers, sympify_helpers,
-	render_and_write_code,
-	collect_arguments,
+	sort_helpers, sympify_helpers,
+	collect_arguments, count_calls,
 	random_direction, rel_dist
 	)
 
@@ -24,52 +23,53 @@ _default_min_step = 1e-10
 sigmoid = lambda x: (np.tanh(x)+1)/2
 
 #: the symbol for time for defining the differential equation. You may just as well define the an analogous symbol directly with SymPy, but using this function is the best way to get the most of future versions of JiTCDDE, in particular avoiding incompatibilities.
-t = sympy.Symbol("t", real=True)
+t = symengine.Symbol("t", real=True)
 
-class y(sympy.Function):
-	"""
-	the symbol representing the DDE’s past and present states used for defining the differential equation. It is a function with the first integer argument denoting the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected.
-	"""
-	def __init__(self):
-		pass
-	
-	@classmethod
-	def eval(cls, index, time=t):
+def y(index=None,time=t):
+	if index is None:
+		raise Exception
+	else:
 		if time == t:
 			return current_y(index)
 		else:
 			return past_y(time, index, anchors(time))
 
+#class base_y(symengine.Function):
+#	"""
+#	the symbol representing the DDE’s past and present states used for defining the differential equation. It is a function with the first integer argument denoting the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected.
+#	"""
+#	@property
+#	def __signature__(self):
+#		return signature(self.eval)
+#	
+#	@classmethod
+#	def eval(cls, index, time=t):
+#		if time == t:
+#			return current_y(index)
+#		else:
+#			return past_y(time, index, anchors(time))
+
 
 #: the symbol for the current state for defining the differential equation. It is a function and the integer argument denotes the component. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead.
-current_y = sympy.Function("current_y")
+current_y = symengine.Function("current_y")
 
 #: the symbol for DDE’s past state for defining differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead.
-past_y = sympy.Function("past_y")
+past_y = symengine.Function("past_y")
 
 #: the symbol representing two anchors for defining the differential equation. It is a function and the float argument denotes the time point to which the anchors pertain. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead.
-anchors = sympy.Function("anchors")
-
-def provide_basic_symbols():
-	"""
-	This function is provided for backwards compatibility only. Use `from jitcdde import y, t` or similar instead.
-	"""
-	return t, y
-
-def provide_advanced_symbols():
-	"""
-	This function is provided for backwards compatibility only. Use `from jitcdde import y, t, current_y, past_y, anchors` or similar instead.
-	"""
-	return t, y, current_y, past_y, anchors
+anchors = symengine.Function("anchors")
 
 def _get_delays(f, helpers=()):
 	delay_terms = set().union(*(collect_arguments(entry, anchors) for entry in f()))
 	delay_terms.update(*(collect_arguments(helper[1], anchors) for helper in helpers))
-	
-	return [0]+[t-delay_term[0] for delay_term in delay_terms]
+	delays = [
+			(t-delay_term[0]).simplify()
+			for delay_term in delay_terms
+		]
+	return [0]+delays
 
 def _find_max_delay(delays):
-	if all(sympy.sympify(delay).is_Number for delay in delays):
+	if all(symengine.sympify(delay).is_Number for delay in delays):
 		return float(max(delays))
 	else:
 		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
@@ -135,9 +135,9 @@ class jitcdde(jitcxde):
 		module_location = None
 		):
 		
-		super(jitcdde,self).__init__(verbose,module_location)
+		super(jitcdde,self).__init__(n,verbose,module_location)
 		
-		self.f_sym, self.n = handle_input(f_sym,n)
+		self.f_sym = self._handle_input(f_sym)
 		self.n_basic = self.n
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
 		self.control_pars = control_pars
@@ -211,7 +211,7 @@ class jitcdde(jitcxde):
 				if index >= self.n:
 					problem("y is called with an argument (%i) higher than the system’s dimension (%i) in equation %i."  % (index, self.n, i))
 			
-			for symbol in entry.atoms(sympy.Symbol):
+			for symbol in entry.atoms(symengine.Symbol):
 				if symbol not in valid_symbols:
 					problem("Invalid symbol (%s) in equation %i."  % (symbol.name, i))
 		
@@ -405,7 +405,7 @@ class jitcdde(jitcxde):
 	def compile_C(
 		self,
 		simplify = True,
-		do_cse = True,
+		do_cse = False,
 		chunk_size = 100,
 		extra_compile_args = None,
 		extra_link_args = None,
@@ -452,71 +452,64 @@ class jitcdde(jitcxde):
 			additional_helper = sympy.Function("additional_helper")
 			
 			_cse = sympy.cse(
-					sympy.Matrix(list(f_sym_wc)),
+					sympy.Matrix(sympy.sympify(list(f_sym_wc))),
 					symbols = (additional_helper(i) for i in count())
 				)
-			helpers_wc.extend(_cse[0])
-			f_sym_wc = _cse[1][0]
+			helpers_wc.extend(symengine.sympify(_cse[0]))
+			f_sym_wc = symengine.sympify(_cse[1][0])
 		
 		arguments = [
 			("self", "dde_integrator * const"),
 			("t", "double const"),
 			("y", "double", self.n),
 			]
-		functions = ["current_y","past_y","anchors"]
 		helper_i = 0
 		anchor_i = 0
 		converted_helpers = []
 		self.past_calls = 0
-		self.substitutions = [
-				(control_par, sympy.Symbol("self->parameter_"+control_par.name))
+		self.substitutions = {
+				control_par: symengine.Symbol("self->parameter_"+control_par.name)
 				for control_par in self.control_pars
-			]
+			}
 		
 		def finalise(expression):
 			expression = expression.subs(self.substitutions)
-			self.past_calls += expression.count(anchors)
+			self.past_calls += count_calls(expression,anchors)
 			return expression
 		
 		if helpers_wc:
-			get_helper = sympy.Function("get_f_helper")
-			set_helper = sympy.Function("set_f_helper")
+			get_helper = symengine.Function("get_f_helper")
+			set_helper = symengine.Function("set_f_helper")
 			
-			get_anchor = sympy.Function("get_f_anchor_helper")
-			set_anchor = sympy.Function("set_f_anchor_helper")
+			get_anchor = symengine.Function("get_f_anchor_helper")
+			set_anchor = symengine.Function("set_f_anchor_helper")
 			
 			for helper in helpers_wc:
 				if helper[1].__class__ == anchors:
 					converted_helpers.append(set_anchor(anchor_i, finalise(helper[1])))
-					self.substitutions.append((helper[0], get_anchor(anchor_i)))
+					self.substitutions[helper[0]] = get_anchor(anchor_i)
 					anchor_i += 1
 				else:
 					converted_helpers.append(set_helper(helper_i, finalise(helper[1])))
-					self.substitutions.append((helper[0], get_helper(helper_i)))
+					self.substitutions[helper[0]] = get_helper(helper_i)
 					helper_i += 1
 			
 			if helper_i:
 				arguments.append(("f_helper","double", helper_i))
-				functions.extend(["get_f_helper", "set_f_helper"])
 			if anchor_i:
 				arguments.append(("f_anchor_helper","anchor", anchor_i))
-				functions.extend(["get_f_anchor_helper", "set_f_anchor_helper"])
 			
-			render_and_write_code(
+			self.render_and_write_code(
 				converted_helpers,
-				self._tmpfile,
-				"helpers",
-				functions,
+				name = "helpers",
 				chunk_size = chunk_size,
 				arguments = arguments
 				)
 		
-		set_dy = sympy.Function("set_dy")
-		render_and_write_code(
+		set_dy = symengine.Function("set_dy")
+		self.render_and_write_code(
 			(set_dy(i,finalise(entry)) for i,entry in enumerate(f_sym_wc)),
-			self._tmpfile,
-			"f",
-			functions = functions+["set_dy"],
+			name = "f",
 			chunk_size = chunk_size,
 			arguments = arguments + [("dY", "double", self.n)]
 			)
@@ -882,7 +875,7 @@ class jitcdde(jitcxde):
 		assert min_distance > 0, "min_distance must be positive."
 		assert isinstance(propagations,int), "Non-integer number of propagations."
 		
-		if not all(sympy.sympify(delay).is_Number for delay in self.delays):
+		if not all(symengine.sympify(delay).is_Number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
 		self.delays = [float(delay) for delay in self.delays]
 		
@@ -941,7 +934,7 @@ def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0, simplify=Tru
 					yield expression
 			
 			for _ in range(zero_padding):
-				yield sympy.sympify(0)
+				yield symengine.sympify(0)
 	
 	else:
 		return []

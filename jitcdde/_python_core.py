@@ -158,7 +158,7 @@ class dde_integrator(object):
 		past_calls = 0
 		f_wc = []
 		for entry in f():
-			new_entry = entry.subs(substitutions).simplify(ratio=1.0)
+			new_entry = sympy.sympify(entry).subs(substitutions).simplify(ratio=1.0)
 			past_calls += new_entry.count(anchors)
 			f_wc.append(new_entry)
 		
@@ -167,8 +167,8 @@ class dde_integrator(object):
 			f_wc,
 			[
 				{
-					anchors.__name__: self.get_past_anchors,
-					past_y .__name__: interpolate
+					anchors.name: self.get_past_anchors,
+					past_y .name: interpolate
 				},
 				"math"
 			]
