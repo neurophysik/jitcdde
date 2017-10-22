@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
@@ -6,7 +6,7 @@ from jitcdde import (
 	jitcdde,
 	t, y, current_y, past_y, anchors,
 	)
-import sympy
+import symengine
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
@@ -21,7 +21,7 @@ class TestIntegration(unittest.TestCase):
 	
 	def test_exp(self):
 		f_1 = lambda time: [np.exp(time),0.5*np.exp(2*time)]
-		f_2 = [sympy.exp(t),sympy.exp(2*t)/2]
+		f_2 = [symengine.exp(t),symengine.exp(2*t)/2]
 		
 		results = []
 		for function in (f_1,f_2):

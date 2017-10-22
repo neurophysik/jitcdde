@@ -320,7 +320,7 @@ class jitcdde(jitcxde):
 				return [time,value,derivative,None]
 		else:
 			def get_anchor(time):
-				evaluate = lambda expr: expr.evalf(tol,subs={t:time})
+				evaluate = lambda expr: sympy.sympify(expr).evalf(tol,subs={t:time})
 				value = np.fromiter(
 					(evaluate(comp) for comp in function),
 					dtype = float,
