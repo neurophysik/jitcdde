@@ -138,7 +138,8 @@ class jitcdde(jitcxde):
 		super(jitcdde,self).__init__(n,verbose,module_location)
 		
 		self.f_sym = self._handle_input(f_sym)
-		self.n_basic = self.n
+		if not hasattr(self,"n_basic"):
+			self.n_basic = self.n
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
 		self.control_pars = control_pars
 		self.past = []
@@ -954,26 +955,26 @@ class jitcdde_lyap(jitcdde):
 	"""
 	
 	def __init__(self, f_sym=(), helpers=(), n=None, delays=None, max_delay=None, control_pars=(), n_lyap=1, module_location=None, simplify=True):
-		f_basic, n = handle_input(f_sym,n)
+		self.n_basic = n
+		f_basic = self._handle_input(f_sym,n_basic=True)
 		
 		assert n_lyap>=0, "n_lyap negative"
 		self._n_lyap = n_lyap
 		helpers = sort_helpers(sympify_helpers(helpers or []))
 		delays = delays or _get_delays(f_basic, helpers)
 		
-		f_lyap = tangent_vector_f(f_basic, helpers, n, self._n_lyap, delays, 0, simplify)
+		f_lyap = tangent_vector_f(f_basic, helpers, self.n_basic, self._n_lyap, delays, 0, simplify)
 		
 		super(jitcdde_lyap, self).__init__(
 			f_lyap,
 			helpers = helpers,
-			n = n*(self._n_lyap+1),
+			n = self.n_basic*(self._n_lyap+1),
 			delays = delays,
 			max_delay = max_delay,
 			control_pars = control_pars,
 			module_location = module_location
 			)
 		
-		self.n_basic = n
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 	
 	def add_past_points(self, anchors):
@@ -1071,7 +1072,8 @@ class jitcdde_restricted_lyap(jitcdde):
 	"""
 	
 	def __init__(self, f_sym=(), vectors=(), helpers=(), n=None, delays=None, max_delay=None, control_pars=(), module_location=None, simplify=True):
-		f_basic, n = handle_input(f_sym,n)
+		self.n_basic = n
+		f_basic = self._handle_input(f_sym,n_basic=True)
 		
 		helpers = sort_helpers(sympify_helpers(helpers or []))
 		delays = delays or _get_delays(f_basic, helpers)
@@ -1081,8 +1083,8 @@ class jitcdde_restricted_lyap(jitcdde):
 		self.diff_components = []
 		
 		for vector in vectors:
-			assert len(vector[0]) == n
-			assert len(vector[1]) == n
+			assert len(vector[0]) == self.n_basic
+			assert len(vector[1]) == self.n_basic
 			
 			if np.count_nonzero(vector[0])+np.count_nonzero(vector[1]) > 1:
 				state = np.array(vector[0], dtype=float, copy=True)
@@ -1098,24 +1100,22 @@ class jitcdde_restricted_lyap(jitcdde):
 		f_lyap = tangent_vector_f(
 			f_basic,
 			helpers,
-			n,
+			self.n_basic,
 			1,
 			delays,
-			zero_padding = 2*n*len(self.vectors),
+			zero_padding = 2*self.n_basic*len(self.vectors),
 			simplify = simplify
 			)
 		
 		super(jitcdde_restricted_lyap, self).__init__(
 			f_lyap,
 			helpers = helpers,
-			n = n*(2+2*len(self.vectors)),
+			n = self.n_basic*(2+2*len(self.vectors)),
 			delays = delays,
 			max_delay = max_delay,
 			control_pars = control_pars,
 			module_location = module_location
 			)
-		
-		self.n_basic = n
 		
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 	

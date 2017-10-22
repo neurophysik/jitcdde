@@ -88,7 +88,7 @@ class TestSaveAndLoad(TestIntegration):
 			n_lyap=len(lyap_controls)
 			)
 		self.DDE.add_past_point(-delay, np.random.random(6), np.random.random(6))
-		self.DDE.add_past_point(0.0, np.random.random(6), np.random.random(6))
+		self.DDE.add_past_point(0.0,    np.random.random(6), np.random.random(6))
 		self.DDE.set_integration_parameters(**test_parameters)
 
 if __name__ == "__main__":
