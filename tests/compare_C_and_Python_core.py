@@ -7,11 +7,9 @@ Creates instances of the Python and C core for the same DDE and subjects them to
 The argument is the number of runs.
 """
 
-from __future__ import print_function
 from jitcdde._python_core import dde_integrator as py_dde_integrator
 from jitcdde import t, y, jitcdde
 
-import sympy
 import numpy as np
 from numpy.testing import assert_allclose
 import platform
@@ -45,8 +43,8 @@ def f():
 	yield omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3))
 	yield omega[1] * (y(3) + 0.165 * y(4))
 	yield omega[1] * (0.2 + y(5) * (y(3) - 10.0))
-	yield sympy.sympify(0)
-	yield sympy.sympify(0)
+	yield 0
+	yield 0
 
 n = 8
 

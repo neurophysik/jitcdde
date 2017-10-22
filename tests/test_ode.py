@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 from jitcdde import (
@@ -11,7 +11,6 @@ import platform
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
-from sympy import symbols
 
 if platform.system() == "Windows":
 	compile_args = None
