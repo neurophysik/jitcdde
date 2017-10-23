@@ -9,12 +9,10 @@ import sympy
 import symengine
 import numpy as np
 import jitcdde._python_core as python_core
-from jitcxde_common import (
-	jitcxde,
-	sort_helpers, sympify_helpers,
-	collect_arguments, count_calls,
-	random_direction, rel_dist
-	)
+from jitcxde_common import jitcxde
+from jitcxde_common.helpers import sort_helpers, sympify_helpers
+from jitcxde_common.symbolic import collect_arguments, count_calls
+from jitcxde_common.numerical import random_direction, rel_dist
 
 _default_min_step = 1e-10
 

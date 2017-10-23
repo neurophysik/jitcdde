@@ -153,7 +153,7 @@ class dde_integrator(object):
 		
 		from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 		Y = sympy.DeferredVector("Y")
-		substitutions = list(helpers[::-1]) + [(y(i),Y[i]) for i in range(self.n)]
+		substitutions = list(reversed(helpers)) + [(y(i),Y[i]) for i in range(self.n)]
 		
 		past_calls = 0
 		f_wc = []
