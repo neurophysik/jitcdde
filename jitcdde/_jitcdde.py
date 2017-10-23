@@ -25,30 +25,14 @@ sigmoid = lambda x: (np.tanh(x)+1)/2
 #: the symbol for time for defining the differential equation. You may just as well define the an analogous symbol directly with SymPy, but using this function is the best way to get the most of future versions of JiTCDDE, in particular avoiding incompatibilities.
 t = symengine.Symbol("t", real=True)
 
-def y(index=None,time=t):
-	if index is None:
-		raise Exception
+def y(index,time=t):
+	"""
+	the function representing the DDE’s past and present states used for defining the differential equation. The first integer argument denotes the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected.
+	"""
+	if time == t:
+		return current_y(index)
 	else:
-		if time == t:
-			return current_y(index)
-		else:
-			return past_y(time, index, anchors(time))
-
-#class base_y(symengine.Function):
-#	"""
-#	the symbol representing the DDE’s past and present states used for defining the differential equation. It is a function with the first integer argument denoting the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected.
-#	"""
-#	@property
-#	def __signature__(self):
-#		return signature(self.eval)
-#	
-#	@classmethod
-#	def eval(cls, index, time=t):
-#		if time == t:
-#			return current_y(index)
-#		else:
-#			return past_y(time, index, anchors(time))
-
+		return past_y(time, index, anchors(time))
 
 #: the symbol for the current state for defining the differential equation. It is a function and the integer argument denotes the component. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead.
 current_y = symengine.Function("current_y")
