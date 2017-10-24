@@ -936,25 +936,35 @@ class jitcdde_lyap(jitcdde):
 		Whether the differential equations for the separation function shall be subjected to SymPy’s `simplify`. Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
 	"""
 	
-	def __init__(self, f_sym=(), helpers=(), n=None, delays=None, max_delay=None, control_pars=(), n_lyap=1, module_location=None, simplify=True):
-		self.n_basic = n
+	def __init__( self, f_sym=(), n_lyap=1, simplify=True, **kwargs ):
+		self.n_basic = kwargs.pop("n",None)
+		
+		if "helpers" not in kwargs.keys():
+			kwargs["helpers"] = ()
+		kwargs["helpers"] = sort_helpers(sympify_helpers(kwargs["helpers"] or []))
+
 		f_basic = self._handle_input(f_sym,n_basic=True)
+		
+		if "delays" not in kwargs.keys() or not kwargs["delays"]:
+			kwargs["delays"] = _get_delays(f_basic,kwargs["helpers"])
 		
 		assert n_lyap>=0, "n_lyap negative"
 		self._n_lyap = n_lyap
-		helpers = sort_helpers(sympify_helpers(helpers or []))
-		delays = delays or _get_delays(f_basic, helpers)
 		
-		f_lyap = tangent_vector_f(f_basic, helpers, self.n_basic, self._n_lyap, delays, 0, simplify)
+		f_lyap = tangent_vector_f(
+				f = f_basic,
+				helpers = kwargs["helpers"],
+				n = self.n_basic,
+				n_lyap = self._n_lyap,
+				delays = kwargs["delays"],
+				zero_padding = 0,
+				simplify = simplify
+			)
 		
 		super(jitcdde_lyap, self).__init__(
 			f_lyap,
-			helpers = helpers,
 			n = self.n_basic*(self._n_lyap+1),
-			delays = delays,
-			max_delay = max_delay,
-			control_pars = control_pars,
-			module_location = module_location
+			**kwargs
 			)
 		
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
@@ -1053,12 +1063,17 @@ class jitcdde_restricted_lyap(jitcdde):
 		Vectors that are multiples of canonical base vectors (i.e., only have one non-zero component) are handled considerably faster. Consider transforming your differential equation to achieve this.
 	"""
 	
-	def __init__(self, f_sym=(), vectors=(), helpers=(), n=None, delays=None, max_delay=None, control_pars=(), module_location=None, simplify=True):
-		self.n_basic = n
+	def __init__(self, f_sym=(), vectors=(), **kwargs):
+		self.n_basic = kwargs.pop("n",None)
+		
+		if "helpers" not in kwargs.keys():
+			kwargs["helpers"] = ()
+		kwargs["helpers"] = sort_helpers(sympify_helpers(kwargs["helpers"] or []))
+		
 		f_basic = self._handle_input(f_sym,n_basic=True)
 		
-		helpers = sort_helpers(sympify_helpers(helpers or []))
-		delays = delays or _get_delays(f_basic, helpers)
+		if "delays" not in kwargs.keys() or not kwargs["delays"]:
+			kwargs["delays"] = _get_delays(f_basic,kwargs["helpers"])
 		
 		self.vectors = []
 		self.state_components = []
@@ -1080,23 +1095,19 @@ class jitcdde_restricted_lyap(jitcdde):
 				raise ValueError("One vector contains only zeros.")
 		
 		f_lyap = tangent_vector_f(
-			f_basic,
-			helpers,
-			self.n_basic,
-			1,
-			delays,
+			f = f_basic,
+			helpers = kwargs["helpers"],
+			n = self.n_basic,
+			n_lyap = 1,
+			delays = kwargs["delays"],
 			zero_padding = 2*self.n_basic*len(self.vectors),
-			simplify = simplify
+			simplify = kwargs.pop("simplify",True)
 			)
 		
 		super(jitcdde_restricted_lyap, self).__init__(
 			f_lyap,
-			helpers = helpers,
 			n = self.n_basic*(2+2*len(self.vectors)),
-			delays = delays,
-			max_delay = max_delay,
-			control_pars = control_pars,
-			module_location = module_location
+			**kwargs
 			)
 		
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
