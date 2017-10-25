@@ -901,9 +901,7 @@ def _jac(f, helpers, delay, n):
 def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0, simplify=True):
 	if f:
 		def f_lyap():
-			#Replace with yield from, once Python 2 is dead:
-			for entry in f():
-				yield entry
+			yield from f():
 			
 			for i in range(n_lyap):
 				jacs = [_jac(f, helpers, delay, n) for delay in delays]
