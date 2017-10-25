@@ -1,5 +1,5 @@
 from __future__ import print_function
-from jitcdde import t, y, current_y, past_y, anchors, jitcdde
+from jitcdde import t, y, jitcdde
 import numpy as np
 
 ω = np.random.normal(0.89, 0.0089, 2)

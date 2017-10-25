@@ -20,12 +20,12 @@ _default_min_step = 1e-10
 #sigmoid = lambda x: 1 if x>0 else 0
 sigmoid = lambda x: (np.tanh(x)+1)/2
 
-#: the symbol for time for defining the differential equation. You may just as well define the an analogous symbol directly with SymPy, but using this function is the best way to get the most of future versions of JiTCDDE, in particular avoiding incompatibilities.
+#: the symbol for time for defining the differential equation. You may just as well define the an analogous symbol directly with SymEngine or SymPy, but using this function is the best way to get the most of future versions of JiTCDDE, in particular avoiding incompatibilities.
 t = symengine.Symbol("t", real=True)
 
 def y(index,time=t):
 	"""
-	the function representing the DDE’s past and present states used for defining the differential equation. The first integer argument denotes the component. The second, optional argument is a Sympy expression denoting the time. This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected.
+	the function representing the DDE’s past and present states used for defining the differential equation. The first integer argument denotes the component. The second, optional argument is a symbolic expression denoting the time. This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected.
 	"""
 	if time == t:
 		return current_y(index)
@@ -80,22 +80,22 @@ class jitcdde(jitcxde):
 	"""
 	Parameters
 	----------
-	f_sym : iterable of SymPy expressions or generator function yielding SymPy expressions
+	f_sym : iterable of symbolic expressions or generator function yielding symbolic expressions
 		The `i`-th element is the `i`-th component of the value of the DDE’s derivative :math:`f(t,y)`.
 	
-	helpers : list of length-two iterables, each containing a SymPy symbol and a SymPy expression
-		Each helper is a variable that will be calculated before evaluating the derivative and can be used in the latter’s computation. The first component of the tuple is the helper’s symbol as referenced in the derivative or other helpers, the second component describes how to compute it from `t`, `y` and other helpers. This is for example useful to realise a mean-field coupling, where the helper could look like `(mean, sympy.Sum(y(i),(i,0,99))/100)`. (See `the JiTCODE documentation <http://jitcode.readthedocs.io/#module-SW_of_Roesslers>`_ for an example.)
+	helpers : list of length-two iterables, each containing a symbol and an expression
+		Each helper is a variable that will be calculated before evaluating the derivative and can be used in the latter’s computation. The first component of the tuple is the helper’s symbol as referenced in the derivative or other helpers, the second component describes how to compute it from `t`, `y` and other helpers. This is for example useful to realise a mean-field coupling, where the helper could look like `(mean, sum(y(i) for i an range(100))/100)`. (See `the JiTCODE documentation <http://jitcode.readthedocs.io/#module-SW_of_Roesslers>`_ for an example.)
 	
 	n : integer
 		Length of `f_sym`. While JiTCDDE can easily determine this itself (and will, if necessary), this may take some time if `f_sym` is a generator function and `n` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
 	
-	delays : iterable of SymPy expressions or floats
+	delays : iterable of expressions or floats
 		The delays of the dynamics. If not given, JiTCDDE will determine these itself if needed. However, this may take some time if `f_sym` is large. Take care that these are correct – if they aren’t, you won’t get a helpful error message.
 	
 	max_delay : number
 		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large and `delays` is not given. Take care that this value is not too small – if it is, you will not get a helpful error message. If this value is too large, you may run into memory issues for long integration times and calculating Lyapunov exponents (with `jitcdde_lyap`) may take forever.
 	
-	control_pars : list of SymPy symbols
+	control_pars : list of symbols
 		Each symbol corresponds to a control parameter that can be used when defining the equations and set after compilation with `set_parameters`. Using this makes sense if you need to do a parameter scan with short integrations for each parameter and you are spending a considerable amount of time compiling.
 	
 	verbose : boolean
@@ -266,9 +266,9 @@ class jitcdde(jitcxde):
 		
 		Parameters
 		----------
-		function : callable or iterable of SymPy expressions
+		function : callable or iterable of symbolic expressions
 			If callable, this takes the time as an argument and returns an iterable of floats that is the initial state of the past at that time.
-			If an iterable of SymPy expressions, each expression represents how initial past of the respective component depends on `t`.
+			If an iterable of expressions, each expression represents how initial past of the respective component depends on `t`.
 			In both cases, the lengths of the iterable must match the dimension of the differential equation (`n`).
 			
 		times_of_interest : iterable of numbers or `None`
@@ -387,7 +387,7 @@ class jitcdde(jitcxde):
 	
 	def compile_C(
 		self,
-		simplify = True,
+		simplify = None,
 		do_cse = False,
 		chunk_size = 100,
 		extra_compile_args = None,
@@ -396,20 +396,20 @@ class jitcdde(jitcxde):
 		modulename = None,
 		):
 		"""
-		translates the derivative to C code using SymPy’s `C-code printer <http://docs.sympy.org/dev/modules/printing.html#module-sympy.printing.ccode>`_.
+		translates the derivative to C code using SymEngine’s `C-code printer <https://github.com/symengine/symengine/pull/1054>`_.
 		For detailed information many of the arguments and other ways to tweak the compilation, read `these notes <jitcde-common.readthedocs.io>`_.
 
 		Parameters
 		----------
 		simplify : boolean
-			Whether the derivative should be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`) before translating to C code. The main reason why you could want to disable this is if your derivative is already optimised and so large that simplifying takes a considerable amount of time.
+			Whether the derivative should be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`) before translating to C code. The main reason why you could want to disable this is if your derivative is already optimised and so large that simplifying takes a considerable amount of time. If `None`, this will be automatically disabled for `n>10`.
 		
 		do_cse : boolean
 			Whether SymPy’s `common-subexpression detection <http://docs.sympy.org/dev/modules/rewriting.html#module-sympy.simplify.cse_main>`_ should be applied before translating to C code.
-			This is worthwile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input.
+			This is worthwile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input. Also, this feature uses SymPy and not SymEngine.
 		
 		chunk_size : integer
-			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. After the generation of each chunk, SymPy’s cache is cleared. See `Handling very large differential equations <http://jitcde-common.readthedocs.io/#handling-very-large-differential-equations>`_ on why this is useful and how to best choose this value.
+			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. See `Handling very large differential equations <http://jitcde-common.readthedocs.io/#handling-very-large-differential-equations>`_ on why this is useful and how to best choose this value.
 			If smaller than 1, no chunking will happen.
 		
 		extra_compile_args : iterable of strings
@@ -428,6 +428,8 @@ class jitcdde(jitcxde):
 		f_sym_wc = self.f_sym()
 		helpers_wc = list(self.helpers) # list is here for copying
 		
+		if simplify is None:
+			simplify = self.n<=10
 		if simplify:
 			f_sym_wc = (entry.simplify(ratio=1.0) for entry in f_sym_wc)
 		
@@ -933,7 +935,7 @@ class jitcdde_lyap(jitcdde):
 		Number of Lyapunov exponents to calculate.
 	
 	simplify : boolean
-		Whether the differential equations for the separation function shall be subjected to SymPy’s `simplify`. Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
+		Whether the differential equations for the separation function shall be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`). Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
 	"""
 	
 	def __init__( self, f_sym=(), n_lyap=1, simplify=True, **kwargs ):
@@ -1112,13 +1114,23 @@ class jitcdde_restricted_lyap(jitcdde):
 		
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 	
-	def add_past_point(self, time, state, derivative):
-		padding = len(self.vectors)*2*self.n_basic
-		super(jitcdde_restricted_lyap, self).add_past_point(
-			time,
-			np.hstack((state,      random_direction(self.n_basic), np.empty(padding))),
-			np.hstack((derivative, random_direction(self.n_basic), np.empty(padding)))
-			)
+	def add_past_points(self, anchors):
+		padding = np.empty(len(self.vectors)*2*self.n_basic)
+		def new_anchors():
+			for time,state,derivative in anchors:
+				new_state = np.hstack([
+						state,
+						random_direction(self.n_basic),
+						padding
+					])
+				new_derivative = np.hstack([
+						derivative,
+						random_direction(self.n_basic),
+						padding
+					])
+				yield time,new_state,new_derivative
+		
+		super(jitcdde_restricted_lyap,self).add_past_points(new_anchors())
 	
 	def remove_projections(self):
 		for state_component in self.state_components:
