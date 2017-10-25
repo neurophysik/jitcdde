@@ -1,18 +1,10 @@
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wpedantic"
 # define NPY_NO_DEPRECATED_API NPY_1_8_API_VERSION
 # include <Python.h>
 # include <numpy/arrayobject.h>
-# pragma GCC diagnostic pop
-# include <structmember.h>
-
 # include <math.h>
+# include <structmember.h>
 # include <assert.h>
 # include <stdbool.h>
-# include <stdio.h>
-
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wunused-parameter"
 
 # define TYPE_INDEX NPY_DOUBLE
 
@@ -179,10 +171,7 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 	}
 	
 	npy_intp dims[1] = { {{n}} };
-	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-Wpedantic"
 	PyArrayObject * result = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
-	# pragma GCC diagnostic pop
 	
 	anchor const w = *(self->last_anchor);
 	anchor const v = *(w.previous);
@@ -200,10 +189,7 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 				(1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x*x) + c;
 	}
 	
-	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-Wpedantic"
 	return (PyObject *) result;
-	# pragma GCC diagnostic pop
 }
 
 static PyObject * get_current_state(dde_integrator const * const self)
@@ -211,26 +197,18 @@ static PyObject * get_current_state(dde_integrator const * const self)
 	assert(self->last_anchor);
 	
 	npy_intp dims[1] = { {{n}} };
-	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-Wpedantic"
 	PyArrayObject * result = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
-	# pragma GCC diagnostic pop
 	
 	for (int index=0; index<{{n}}; index++)
 		* (double *) PyArray_GETPTR1(result, index) = self->last_anchor->state[index];
 	
-	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-Wpedantic"
 	return (PyObject *) result;
-	# pragma GCC diagnostic pop
 }
 
 static PyObject * get_full_state(dde_integrator const * const self)
 {
 	PyObject * py_past = PyList_New(0);
     npy_intp dim[1] = { {{n}} };
-	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-Wpedantic"
 	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
 		PyList_Append(
 			py_past,
@@ -241,7 +219,6 @@ static PyObject * get_full_state(dde_integrator const * const self)
 				PyArray_SimpleNewFromData(1, dim, TYPE_INDEX, ca->diff ) 
 				)
 			);
-	# pragma GCC diagnostic pop
 	return py_past;
 }
 
@@ -689,10 +666,7 @@ static PyObject * orthonormalise(dde_integrator const * const self, PyObject * a
 	calculate_sp_matrices(self, delay);
 	
 	npy_intp dims[1] = { n_lyap };
-	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-Wpedantic"
 	PyArrayObject * norms = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
-	# pragma GCC diagnostic pop
 	
 	for (unsigned int i=0; i<n_lyap; i++)
 	{
@@ -707,10 +681,7 @@ static PyObject * orthonormalise(dde_integrator const * const self, PyObject * a
 		* (double *) PyArray_GETPTR1(norms, i) = norm;
 	}
 	
-	# pragma GCC diagnostic push
-	# pragma GCC diagnostic ignored "-Wpedantic"
 	return (PyObject *) norms;
-	# pragma GCC diagnostic pop
 }
 
 unsigned int get_dummy(unsigned int const index)
