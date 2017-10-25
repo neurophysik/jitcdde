@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
 from jitcdde import (
 	t, y, current_y, past_y, anchors,
 	jitcdde_lyap,

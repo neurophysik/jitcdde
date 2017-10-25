@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function, division
 from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate
 from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 

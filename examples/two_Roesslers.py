@@ -1,4 +1,3 @@
-from __future__ import print_function
 from jitcdde import t, y, jitcdde
 import numpy as np
 

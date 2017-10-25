@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from ._jitcdde import (
 		jitcdde, jitcdde_lyap, jitcdde_restricted_lyap,
 		t, y, current_y, past_y, anchors,
