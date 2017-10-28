@@ -52,7 +52,7 @@ for realisation in range(number_of_runs):
 	P = py_dde_integrator(f, past_points())
 	
 	DDE = jitcdde(f)
-	DDE.generate_f_C()
+	DDE.compile_C()
 	C = DDE.jitced.dde_integrator(past_points())
 	
 	def get_next_step():

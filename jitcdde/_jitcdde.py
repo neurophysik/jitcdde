@@ -359,9 +359,6 @@ class jitcdde(jitcxde):
 		"""
 		self.DDE = None
 	
-	def generate_f_lambda(self):
-		self.generate_lambdas()
-	
 	def generate_lambdas(self):
 		"""
 		Explicitly initiates a purely Python-based integrator.
@@ -377,9 +374,6 @@ class jitcdde(jitcxde):
 			self.n_basic
 			)
 		self.compile_attempt = False
-	
-	def generate_f_C(self, *args, **kwargs):
-		self.compile_C(*args, **kwargs)
 	
 	def _compile_C(self, *args, **kwargs):
 		self.compile_C(*args, **kwargs)

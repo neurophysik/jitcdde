@@ -58,7 +58,7 @@ class TestIntegration(unittest.TestCase):
 		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def generator(self):
-		self.DDE.generate_f_C(extra_compile_args=compile_args)
+		self.DDE.compile_C(extra_compile_args=compile_args)
 	
 	def setUp(self):
 		for point in get_past_points():
@@ -96,7 +96,7 @@ class TestIntegration(unittest.TestCase):
 
 class TestIntegrationLambda(TestIntegration):
 	def generator(self):
-		self.DDE.generate_f_lambda()
+		self.DDE.generate_lambdas()
 
 class TestIntegrationSaveAndLoad(TestIntegration):
 	@classmethod
@@ -111,11 +111,11 @@ class TestIntegrationSaveAndLoad(TestIntegration):
 
 class TestIntegrationChunks(TestIntegration):
 	def generator(self):
-		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
 
 class TestIntegrationCSE(TestIntegration):
 	def generator(self):
-		self.DDE.generate_f_C(do_cse=True, extra_compile_args=compile_args)
+		self.DDE.compile_C(do_cse=True, extra_compile_args=compile_args)
 
 tiny_delay = 1e-30
 f_with_tiny_delay = [
@@ -141,11 +141,11 @@ class TestPastWithinStepFuzzy(TestIntegration):
 
 class TestPastWithinStepLambda(TestPastWithinStep):
 	def generator(self):
-		self.DDE.generate_f_lambda()
+		self.DDE.generate_lambdas()
 
 class TestPastWithinStepFuzzyLambda(TestPastWithinStepFuzzy):
 	def generator(self):
-		self.DDE.generate_f_lambda()
+		self.DDE.generate_lambdas()
 
 
 def f_generator():
@@ -164,11 +164,11 @@ class TestGenerator(TestIntegration):
 
 class TestGeneratorPython(TestGenerator):
 	def generator(self):
-		self.DDE.generate_f_lambda()
+		self.DDE.generate_lambdas()
 
 class TestGeneratorChunking(TestGenerator):
 	def generator(self):
-		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
 
 
 delayed_y, y3m10, coupling_term = symengine.symbols("delayed_y y3m10 coupling_term")
@@ -195,11 +195,11 @@ class TestHelpers(TestIntegration):
 
 class TestHelpersPython(TestHelpers):
 	def generator(self):
-		self.DDE.generate_f_lambda()
+		self.DDE.generate_lambdas()
 
 class TestHelpersChunking(TestHelpers):
 	def generator(self):
-		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
 
 
 a,b,c,k = symengine.symbols("a b c k")
@@ -219,12 +219,12 @@ class TestParameters(TestIntegration):
 		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def generator(self):
-		self.DDE.generate_f_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
 		self.DDE.set_parameters(0.165, 0.2, 10.0, 0.25)
 
 class TestParametersPython(TestParameters):
 	def generator(self):
-		self.DDE.generate_f_lambda()
+		self.DDE.generate_lambdas()
 		self.DDE.set_parameters(0.165, 0.2, 10.0, 0.25)
 
 class TestIntegrationParameters(unittest.TestCase):
@@ -232,7 +232,7 @@ class TestIntegrationParameters(unittest.TestCase):
 		self.DDE = jitcdde(f)
 		for point in get_past_points():
 			self.DDE.add_past_point(*point)
-		self.DDE.generate_f_C(extra_compile_args=compile_args)
+		self.DDE.compile_C(extra_compile_args=compile_args)
 		
 	def test_min_step_error(self):
 		self.DDE.set_integration_parameters(min_step=1.0)

@@ -62,10 +62,10 @@ class basic_test(unittest.TestCase):
 		self.ODE.set_integration_parameters(first_step=0.01)
 	
 	def test_C(self):
-		self.ODE.generate_f_C(extra_compile_args=compile_args)
+		self.ODE.compile_C(extra_compile_args=compile_args)
 	
 	def test_Python(self):
-		self.ODE.generate_f_lambda()
+		self.ODE.generate_lambdas()
 	
 	def integrate(self):
 		pass
