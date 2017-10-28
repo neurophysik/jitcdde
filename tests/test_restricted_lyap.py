@@ -25,15 +25,21 @@ vectors = [
 		( np.array([0,0,0,0]), np.array([0,1,0,1]) )
 	]
 
-DDE = jitcdde_restricted_lyap( f, vectors=vectors, verbose=False, control_pars=[k] )
+DDE = jitcdde_restricted_lyap(
+		f,
+		vectors = vectors,
+		verbose = False,
+		control_pars = [k]
+	)
+# Simplification would lead to trajectories diverging from the synchronisation manifold due to numerical noise.
 DDE.compile_C(simplify=False)
 
 scenarios = [
-		{"k": 0    , "sign": 0},
-		{"k":-0.128, "sign": 1},
-		{"k":-0.2  , "sign": 1},
-		{"k": 0.128, "sign":-1},
-		{"k": 0.2  , "sign":-1},
+		{"k": 0  , "sign": 0},
+		{"k":-0.1, "sign": 1},
+		{"k":-0.2, "sign": 1},
+		{"k": 0.1, "sign":-1},
+		{"k": 0.2, "sign":-1},
 	]
 
 for scenario in scenarios:
