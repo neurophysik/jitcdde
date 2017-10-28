@@ -41,7 +41,6 @@ y_10_ref = np.loadtxt("two_Roessler_y10.dat")
 T = 10
 
 test_parameters = {
-	"raise_exception": True,
 	"rtol": 1e-7,
 	"atol": 1e-7,
 	"pws_rtol": 1e-3,
@@ -235,26 +234,20 @@ class TestIntegrationParameters(unittest.TestCase):
 			self.DDE.add_past_point(*point)
 		self.DDE.generate_f_C(extra_compile_args=compile_args)
 		
-	def test_min_step_warning(self):
-		self.DDE.set_integration_parameters(min_step=1.0, raise_exception=False)
-		self.DDE.integrate(1000)
-		self.assertFalse(self.DDE.successful)
-	
 	def test_min_step_error(self):
-		self.DDE.set_integration_parameters(min_step=1.0, raise_exception=True)
+		self.DDE.set_integration_parameters(min_step=1.0)
 		with self.assertRaises(UnsuccessfulIntegration):
 			self.DDE.integrate(1000)
-		self.assertFalse(self.DDE.successful)
 	
-	def test_rtol_warning(self):
-		self.DDE.set_integration_parameters(min_step=1e-3, rtol=1e-10, atol=0, raise_exception=False)
-		self.DDE.integrate(1000)
-		self.assertFalse(self.DDE.successful)
+	def test_rtol_error(self):
+		self.DDE.set_integration_parameters(min_step=1e-3, rtol=1e-10, atol=0)
+		with self.assertRaises(UnsuccessfulIntegration):
+			self.DDE.integrate(1000)
 	
-	def test_atol_warning(self):
-		self.DDE.set_integration_parameters(min_step=1e-3, rtol=0, atol=1e-10, raise_exception=False)
-		self.DDE.integrate(1000)
-		self.assertFalse(self.DDE.successful)
+	def test_atol_error(self):
+		self.DDE.set_integration_parameters(min_step=1e-3, rtol=0, atol=1e-10)
+		with self.assertRaises(UnsuccessfulIntegration):
+			self.DDE.integrate(1000)
 
 class TestFindMaxDelay(unittest.TestCase):
 	def test_default(self):

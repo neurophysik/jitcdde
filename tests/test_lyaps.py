@@ -34,7 +34,6 @@ f = [
 	]
 
 test_parameters = {
-	"raise_exception": True,
 	"rtol": 1e-7,
 	"atol": 1e-7,
 	"pws_rtol": 1e-3,

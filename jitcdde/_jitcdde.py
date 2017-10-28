@@ -71,9 +71,8 @@ def _propagate_delays(delays, p, threshold=1e-5):
 
 class UnsuccessfulIntegration(Exception):
 	"""
-		This exception is raised when the integrator cannot meet the accuracy and step-size requirements and the argument `raise_exception` of `set_integration_parameters` is set.
+		This exception is raised when the integrator cannot meet the accuracy and step-size requirements. If you want to know the exact state of your system before the integration fails or similar, catch this exception.
 	"""
-	
 	pass
 
 class jitcdde(jitcxde):
@@ -565,7 +564,6 @@ class jitcdde(jitcxde):
 			pws_max_iterations = 10,
 			pws_base_increase_chance = 0.1,
 			pws_fuzzy_increase = False,
-			raise_exception = True,
 			):
 		
 		"""
@@ -614,9 +612,6 @@ class jitcdde(jitcxde):
 			
 		pws_fuzzy_increase : boolean
 			Whether the decision to try to increase the step size shall depend on chance. The upside of this is that it is less likely that the step size gets locked at a unnecessarily low value. The downside is that the integration is not deterministic anymore. If False, increase probabilities will be added up until they exceed 0.9, in which case an increase happens.
-		
-		raise_exception : boolean
-			Whether (`UnsuccessfulIntegration`) shall be raised if the integration fails. You can deal with this by catching this exception. If `False`, there is only a warning and `self.successful` is set to `False`.
 		"""
 		
 		if first_step > max_step:
@@ -651,7 +646,6 @@ class jitcdde(jitcxde):
 		self.safety_factor = safety_factor
 		self.max_factor = max_factor
 		self.min_factor = min_factor
-		self.do_raise_exception = raise_exception
 		self.pws_atol = pws_atol
 		self.pws_rtol = pws_rtol
 		self.pws_max_iterations = pws_max_iterations
@@ -703,9 +697,8 @@ class jitcdde(jitcxde):
 		if p > self.decrease_threshold:
 			self.dt *= max(self.safety_factor*p**(-1/self.q), self.min_factor)
 			self._control_for_min_step()
+			return False
 		else:
-			self.successful = True
-			self.DDE.accept_step()
 			if p <= self.increase_threshold:
 				factor = self.safety_factor*p**(-1/(self.q+1)) if p else self.max_factor
 				
@@ -718,6 +711,7 @@ class jitcdde(jitcxde):
 					self.dt = new_dt
 					self.count = 0
 					self.last_pws = False
+			return True
 	
 	@property
 	def t(self):
@@ -743,49 +737,38 @@ class jitcdde(jitcxde):
 		Returns
 		-------
 		state : NumPy array
-			the computed state of the system at `target_time`. If the integration fails and `raise_exception` is `False`, an extra- or interpolation of the desired state is returned – which may be blatantly wrong.
+			the computed state of the system at `target_time`.
 		"""
 		self._initiate()
 		
-		try:
-			while self.DDE.get_t() < target_time:
-				self.successful = False
-				while not self.successful:
+		while self.DDE.get_t() < target_time:
+			self.DDE.get_next_step(self.dt)
+			
+			if self.DDE.past_within_step:
+				self.last_pws = self.DDE.past_within_step
+				
+				# If possible, adjust step size to make integration explicit:
+				if self.dt > self.pws_factor*self.DDE.past_within_step:
+					self.dt /= self.pws_factor
+					self._control_for_min_step()
+					continue
+				
+				# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
+				for self.count in range(1,self.pws_max_iterations+1):
 					self.DDE.get_next_step(self.dt)
-					
-					if self.DDE.past_within_step:
-						self.last_pws = self.DDE.past_within_step
-						
-						# If possible, adjust step size to make integration explicit:
-						if self.dt > self.pws_factor*self.DDE.past_within_step:
-							self.dt /= self.pws_factor
-							self._control_for_min_step()
-							continue
-						
-						# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
-						for self.count in range(1,self.pws_max_iterations+1):
-							self.DDE.get_next_step(self.dt)
-							if self.DDE.check_new_y_diff(self.pws_atol, self.pws_rtol):
-								break
-						else:
-							self.dt /= self.pws_factor
-							self._control_for_min_step()
-							continue
-					
-					self._adjust_step_size()
+					if self.DDE.check_new_y_diff(self.pws_atol, self.pws_rtol):
+						break
+				else:
+					self.dt /= self.pws_factor
+					self._control_for_min_step()
+					continue
+			
+			if self._adjust_step_size():
+				self.DDE.accept_step()
 		
-		except UnsuccessfulIntegration as error:
-			self.successful = False
-			if self.do_raise_exception:
-				raise error
-			else:
-				warn(str(error))
-				return self.DDE.get_recent_state(target_time)
-		
-		else:
-			result = self.DDE.get_recent_state(target_time)
-			self.DDE.forget(self.max_delay)
-			return result
+		result = self.DDE.get_recent_state(target_time)
+		self.DDE.forget(self.max_delay)
+		return result
 	
 	def _prepare_blind_int(self, target_time, step):
 		self._initiate()
