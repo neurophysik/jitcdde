@@ -116,9 +116,10 @@ Time- and state-dependent delays
 
 There is nothing in JiTCDDE’s implementation that keeps you from making delays time- or state-dependent.
 However, the error estimate is not accurate anymore as it does not take into account the inaccuracy caused by the changing delay.
-This should not be a problem if your delays change sufficiently slowly.
+This should not be a problem if your delays change sufficiently slowly in comparison to your step size.
 
 Note that if you want to make use of this, you must provide the maximum delay manually.
+See `this file <https://github.com/neurophysik/jitcdde/blob/master/examples/state_dependent.py>`_ for an example.
 
 Networks and large equations
 ----------------------------
