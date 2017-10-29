@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from itertools import chain
-import sympy
 import numpy as np
 
 MIN_GARBAGE = 10
@@ -150,17 +149,18 @@ class dde_integrator(object):
 		self.parameters = []
 		
 		from jitcdde._jitcdde import t, y, current_y, past_y, anchors
-		Y = sympy.DeferredVector("Y")
+		from sympy import DeferredVector, sympify, lambdify
+		Y = DeferredVector("Y")
 		substitutions = list(reversed(helpers)) + [(y(i),Y[i]) for i in range(self.n)]
 		
 		past_calls = 0
 		f_wc = []
 		for entry in f():
-			new_entry = sympy.sympify(entry).subs(substitutions).simplify(ratio=1.0)
+			new_entry = sympify(entry).subs(substitutions).simplify(ratio=1.0)
 			past_calls += new_entry.count(anchors)
 			f_wc.append(new_entry)
 		
-		F = sympy.lambdify(
+		F = lambdify(
 			[t, Y] + list(control_pars),
 			f_wc,
 			[

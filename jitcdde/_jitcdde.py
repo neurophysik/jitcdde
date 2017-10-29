@@ -5,7 +5,6 @@ from warnings import warn
 from itertools import count
 from traceback import format_exc
 from inspect import signature
-import sympy
 import symengine
 import numpy as np
 import jitcdde._python_core as python_core
@@ -301,6 +300,7 @@ class jitcdde(jitcxde):
 				derivative = (array_function(time+eps)-value)/eps
 				return [time,value,derivative,None]
 		else:
+			import sympy
 			def get_anchor(time):
 				evaluate = lambda expr: sympy.sympify(expr).evalf(tol,subs={t:time})
 				value = np.fromiter(
@@ -427,6 +427,7 @@ class jitcdde(jitcxde):
 			f_sym_wc = (entry.simplify(ratio=1.0) for entry in f_sym_wc)
 		
 		if do_cse:
+			import sympy
 			additional_helper = sympy.Function("additional_helper")
 			
 			_cse = sympy.cse(
@@ -887,7 +888,7 @@ def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0, simplify=Tru
 					expression = 0
 					for delay,jac in zip(delays,jacs):
 						for k,entry in enumerate(next(jac)):
-							expression += entry * y(k+(i+1)*n, t-delay)
+							expression += entry * y(k+(i+1)*n,t-delay)
 					
 					if simplify:
 						expression = expression.simplify(ratio=1.0)
