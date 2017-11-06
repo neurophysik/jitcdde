@@ -1,5 +1,5 @@
 from ._jitcdde import (
-		jitcdde, jitcdde_lyap, jitcdde_restricted_lyap,
+		jitcdde, jitcdde_lyap, jitcdde_restricted_lyap, jitcdde_transversal_lyap,
 		t, y, current_y, past_y, anchors,
 		UnsuccessfulIntegration,
 		_find_max_delay, _get_delays,

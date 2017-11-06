@@ -63,10 +63,18 @@ for realisation in range(number_of_runs):
 	print(".", end="")
 	stdout.flush()
 	
-	P = py_dde_integrator(f,past(),n_basic=2)
+	tangent_indices = random.sample(range(n),random.randint(1,n-1))
+	
+	P = py_dde_integrator(
+			f,
+			past(),
+			n_basic = 2,
+			tangent_indices = tangent_indices
+		)
 	
 	DDE = jitcdde(f)
 	DDE.n_basic = 2
+	DDE.G = type("",(),{"tangent_indices":tangent_indices}) # cheap mock
 	DDE.compile_C(chunk_size=random.randint(0,7))
 	C = DDE.jitced.dde_integrator(past())
 	
@@ -140,10 +148,14 @@ for realisation in range(number_of_runs):
 				P.remove_diff_component(i)
 				C.remove_diff_component(i)
 	
+	def normalise_indices():
+		d = np.random.uniform(0.1*delay, delay)
+		compare(P.normalise_indices(d), C.normalise_indices(d))
+	
 	get_next_step()
 	get_next_step()
 	
-	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_full_state, get_p, accept_step, forget, check_new_y_diff, past_within_step, orthonormalise, remove_projections]
+	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_full_state, get_p, accept_step, forget, check_new_y_diff, past_within_step, orthonormalise, remove_projections, normalise_indices]
 	
 	for i in range(30):
 		action = random.sample(actions,1)[0]
@@ -159,3 +171,4 @@ for realisation in range(number_of_runs):
 			break
 
 print("Runs with errors: %i / %i" % (errors, number_of_runs))
+

@@ -10,8 +10,9 @@ import numpy as np
 import jitcdde._python_core as python_core
 from jitcxde_common import jitcxde
 from jitcxde_common.helpers import sort_helpers, sympify_helpers
-from jitcxde_common.symbolic import collect_arguments, count_calls
+from jitcxde_common.symbolic import collect_arguments, count_calls, replace_function
 from jitcxde_common.numerical import random_direction, rel_dist
+from jitcxde_common.transversal import GroupHandler
 
 _default_min_step = 1e-10
 
@@ -371,7 +372,8 @@ class jitcdde(jitcxde):
 			self.past,
 			self.helpers,
 			self.control_pars,
-			self.n_basic
+			self.n_basic,
+			self.G.tangent_indices if hasattr(self,"G") else None
 			)
 		self.compile_attempt = False
 	
@@ -505,7 +507,8 @@ class jitcdde(jitcxde):
 			has_any_helpers = anchor_i or helper_i,
 			anchor_mem_length = self.past_calls,
 			n_basic = self.n_basic,
-			control_pars = [par.name for par in self.control_pars]
+			control_pars = [par.name for par in self.control_pars],
+			tangent_indices = self.G.tangent_indices if hasattr(self,"G") else []
 			)
 		
 		self._compile_and_load(verbose,extra_compile_args,extra_link_args)
@@ -1178,3 +1181,166 @@ class jitcdde_restricted_lyap(jitcdde):
 		
 		return state, lyap, total_integration_time
 
+
+class jitcdde_transversal_lyap(jitcdde):
+	"""
+	Calculates the largest Lyapunov exponent in orthogonal direction to a predefined synchronisation manifold, i.e. the projection of the tangent vector onto that manifold vanishes. In contrast to `jitcdde_restricted_lyap`, this performs some transformations tailored to this specific application that may strongly reduce the number of differential equations and ensure a dynamics on the synchronisation manifold.
+
+	Note that all functions for defining the past differ from their analoga from `jitcdde` by having the dimensions of the arguments reduced to the number of groups. This means that only one initial value (of the state or derivative) per group of synchronised components has to be provided (in the same order as the `groups` argument of the constructor).
+	
+	See `this test <https://github.com/neurophysik/jitcdde/blob/master/tests/test_transversal_lyap.py>`_ for an example of usage. The handling is the same as that for `jitcdde` except for:
+	
+	Parameters
+	----------
+	groups : iterable of iterables of integers
+		each group is an iterable of indices that identify dynamical variables that are synchronised on the synchronisation manifold.
+	
+	simplify : boolean
+		Whether the transformed differential equations shall be subjected to SymEngine’s `simplify`. Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
+	"""
+	
+	def __init__( self, f_sym=(), groups=(), simplify=True, **kwargs ):
+		self.G = GroupHandler(groups)
+		self.n = kwargs.pop("n",None)
+		
+		f_basic,extracted = self.G.extract_main(self._handle_input(f_sym))
+		helpers = sort_helpers(sympify_helpers( kwargs.pop("helpers",[]) ))
+		delays = kwargs.pop("delays",()) or _get_delays(f_basic,helpers)
+		
+		past_z = symengine.Function("past_z")
+		current_z = symengine.Function("current_z")
+		def z(index,time=t):
+			if time == t:
+				return current_z(index)
+			else:
+				return past_z(time, index, anchors(time))
+		
+		tangent_vectors = {}
+		for d in delays:
+			z_vector = [z(i,(t-d)) for i in range(self.n)]
+			tangent_vectors[d] = self.G.back_transform(z_vector)
+		
+		def tangent_vector_f():
+			jacs = [
+					_jac( f_basic, helpers, delay, self.n )
+					for delay in delays
+				]
+			
+			for _ in range(self.n):
+				expression = 0
+				for delay,jac in zip(delays,jacs):
+					try:
+						for k,entry in enumerate(next(jac)):
+							expression += entry * tangent_vectors[delay][k]
+					except StopIteration:
+						raise AssertionError("Something got horribly wrong")
+				yield expression
+		
+		current_z_conflate = lambda i: current_z(self.G.map_to_main(i))
+		past_z_conflate = lambda t,i,a: past_z(t,self.G.map_to_main(i),a)
+		
+		def finalise(entry):
+			entry = replace_function(entry,current_y,current_z_conflate)
+			entry = replace_function(entry,past_y,past_z_conflate)
+			if simplify:
+				entry = entry.simplify(ratio=1)
+			entry = replace_function(entry,current_z,current_y)
+			entry = replace_function(entry,past_z,past_y)
+			return entry
+		
+		def f_lyap():
+			for entry in self.G.iterate(tangent_vector_f()):
+				if type(entry)==int:
+					yield finalise(extracted[self.G.main_indices[entry]])
+				else:
+					yield finalise(entry[0]-entry[1])
+		
+		helpers = ((helper[0],finalise(helper[1])) for helper in helpers)
+		
+		super(jitcdde_transversal_lyap, self).__init__(
+				f_lyap,
+				n = self.n,
+				delays = delays,
+				helpers = helpers,
+				**kwargs
+			)
+	
+	def add_past_points(self, anchors):
+		def new_anchors():
+			for time,state,derivative in anchors:
+				assert len(state)==len(derivative)==len(self.G.groups), "State and derivative too long or non matching. Provide only one value per synchronisation group"
+				
+				new_state = np.empty(self.n)
+				new_state[self.G.main_indices] = state
+				new_state[self.G.tangent_indices] = random_direction(len(self.G.tangent_indices))
+				
+				new_derivative = np.empty(self.n)
+				new_derivative[self.G.main_indices] = derivative
+				new_derivative[self.G.tangent_indices] = random_direction(len(self.G.tangent_indices))
+				
+				yield time,new_state,new_derivative
+		
+		super(jitcdde_transversal_lyap,self).add_past_points(new_anchors())
+	
+	def norm(self):
+		tangent_vector = self._y[self.G.tangent_indices]
+		norm = np.linalg.norm(tangent_vector)
+		tangent_vector /= norm
+		if not np.isfinite(norm):
+			warn("Norm of perturbation vector for Lyapunov exponent out of numerical bounds. You probably waited too long before renormalising and should call integrate with smaller intervals between steps (as renormalisations happen once with every call of integrate).")
+		self._y[self.G.tangent_indices] = tangent_vector
+		return norm
+	
+	def integrate(self, target_time):
+		"""
+		Like `jitcdde`’s `integrate`, except for normalising and aligning the separation function and:
+		
+		Returns
+		-------
+		y : one-dimensional NumPy array
+			The state of the system. Only one initial value per group of synchronised components is returned (in the same order as the `groups` argument of the constructor).
+		
+		lyap : float
+			The “local” largest transversal Lyapunov exponent as estimated from the growth or shrinking of the separation function during the integration time of this very `integrate` command.
+			
+		integration time : float
+			The actual integration time during to which the local Lyapunov exponents apply. Note that this is not necessarily difference between `target_time` and the previous `target_time`, as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. When averaging the Lyapunov exponents, you almost always want to weigh them with the integration time.
+			
+			If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all and the integration time is zero. In this case, the local Lyapunov exponents are returned as `0`, which is as nonsensical as any other result (except perhaps `nan`) but should not matter with a proper weighted averaging.
+		
+		It is essential that you choose `target_time` properly such that orthonormalisation does not happen too rarely. If you want to control the maximum step size, use the parameter `max_step` of `set_integration_parameters` instead.
+		"""
+		
+		self._initiate()
+		old_t = self.DDE.get_t()
+		result = super(jitcdde_transversal_lyap, self).integrate(target_time)[:self.n_basic]
+		delta_t = self.DDE.get_t()-old_t
+		
+		if delta_t==0:
+			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent; therefore I return 0 instead.")
+			lyap = 0
+		else:
+			norm = self.DDE.normalise_indices(self.max_delay)
+			lyap = np.log(norm) / delta_t
+		return result, lyap, delta_t
+	
+	def integrate_blindly(self, target_time, step=None):
+		"""
+		Like `jitcdde`’s `integrate_blindly`, except for normalising and aligning the separation function after each step and the output being analogous to `jitcdde_transversal_lyap`’s `integrate`.
+		"""
+		
+		dt,number,total_integration_time = self._prepare_blind_int(target_time, step)
+		
+		instantaneous_lyaps = []
+		
+		for _ in range(number):
+			self.DDE.get_next_step(dt)
+			self.DDE.accept_step()
+			self.DDE.forget(self.max_delay)
+			norm = self.DDE.normalise_indices(self.max_delay)
+			instantaneous_lyaps.append(np.log(norm)/dt)
+		
+		lyap = np.average(instantaneous_lyaps)
+		state = self.DDE.get_current_state()[:self.n_basic]
+		
+		return state, lyap, total_integration_time

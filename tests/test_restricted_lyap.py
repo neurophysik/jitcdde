@@ -60,13 +60,11 @@ for scenario in scenarios:
 	
 	lyaps = []
 	weights = []
-	states = []
 	times = DDE.t + np.arange(100,100000,100)
 	for i,time in enumerate(times):
 		state,lyap,weight = DDE.integrate(time)
 		lyaps.append(lyap)
 		weights.append(weight)
-		states.append(state)
 		assert not np.isnan(lyap)
 	
 	# Check that we are still on the synchronisation manifold:

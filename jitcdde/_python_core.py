@@ -137,12 +137,14 @@ class dde_integrator(object):
 				past,
 				helpers = (),
 				control_pars = (),
-				n_basic = None
+				n_basic = None,
+				tangent_indices = (),
 			):
 		self.past = past
 		self.t, self.y, self.diff = self.past[-1]
 		self.n = len(self.y)
 		self.n_basic = n_basic or self.n
+		self.tangent_indices = tangent_indices
 		self.last_garbage = -1
 		self.old_new_y = None
 		
@@ -386,6 +388,16 @@ class dde_integrator(object):
 		self.scale_past(sep_func, 1./norm)
 		
 		return norm
+	
+	def normalise_indices(self, delay):
+		"""
+		Normalise the separation function of the tangent indices (with Gram-Schmidt) and return the norms (before normalisation).
+		"""
+		
+		norm = self.norm(delay,self.tangent_indices)
+		if norm > NORM_THRESHOLD:
+			self.scale_past(self.tangent_indices,1./norm)
+		return (norm)
 	
 	def remove_state_component(self, index):
 		for anchor in self.past:

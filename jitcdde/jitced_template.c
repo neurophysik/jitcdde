@@ -25,7 +25,7 @@ typedef struct anchor
 	double diff[{{n}}];
 	struct anchor * next;
 	struct anchor * previous;
-	{% if n_basic != n: %}
+	{% if (n_basic != n) or tangent_indices: %}
 	double sp_matrix[4][4];
 	{% endif %}
 } anchor;
@@ -478,8 +478,8 @@ static int dde_integrator_init(dde_integrator * self, PyObject * args)
 	return 0;
 }
 
-// Functions for Lyapunov exponents
-{% if n_basic != n: %}
+// Functions for both, normal and transversal, Lyapunov exponents
+{% if (n_basic != n) or tangent_indices: %}
 
 void calculate_sp_matrix(
 	dde_integrator const * const self,
@@ -551,6 +551,11 @@ void calculate_sp_matrices(dde_integrator const * const self, double const delay
 	for(; ca->next; ca=ca->next)
 		calculate_sp_matrix(self, ca);
 }
+
+{% endif %}
+
+// Functions for normal Lyapunov exponents
+{% if n_basic != n: %}
 
 double norm_sq_interval(anchor const v, unsigned int const begin)
 {
@@ -810,6 +815,83 @@ static PyObject * remove_diff_component(dde_integrator const * const self, PyObj
 
 {% endif %}
 
+// Functions for transversal Lyapunov exponents
+{% if tangent_indices: %}
+
+unsigned int const tangent_indices[ {{tangent_indices|length}} ] = {
+	{% for index in tangent_indices %}
+		{{index}} ,
+	{% endfor %}
+};
+
+double norm_sq_interval_tangent(anchor const v)
+{
+	anchor const w = *(v.next);
+	double const * const vector[4] = {
+				v.state, // a
+				v.diff , // b/q
+				w.state, // c
+				w.diff   // d/q
+			};
+	
+	double sum = 0;
+	
+	for (unsigned int i=0; i<4; i++)
+		for (unsigned int j=0; j<4; j++)
+			for (unsigned int ti_index=0; ti_index<{{tangent_indices|length}}; ti_index++)
+			{
+				unsigned int const index = tangent_indices[ti_index];
+				sum += v.sp_matrix[i][j] * vector[i][index] * vector[j][index];
+			}
+	
+	return sum;
+}
+
+double norm_sq_tangent(dde_integrator const * const self)
+{
+	double sum = 0;
+	for (anchor * ca = self->first_anchor; ca->next; ca = ca->next)
+		sum += norm_sq_interval_tangent(*ca);
+	
+	return sum;
+}
+
+void scale_past_tangent(
+	dde_integrator const * const self,
+	double const factor)
+{
+	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
+		for (unsigned int ti_index=0; ti_index<{{tangent_indices|length}}; ti_index++)
+		{
+			unsigned int const index = tangent_indices[ti_index];
+			ca->state[index] *= factor;
+			ca->diff [index] *= factor;
+		}
+}
+
+static PyObject * normalise_indices(dde_integrator const * const self, PyObject * args)
+{
+	assert(self->last_anchor);
+	assert(self->first_anchor);
+	
+	double delay;
+	if (!PyArg_ParseTuple(args, "d", &delay))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
+	
+	calculate_sp_matrices(self,delay);
+	
+	double norm = sqrt(norm_sq_tangent(self));
+	if (norm > NORM_THRESHOLD)
+		scale_past_tangent(self,1./norm);
+	
+	return PyFloat_FromDouble(norm);
+}
+
+{% endif %}
+
 // ======================================================
 
 static PyMemberDef dde_integrator_members[] = {
@@ -835,6 +917,9 @@ static PyMethodDef dde_integrator_methods[] = {
 	{"remove_projections", (PyCFunction) remove_projections, METH_VARARGS, NULL},
 	{"remove_state_component", (PyCFunction) remove_state_component, METH_VARARGS, NULL},
 	{"remove_diff_component", (PyCFunction) remove_diff_component, METH_VARARGS, NULL},
+	{% endif %}
+	{% if tangent_indices %}
+	{"normalise_indices", (PyCFunction) normalise_indices, METH_VARARGS, NULL},
 	{% endif %}
 	{NULL, NULL, 0, NULL}
 };
