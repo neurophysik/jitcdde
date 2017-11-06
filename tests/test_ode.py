@@ -1,16 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from jitcdde import (
-        t, y,
-	jitcdde,
-	UnsuccessfulIntegration,
-	_find_max_delay,
-	)
 import platform
+import unittest
+from jitcdde import t, y, jitcdde
 import numpy as np
 from numpy.testing import assert_allclose
-import unittest
 
 if platform.system() == "Windows":
 	compile_args = None
@@ -86,12 +81,12 @@ f_with_tiny_delay = [
 	b2*y(2) - c*y(3)
 	]
 
-class tiny_delay(basic_test):
+class TestTinyDelay(basic_test):
 	@classmethod
 	def setUpClass(self):
 		self.ODE = jitcdde(f_with_tiny_delay)
 
-class blind_integration_and_tiny_delay(tiny_delay):
+class blind_integration_and_tiny_delay(TestTinyDelay):
 	def integrate(self):
 		self.ODE.integrate_blindly(0.98,0.01)
 

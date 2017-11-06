@@ -1,14 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from jitcdde import (
-	jitcdde,
-	t, y, current_y, past_y, anchors,
-	)
+import unittest
 import symengine
 import numpy as np
 from numpy.testing import assert_allclose
-import unittest
+from jitcdde import jitcdde, t, y
 
 class TestIntegration(unittest.TestCase):
 	def setUp(self):

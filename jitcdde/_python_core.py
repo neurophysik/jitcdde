@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from itertools import chain
 import numpy as np
 
 MIN_GARBAGE = 10
@@ -150,7 +149,7 @@ class dde_integrator(object):
 		
 		self.parameters = []
 		
-		from jitcdde._jitcdde import t, y, current_y, past_y, anchors
+		from jitcdde._jitcdde import t, y, past_y, anchors
 		from sympy import DeferredVector, sympify, lambdify
 		Y = DeferredVector("Y")
 		substitutions = list(reversed(helpers)) + [(y(i),Y[i]) for i in range(self.n)]
@@ -397,7 +396,7 @@ class dde_integrator(object):
 		norm = self.norm(delay,self.tangent_indices)
 		if norm > NORM_THRESHOLD:
 			self.scale_past(self.tangent_indices,1./norm)
-		return (norm)
+		return norm
 	
 	def remove_state_component(self, index):
 		for anchor in self.past:

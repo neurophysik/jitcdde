@@ -16,8 +16,8 @@ coeff = np.random.random((m,4))
 poly = [lambda x, j=j: sum(coeff[j]*(x**np.arange(4))) for j in range(m)]
 diff = [lambda x, j=j: sum(np.arange(1,4)*coeff[j,1:]*(x**np.arange(3))) for j in range(m)]
 
-assert(poly[0](1.0) != poly[1](1.0))
-assert(diff[0](1.0) != diff[1](1.0))
+assert poly[0](1.0) != poly[1](1.0)
+assert diff[0](1.0) != diff[1](1.0)
 
 past = [
 		(
@@ -138,7 +138,7 @@ class metrics_test(unittest.TestCase):
 	
 	def test_orthonormalisation(self):
 		delay = np.random.uniform(0.0,2.0)
-		norms = self.DDE.orthonormalise(m-1, delay)
+		self.DDE.orthonormalise(m-1, delay)
 		
 		for j in range(1,m):
 			self.assertAlmostEqual(self.DDE.norm(delay, j), 1.0)

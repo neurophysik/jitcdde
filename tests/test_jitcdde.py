@@ -3,7 +3,7 @@
 
 from jitcdde import (
 	jitcdde,
-	t, y, current_y, past_y, anchors,
+	t, y,
 	UnsuccessfulIntegration,
 	_find_max_delay, _get_delays,
 	)
@@ -12,7 +12,6 @@ import symengine
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
-from jitcdde._python_core import dde_integrator, interpolate_vec
 
 if platform.system() == "Windows":
 	compile_args = None
@@ -75,8 +74,8 @@ class TestIntegration(unittest.TestCase):
 			self.assertEqual(value, self.y_10)
 	
 	def test_integration(self):
-		for t in np.linspace(0, T, 10, endpoint=True):
-			value = self.DDE.integrate(t)
+		for time in np.linspace(0, T, 10, endpoint=True):
+			value = self.DDE.integrate(time)
 		assert_allclose(value, y_10_ref)
 		self.assert_consistency_with_previous(value)
 		
@@ -86,8 +85,8 @@ class TestIntegration(unittest.TestCase):
 		self.assert_consistency_with_previous(value)
 	
 	def test_tiny_steps(self):
-		for t in np.linspace(0.0, T, 10000, endpoint=True):
-			value = self.DDE.integrate(t)
+		for time in np.linspace(0.0, T, 10000, endpoint=True):
+			value = self.DDE.integrate(time)
 		assert_allclose(value, y_10_ref)
 		self.assert_consistency_with_previous(value)
 		

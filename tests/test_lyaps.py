@@ -1,19 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from jitcdde import (
-	t, y, current_y, past_y, anchors,
-	jitcdde_lyap,
-	UnsuccessfulIntegration,
-	_find_max_delay, _get_delays,
-	)
 
-import sympy
 import platform
-import numpy as np
-from numpy.testing import assert_allclose
 import unittest
+import numpy as np
 from scipy.stats import sem
+from jitcdde import t, y, jitcdde_lyap
 
 if platform.system() == "Windows":
 	compile_args = None
