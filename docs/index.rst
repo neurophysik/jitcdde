@@ -161,9 +161,9 @@ Note that for the limit of an infinitely fine sampling, this yields the same res
 .. automodule:: mackey_glass_lyap
 
 As the Lyapunov vectors (separation functions) are quite difficult to interpret, they are not returned as of now (if you need them, please `make a feature request <http://github.com/neurophysik/jitcdde/issues>`_).
-There also is a class (`jitcdde_restricted_lyap`) that allows to calculate the largest transversal Lyapunov exponents to some manifold (such as a synchronisation manifold).
 
-
+There also two classes (`jitcdde_transversal_lyap` and `jitcdde_restricted_lyap`) that allows to calculate the largest transversal Lyapunov exponents to the synchronisation manifold and arbitrary hyperplanes, respectively.
+See the `JiTCODE documentation`_ for an example on how to use the former.
 
 Command reference
 -----------------
@@ -183,6 +183,9 @@ Lyapunov exponents
 ^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: jitcdde_lyap
+	:members:
+
+.. autoclass:: jitcdde_transversal_lyap
 	:members:
 
 .. autoclass:: jitcdde_restricted_lyap

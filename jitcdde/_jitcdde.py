@@ -1188,7 +1188,7 @@ class jitcdde_transversal_lyap(jitcdde):
 
 	Note that all functions for defining the past differ from their analoga from `jitcdde` by having the dimensions of the arguments reduced to the number of groups. This means that only one initial value (of the state or derivative) per group of synchronised components has to be provided (in the same order as the `groups` argument of the constructor).
 	
-	See `this test <https://github.com/neurophysik/jitcdde/blob/master/tests/test_transversal_lyap.py>`_ for an example of usage. The handling is the same as that for `jitcdde` except for:
+	The handling is the same as that for `jitcdde` except for:
 	
 	Parameters
 	----------
