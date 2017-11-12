@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from itertools import combinations
+import platform
 from jitcdde import (
 		t,y,
 		jitcdde_restricted_lyap, jitcdde_transversal_lyap
