@@ -112,6 +112,10 @@ class TestIntegrationChunks(TestIntegration):
 	def generator(self):
 		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
 
+class TestIntegrationOMP(TestIntegration):
+	def generator(self):
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args, omp=True)
+
 class TestIntegrationCSE(TestIntegration):
 	def generator(self):
 		self.DDE.compile_C(do_cse=True, extra_compile_args=compile_args)

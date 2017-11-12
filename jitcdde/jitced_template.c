@@ -121,8 +121,13 @@ static PyObject * get_t(dde_integrator const * const self)
 anchor get_past_anchors(dde_integrator * const self, double const t)
 {
 	assert (self->anchor_mem_cursor <= &( self->anchor_mem[{{anchor_mem_length}}-1] ));
-	anchor * ca = *(self->anchor_mem_cursor);
+	anchor ** this_cursor;
 	
+	#pragma omp atomic capture
+	this_cursor = self->anchor_mem_cursor++;
+	// Note that the above only ensures that no two threads operate on the same cursor and that there are no race conditions. If two calls of get_past_anchors are executed in the “wrong” order, they will get the “wrong” cursor, i.e., they probably have to search considerably longer to find the right anchors. As this does not affect the correctness of the results but only the runtime, it’s okay to do this. It may void the speed boost from parallelising though. Hope is that even with parallelising there there is a stable order in which get_past_anchors is called and thus every call of get_past_anchor gets its unique cursor.
+	
+	anchor * ca = *this_cursor;
 	while ( (ca->time > t) && (ca->previous) )
 		ca = ca->previous;
 	
@@ -134,8 +139,7 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 	if (t > self->current->time)
 		self->past_within_step = fmax(self->past_within_step,t-self->current->time);
 	
-	*(self->anchor_mem_cursor) = ca;
-	self->anchor_mem_cursor++;
+	*this_cursor = ca;
 	return *ca;
 }
 {% endif %}
@@ -283,15 +287,18 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 	double argument[{{n}}];
 	
 	double k_2[{{n}}];
+	#pragma omp parallel for schedule(dynamic, {{chunk_size}})
 	for (int i=0; i<{{n}}; i++)
 		argument[i] = self->current->state[i] + 0.5*delta_t*k_1[i];
 	eval_f(self, self->current->time+0.5*delta_t, argument, k_2);
 	
 	double k_3[{{n}}];
+	#pragma omp parallel for schedule(dynamic, {{chunk_size}})
 	for (int i=0; i<{{n}}; i++)
 		argument[i] = self->current->state[i] + 0.75*delta_t*k_2[i];
 	eval_f(self, self->current->time+0.75*delta_t, argument, k_3);
 	
+	#pragma omp parallel for schedule(dynamic, {{chunk_size}})
 	for (int i=0; i<{{n}}; i++)
 		new->state[i] = self->current->state[i] + (delta_t/9.) * (2*k_1[i]+3*k_2[i]+4*k_3[i]);
 	
@@ -300,6 +307,7 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 	# define k_4 new->diff
 	eval_f( self, new->time, new->state, new->diff );
 	
+	#pragma omp parallel for schedule(dynamic, {{chunk_size}})
 	for (int i=0; i<{{n}}; i++)
 		self->error[i] = (5*k_1[i]-6*k_2[i]-8*k_3[i]+9*k_4[i]) * (1/72.);
 	
@@ -539,17 +547,24 @@ void calculate_sp_matrices(dde_integrator const * const self, double const delay
 {
 	double const threshold = self->current->time - delay;
 	
+	#pragma omp parallel
+	#pragma omp single
+	{
 	anchor * ca = self->first_anchor;
 	for (; ca->next->time<threshold; ca=ca->next)
+		#pragma omp task firstprivate(ca)
 		for (int i=0; i<4; i++)
 			for (int j=0; j<4; j++)
 				ca->sp_matrix[i][j] = 0.0;
 	
+	#pragma omp task firstprivate(ca)
 	calculate_partial_sp_matrix(self, ca, threshold);
 	ca = ca->next;
 	
 	for(; ca->next; ca=ca->next)
+		#pragma omp task firstprivate(ca)
 		calculate_sp_matrix(self, ca);
+	}
 }
 
 {% endif %}
@@ -580,7 +595,11 @@ double norm_sq_interval(anchor const v, unsigned int const begin)
 double norm_sq(dde_integrator const * const self, unsigned int const begin)
 {
 	double sum = 0;
+	#pragma omp parallel
+	#pragma omp single
 	for (anchor * ca = self->first_anchor; ca->next; ca = ca->next)
+		#pragma omp task firstprivate(ca)
+		#pragma omp atomic update
 		sum += norm_sq_interval(*ca, begin);
 	
 	return sum;
@@ -622,7 +641,11 @@ double scalar_product(
 	unsigned int const begin_2)
 {
 	double sum = 0;
+	#pragma omp parallel
+	#pragma omp single
 	for (anchor * ca = self->first_anchor; ca->next; ca = ca->next)
+		#pragma omp task firstprivate(ca)
+		#pragma omp atomic update
 		sum += scalar_product_interval(*ca, begin_1, begin_2);
 	
 	return sum;
@@ -850,7 +873,11 @@ double norm_sq_interval_tangent(anchor const v)
 double norm_sq_tangent(dde_integrator const * const self)
 {
 	double sum = 0;
+	#pragma omp parallel
+	#pragma omp single
 	for (anchor * ca = self->first_anchor; ca->next; ca = ca->next)
+		#pragma omp task firstprivate(ca)
+		#pragma omp atomic update
 		sum += norm_sq_interval_tangent(*ca);
 	
 	return sum;

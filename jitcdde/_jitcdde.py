@@ -387,6 +387,7 @@ class jitcdde(jitcxde):
 		extra_link_args = None,
 		verbose = False,
 		modulename = None,
+		omp = False,
 		):
 		"""
 		translates the derivative to C code using SymEngine’s `C-code printer <https://github.com/symengine/symengine/pull/1054>`_.
@@ -482,7 +483,8 @@ class jitcdde(jitcxde):
 				converted_helpers,
 				name = "helpers",
 				chunk_size = chunk_size,
-				arguments = arguments
+				arguments = arguments,
+				omp = False,
 				)
 		
 		set_dy = symengine.Function("set_dy")
@@ -506,10 +508,11 @@ class jitcdde(jitcxde):
 			anchor_mem_length = self.past_calls,
 			n_basic = self.n_basic,
 			control_pars = [par.name for par in self.control_pars],
-			tangent_indices = self.G.tangent_indices if hasattr(self,"G") else []
+			tangent_indices = self.G.tangent_indices if hasattr(self,"G") else [],
+			chunk_size = chunk_size,
 			)
 		
-		self._compile_and_load(verbose,extra_compile_args,extra_link_args)
+		self._compile_and_load(verbose,extra_compile_args,extra_link_args,omp)
 	
 	def _initiate(self):
 		if self.compile_attempt is None:

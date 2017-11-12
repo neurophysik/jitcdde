@@ -82,6 +82,14 @@ class TestSaveAndLoad(TestIntegration):
 		self.DDE.add_past_point(0.0,    np.random.random(6), np.random.random(6))
 		self.DDE.set_integration_parameters(**test_parameters)
 
+class TestOMP(TestIntegration):
+	def setUp(self):
+		self.DDE = jitcdde_lyap(f, n_lyap=len(lyap_controls))
+		self.DDE.add_past_point(-delay, np.random.random(6), np.random.random(6))
+		self.DDE.add_past_point(0.0, np.random.random(6), np.random.random(6))
+		self.DDE.set_integration_parameters(**test_parameters)
+		self.DDE.compile_C(omp=True,chunk_size=15)
+	
 if __name__ == "__main__":
 	unittest.main(buffer=True)
 
