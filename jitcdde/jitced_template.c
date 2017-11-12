@@ -182,6 +182,7 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 	double const q = w.time-v.time;
 	double const x = (t - v.time)/q;
 	
+	#pragma omp parallel for schedule(dynamic, {{chunk_size}})
 	for (int index=0; index<{{n}}; index++)
 	{
 		double const a = v.state[index];
