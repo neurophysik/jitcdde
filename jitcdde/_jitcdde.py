@@ -918,10 +918,10 @@ class jitcdde_lyap(jitcdde):
 		Number of Lyapunov exponents to calculate.
 	
 	simplify : boolean
-		Whether the differential equations for the separation function shall be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`). Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
-	"""
+		Whether the differential equations for the separation function shall be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`). Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations). If `None`, this will be automatically disabled for `n>10`.
+		"""
 	
-	def __init__( self, f_sym=(), n_lyap=1, simplify=True, **kwargs ):
+	def __init__( self, f_sym=(), n_lyap=1, simplify=None, **kwargs ):
 		self.n_basic = kwargs.pop("n",None)
 		
 		if "helpers" not in kwargs.keys():
@@ -929,6 +929,9 @@ class jitcdde_lyap(jitcdde):
 		kwargs["helpers"] = sort_helpers(sympify_helpers(kwargs["helpers"] or []))
 
 		f_basic = self._handle_input(f_sym,n_basic=True)
+		
+		if simplify is None:
+			simplify = self.n_basic<=10
 		
 		if "delays" not in kwargs.keys() or not kwargs["delays"]:
 			kwargs["delays"] = _get_delays(f_basic,kwargs["helpers"])
@@ -1060,6 +1063,9 @@ class jitcdde_restricted_lyap(jitcdde):
 		
 		f_basic = self._handle_input(f_sym,n_basic=True)
 		
+		if kwargs.pop("simplify",None) is None:
+			simplify = self.n_basic<=10
+		
 		if "delays" not in kwargs.keys() or not kwargs["delays"]:
 			kwargs["delays"] = _get_delays(f_basic,kwargs["helpers"])
 		
@@ -1089,7 +1095,7 @@ class jitcdde_restricted_lyap(jitcdde):
 			n_lyap = 1,
 			delays = kwargs["delays"],
 			zero_padding = 2*self.n_basic*len(self.vectors),
-			simplify = kwargs.pop("simplify",True)
+			simplify = simplify
 			)
 		
 		super(jitcdde_restricted_lyap, self).__init__(
@@ -1200,14 +1206,16 @@ class jitcdde_transversal_lyap(jitcdde):
 		each group is an iterable of indices that identify dynamical variables that are synchronised on the synchronisation manifold.
 	
 	simplify : boolean
-		Whether the transformed differential equations shall be subjected to SymEngine’s `simplify`. Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations).
+		Whether the transformed differential equations shall be subjected to SymEngine’s `simplify`. Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations). If `None`, this will be automatically disabled for `n>10`.
 	"""
 	
-	def __init__( self, f_sym=(), groups=(), simplify=True, **kwargs ):
+	def __init__( self, f_sym=(), groups=(), simplify=None, **kwargs ):
 		self.G = GroupHandler(groups)
 		self.n = kwargs.pop("n",None)
 		
 		f_basic,extracted = self.G.extract_main(self._handle_input(f_sym))
+		if simplify is None:
+			simplify = self.n<=10
 		helpers = sort_helpers(sympify_helpers( kwargs.pop("helpers",[]) ))
 		delays = kwargs.pop("delays",()) or _get_delays(f_basic,helpers)
 		
