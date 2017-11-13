@@ -412,9 +412,12 @@ class jitcdde(jitcxde):
 		
 		verbose : boolean
 			Whether the compiler commands shall be shown. This is the same as Setuptools’ `verbose` setting.
-
+		
 		modulename : string or `None`
 			The name used for the compiled module.
+		
+		omp : pair of iterables of strings or boolean
+			What compiler arguments shall be used for multiprocessing (using OpenMP). If `True`, they will be selected automatically. If empty or `False`, no compilation for multiprocessing will happen (unless you supply the relevant compiler arguments otherwise).
 		"""
 		
 		self.compile_attempt = False
@@ -509,7 +512,7 @@ class jitcdde(jitcxde):
 			n_basic = self.n_basic,
 			control_pars = [par.name for par in self.control_pars],
 			tangent_indices = self.G.tangent_indices if hasattr(self,"G") else [],
-			chunk_size = chunk_size,
+			chunk_size = chunk_size, # only for OMP
 			)
 		
 		self._compile_and_load(verbose,extra_compile_args,extra_link_args,omp)
