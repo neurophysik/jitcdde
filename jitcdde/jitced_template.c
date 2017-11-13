@@ -137,6 +137,7 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 		ca = ca->next;
 	
 	if (t > self->current->time)
+		#pragma omp critical(pws)
 		self->past_within_step = fmax(self->past_within_step,t-self->current->time);
 	
 	*this_cursor = ca;
