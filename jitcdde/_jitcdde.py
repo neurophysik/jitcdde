@@ -1325,7 +1325,7 @@ class jitcdde_transversal_lyap(jitcdde):
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
-		result = super(jitcdde_transversal_lyap, self).integrate(target_time)[:self.n_basic]
+		result = super(jitcdde_transversal_lyap, self).integrate(target_time)[self.G.main_indices]
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t==0:
@@ -1353,6 +1353,7 @@ class jitcdde_transversal_lyap(jitcdde):
 			instantaneous_lyaps.append(np.log(norm)/dt)
 		
 		lyap = np.average(instantaneous_lyaps)
-		state = self.DDE.get_current_state()[:self.n_basic]
+		state = self.DDE.get_current_state()[self.G.main_indices]
 		
 		return state, lyap, total_integration_time
+
