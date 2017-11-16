@@ -237,7 +237,7 @@ class jitcdde(jitcxde):
 		
 		self.past.sort(key = lambda anchor: anchor[0])
 	
-	def constant_past(self,state,start_time=0):
+	def constant_past(self,state,time=0):
 		"""
 		initialises the past with a constant state.
 		
@@ -245,7 +245,7 @@ class jitcdde(jitcxde):
 		----------
 		state : iterable of floats
 			The length must match the dimension of the differential equation (`n`).
-		start_time : float
+		time : float
 			The time at which the integration starts.
 		"""
 		
@@ -253,8 +253,8 @@ class jitcdde(jitcxde):
 			warn("You already added past points in some manner. This routine will ignore them, but not remove them. Be sure that you really want this.")
 		
 		self.add_past_points([
-			( start_time-1., state, np.zeros_like(state) ),
-			( start_time   , state, np.zeros_like(state) ),
+				( time-1., state, np.zeros_like(state) ),
+				( time   , state, np.zeros_like(state) ),
 			])
 	
 	def past_from_function(self,function,times_of_interest=None,max_anchors=100,tol=5):
@@ -784,7 +784,7 @@ class jitcdde(jitcxde):
 		number = int(round(total_integration_time/step))
 		
 		dt = total_integration_time/number
-		assert number*dt==total_integration_time
+		assert abs(number*dt-total_integration_time)<1e-10
 		return dt, number, total_integration_time
 	
 	def integrate_blindly(self, target_time, step=None):
@@ -815,10 +815,10 @@ class jitcdde(jitcxde):
 		return self.DDE.get_current_state()
 	
 	def step_on_discontinuities(
-		self,
-		propagations = 1,
-		max_step = None,
-		min_distance = 1e-5,
+			self,
+			propagations = 1,
+			max_step = None,
+			min_distance = 1e-5,
 		):
 		"""
 		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped. See `discontinuities` as to why you may want to use this.
