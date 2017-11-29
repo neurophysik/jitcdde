@@ -163,7 +163,7 @@ Note that for the limit of an infinitely fine sampling, this yields the same res
 As the Lyapunov vectors (separation functions) are quite difficult to interpret, they are not returned as of now (if you need them, please `make a feature request <http://github.com/neurophysik/jitcdde/issues>`_).
 
 There also two classes (`jitcdde_transversal_lyap` and `jitcdde_restricted_lyap`) that allows to calculate the largest transversal Lyapunov exponents to the synchronisation manifold and arbitrary hyperplanes, respectively.
-See the `JiTCODE documentation`_ for an example on how to use the former.
+See the `JiTCODE documentation`_ for an example on how to use the former and `the accompanying paper`_ for a mathemetical background (and another example).
 
 Command reference
 -----------------
@@ -217,4 +217,6 @@ References
 .. _SymPy: http://www.sympy.org/
 
 .. _SymPy vs. SymEngine: https://jitcde-common.readthedocs.io/#sympy-vs-symengine
+
+.. _the accompanying paper: http://arxiv.org/abs/1711.09886
 
