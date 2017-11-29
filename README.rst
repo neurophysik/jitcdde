@@ -5,9 +5,11 @@ If you want to integrate ordinary or stochastic differential equations, check ou
 `JiTCODE <http://github.com/neurophysik/jitcode>`_, or
 `JiTCSDE <http://github.com/neurophysik/jitcsde>`_, respectively.
 
-* `Documentation <http://jitcdde.readthedocs.io>`_
+* `Documentation <http://jitcdde.readthedocs.io>`_ – Read this to get started and for reference. Don’t miss that some topics ae addressed in the `common JiTC*DE documentation <http://jitcde-common.readthedocs.io>`_.
 
-* `Issue Tracker <http://github.com/neurophysik/jitcdde/issues>`_
+* `Paper <http://arxiv.org/abs/1711.09886>`_ – Read this for the scientific background. Cite this if you wish to give credit or to shift blame. As soon as this is published in a journal, you will find an update here.
+
+* `Issue Tracker <http://github.com/neurophysik/jitcdde/issues>`_ – Please report any bugs here. Also feel free to ask for new features.
 
 * `Installation instructions <http://jitcde-common.readthedocs.io/#installation>`_ (or just ``pip install jitcdde``).
 
