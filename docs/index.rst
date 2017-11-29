@@ -76,11 +76,11 @@ To make this happen, you have three options:
 
 * Carefully chosen initial conditions – of course, you can define the past such that the derivative for the last anchor is identical to the value of :math:`f` as determined with the anchors. To find such initial conditions, you usally have to solve a non-linear equation system. If you are not interested in the general dynamics of the system, but the evolution of a very particular initial condition, this may be given by default (otherwise your model is probably worthless).
 
-Delays within the step
-----------------------
+Delays within the step (overlap)
+--------------------------------
 
 If the delay becomes shorter than the step size, we need a delayed state to evaluate `f` before we have a final result for the required interpolation anchors.
-With other words, the intergration step depends on its own result.
+With other words, the intergration step depends on its own result and thus become implicit.
 
 JiTCDDE addresses this problem mainly in the same manner as Shampine and Thompson [ST01]_:
 
