@@ -6,6 +6,7 @@ from setuptools_scm import get_version
 autodoc_mock_imports = [
 	'numpy', 'numpy.testing', 'numpy.random',
 	'scipy',
+	'symengine',
 	'jitcdde._python_core'
 	'jitcxde_common.helpers','jitcxde_common.numerical','jitcxde_common.symbolic','jitcxde_common.transversal'
 	]
