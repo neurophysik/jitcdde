@@ -7,6 +7,7 @@ autodoc_mock_imports = [
 	'numpy', 'numpy.testing', 'numpy.random',
 	'scipy',
 	'jitcdde._python_core'
+	'jitcxde_common.helpers','jitcxde_common.numerical','jitcxde_common.symbolic','jitcxde_common.transversal'
 	]
 
 sys.path.insert(0,os.path.abspath("../examples"))
