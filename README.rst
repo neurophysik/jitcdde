@@ -11,7 +11,7 @@ If you want to integrate ordinary or stochastic differential equations, check ou
 
 * `Issue Tracker <http://github.com/neurophysik/jitcdde/issues>`_ – Please report any bugs here. Also feel free to ask for new features.
 
-* `Installation instructions <http://jitcde-common.readthedocs.io/#installation>`_ (or just ``pip install jitcdde``).
+* `Installation instructions <http://jitcde-common.readthedocs.io/#installation>`_. Note that just installing from GitHub will most likely fail.
 
 This work was supported by the Volkswagen Foundation (Grant No. 88463).
 
