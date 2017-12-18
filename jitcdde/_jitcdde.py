@@ -982,7 +982,7 @@ class jitcdde_lyap(jitcdde):
 			The “local” Lyapunov exponents as estimated from the growth or shrinking of the separation function during the integration time of this very `integrate` command.
 			
 		integration time : float
-			The actual integration time during to which the local Lyapunov exponents apply. Note that this is not necessarily difference between `target_time` and the previous `target_time`, as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. When averaging the Lyapunov exponents, you almost always want to weigh them with the integration time.
+			The actual integration time during to which the local Lyapunov exponents apply. Note that this is not necessarily the difference between `target_time` and the previous `target_time` as JiTCDDE usually integrates a bit ahead and estimates the output via interpolation. When averaging the Lyapunov exponents, you almost always want to weigh them with the integration time.
 			
 			If the size of the advance by `integrate` (the sampling step) is smaller than the actual integration step, it may also happen that `integrate` does not integrate at all and the integration time is zero. In this case, the local Lyapunov exponents are returned as `0`, which is as nonsensical as any other result (except perhaps `nan`) but should not matter with a proper weighted averaging.
 			
