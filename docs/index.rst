@@ -165,8 +165,8 @@ Before you give up or report an issue, please follow the following protocol:
 
 1. Run your scenario with regular `jitcdde` (i.e., without Lyapunov exponents).
 2. Run your scenario just estimating the largest Lyapunov exponent (`n_lyap=1`).
-3. If the integration is not successful, try to locate the point where things go awry. This may be before you actually get an error message. Look for infinite values or not-a-numbers. Reduce the respective sampling steps (and thus make JiTCDDE rescale more often). This may mean reducing the `max_step` parameter of `step_on_discontinuities`, the `step` parameter of `integrate_blindly`, or the sampling rate of the regular integration.
-4. Increase the number of computed Lyapunov exponents one at a time. Repeat Step 3 as needed. Be aware that starting with second negative Lyapunov exponent, you may encounter highly negative ones – which require a much more frequent rescaling to avoid numerical underflows.
+3. If the integration is not successful, try to locate the point where things go awry. This may be before you actually get an error message. Look for infinite values or not-a-numbers. Reduce the respective parameters that control the frequency of resizing, namely the `max_step` parameter of `step_on_discontinuities`, the `step` parameter of `integrate_blindly`, or the sampling rate of the regular integration.
+4. Increase the number of computed Lyapunov exponents one at a time. Repeat Step 3 as needed. Be aware that once you are in the negative Lyapunov exponents, it may happen that the amplitude of the next exponent is orders of magnitude higher that of the preceding one – thus requiring a much more frequent rescaling to avoid numerical underflows.
 
 As the Lyapunov vectors (separation functions) are quite difficult to interpret, they are not returned as of now (if you need them, please `make a feature request <http://github.com/neurophysik/jitcdde/issues>`_).
 There also two classes (`jitcdde_transversal_lyap` and `jitcdde_restricted_lyap`) that allows to calculate the largest transversal Lyapunov exponents to the synchronisation manifold and arbitrary hyperplanes, respectively.
