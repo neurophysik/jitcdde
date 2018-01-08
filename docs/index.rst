@@ -177,7 +177,7 @@ Command reference
 
 .. automodule:: _jitcdde
 	:members:
-	:exclude-members: jitcdde, jitcdde_lyap, jitcdde_restricted_lyap
+	:exclude-members: jitcdde, jitcdde_lyap, jitcdde_restricted_lyap, jitcdde_transversal_lyap
 
 The main class
 ^^^^^^^^^^^^^^
