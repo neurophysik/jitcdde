@@ -48,15 +48,12 @@ add_function_parentheses = True
 
 add_module_names = False
 
-html_theme = 'pyramid'
+html_theme = 'nature'
 pygments_style = 'colorful'
-#html_theme_options = {}
 htmlhelp_basename = 'JiTCDDEdoc'
 
 numpydoc_show_class_members = False
 autodoc_member_order = 'bysource'
-
-graphviz_output_format = "svg"
 
 def on_missing_reference(app, env, node, contnode):
 	if node['reftype'] == 'any':
