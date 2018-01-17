@@ -3,7 +3,7 @@
 
 import numpy as np
 
-MIN_GARBAGE = 10
+MAX_GARBAGE = 10
 NORM_THRESHOLD = 1e-30
 
 def interpolate(t,i,anchors):
@@ -265,7 +265,7 @@ class dde_integrator(object):
 		while self.past[self.last_garbage+2][0] < threshold:
 			self.last_garbage += 1
 		
-		if self.last_garbage >= MIN_GARBAGE:
+		if self.last_garbage >= MAX_GARBAGE:
 			self.past = self.past[self.last_garbage+1:]
 			self.anchor_mem -= self.last_garbage+1
 			self.last_garbage = -1
