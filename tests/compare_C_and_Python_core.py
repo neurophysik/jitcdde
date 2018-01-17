@@ -74,7 +74,7 @@ for realisation in range(number_of_runs):
 	
 	DDE = jitcdde(f)
 	DDE.n_basic = 2
-	DDE.G = type("",(),{"tangent_indices":tangent_indices}) # cheap mock
+	DDE.tangent_indices = tangent_indices
 	DDE.compile_C(chunk_size=random.randint(0,7))
 	C = DDE.jitced.dde_integrator(past())
 	

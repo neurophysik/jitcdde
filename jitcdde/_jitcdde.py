@@ -371,7 +371,7 @@ class jitcdde(jitcxde):
 			self.helpers,
 			self.control_pars,
 			self.n_basic,
-			self.G.tangent_indices if hasattr(self,"G") else None
+			self.tangent_indices if isinstance(self,jitcdde_transversal_lyap) else None
 			)
 		self.compile_attempt = False
 	
@@ -511,7 +511,7 @@ class jitcdde(jitcxde):
 			anchor_mem_length = self.past_calls,
 			n_basic = self.n_basic,
 			control_pars = [par.name for par in self.control_pars],
-			tangent_indices = self.G.tangent_indices if hasattr(self,"G") else [],
+			tangent_indices = self.tangent_indices if hasattr(self,"tangent_indices") else [],
 			chunk_size = chunk_size, # only for OMP
 			)
 		
@@ -1192,7 +1192,7 @@ class jitcdde_restricted_lyap(jitcdde):
 		return state, lyap, total_integration_time
 
 
-class jitcdde_transversal_lyap(jitcdde):
+class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 	"""
 	Calculates the largest Lyapunov exponent in orthogonal direction to a predefined synchronisation manifold, i.e. the projection of the tangent vector onto that manifold vanishes. In contrast to `jitcdde_restricted_lyap`, this performs some transformations tailored to this specific application that may strongly reduce the number of differential equations and ensure a dynamics on the synchronisation manifold.
 
@@ -1210,10 +1210,10 @@ class jitcdde_transversal_lyap(jitcdde):
 	"""
 	
 	def __init__( self, f_sym=(), groups=(), simplify=None, **kwargs ):
-		self.G = GroupHandler(groups)
+		GroupHandler.__init__(self,groups)
 		self.n = kwargs.pop("n",None)
 		
-		f_basic,extracted = self.G.extract_main(self._handle_input(f_sym))
+		f_basic,extracted = self.extract_main(self._handle_input(f_sym))
 		if simplify is None:
 			simplify = self.n<=10
 		helpers = sort_helpers(sympify_helpers( kwargs.pop("helpers",[]) ))
@@ -1230,7 +1230,7 @@ class jitcdde_transversal_lyap(jitcdde):
 		tangent_vectors = {}
 		for d in delays:
 			z_vector = [z(i,(t-d)) for i in range(self.n)]
-			tangent_vectors[d] = self.G.back_transform(z_vector)
+			tangent_vectors[d] = self.back_transform(z_vector)
 		
 		def tangent_vector_f():
 			jacs = [
@@ -1248,8 +1248,8 @@ class jitcdde_transversal_lyap(jitcdde):
 						raise AssertionError("Something got horribly wrong")
 				yield expression
 		
-		current_z_conflate = lambda i: current_z(self.G.map_to_main(i))
-		past_z_conflate = lambda t,i,a: past_z(t,self.G.map_to_main(i),a)
+		current_z_conflate = lambda i: current_z(self.map_to_main(i))
+		past_z_conflate = lambda t,i,a: past_z(t,self.map_to_main(i),a)
 		
 		def finalise(entry):
 			entry = replace_function(entry,current_y,current_z_conflate)
@@ -1261,9 +1261,9 @@ class jitcdde_transversal_lyap(jitcdde):
 			return entry
 		
 		def f_lyap():
-			for entry in self.G.iterate(tangent_vector_f()):
+			for entry in self.iterate(tangent_vector_f()):
 				if type(entry)==int:
-					yield finalise(extracted[self.G.main_indices[entry]])
+					yield finalise(extracted[self.main_indices[entry]])
 				else:
 					yield finalise(entry[0]-entry[1])
 		
@@ -1280,27 +1280,27 @@ class jitcdde_transversal_lyap(jitcdde):
 	def add_past_points(self, anchors):
 		def new_anchors():
 			for time,state,derivative in anchors:
-				assert len(state)==len(derivative)==len(self.G.groups), "State and derivative too long or non matching. Provide only one value per synchronisation group"
+				assert len(state)==len(derivative)==len(self.groups), "State and derivative too long or non matching. Provide only one value per synchronisation group"
 				
 				new_state = np.empty(self.n)
-				new_state[self.G.main_indices] = state
-				new_state[self.G.tangent_indices] = random_direction(len(self.G.tangent_indices))
+				new_state[self.main_indices] = state
+				new_state[self.tangent_indices] = random_direction(len(self.tangent_indices))
 				
 				new_derivative = np.empty(self.n)
-				new_derivative[self.G.main_indices] = derivative
-				new_derivative[self.G.tangent_indices] = random_direction(len(self.G.tangent_indices))
+				new_derivative[self.main_indices] = derivative
+				new_derivative[self.tangent_indices] = random_direction(len(self.tangent_indices))
 				
 				yield time,new_state,new_derivative
 		
 		super(jitcdde_transversal_lyap,self).add_past_points(new_anchors())
 	
 	def norm(self):
-		tangent_vector = self._y[self.G.tangent_indices]
+		tangent_vector = self._y[self.tangent_indices]
 		norm = np.linalg.norm(tangent_vector)
 		tangent_vector /= norm
 		if not np.isfinite(norm):
 			warn("Norm of perturbation vector for Lyapunov exponent out of numerical bounds. You probably waited too long before renormalising and should call integrate with smaller intervals between steps (as renormalisations happen once with every call of integrate).")
-		self._y[self.G.tangent_indices] = tangent_vector
+		self._y[self.tangent_indices] = tangent_vector
 		return norm
 	
 	def integrate(self, target_time):
@@ -1325,7 +1325,7 @@ class jitcdde_transversal_lyap(jitcdde):
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
-		result = super(jitcdde_transversal_lyap, self).integrate(target_time)[self.G.main_indices]
+		result = super(jitcdde_transversal_lyap, self).integrate(target_time)[self.main_indices]
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t==0:
@@ -1353,7 +1353,7 @@ class jitcdde_transversal_lyap(jitcdde):
 			instantaneous_lyaps.append(np.log(norm)/dt)
 		
 		lyap = np.average(instantaneous_lyaps)
-		state = self.DDE.get_current_state()[self.G.main_indices]
+		state = self.DDE.get_current_state()[self.main_indices]
 		
 		return state, lyap, total_integration_time
 
