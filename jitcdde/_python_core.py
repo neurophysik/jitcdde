@@ -7,14 +7,7 @@ MAX_GARBAGE = 10
 NORM_THRESHOLD = 1e-30
 
 def interpolate(t,i,anchors):
-	q = (anchors[1][0]-anchors[0][0])
-	x = (t-anchors[0][0]) / q
-	a = anchors[0][1][i]
-	b = anchors[0][2][i] * q
-	c = anchors[1][1][i]
-	d = anchors[1][2][i] * q
-	
-	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
+	return interpolate_vec(t,anchors)[i]
 
 def interpolate_vec(t,anchors):
 	q = (anchors[1][0]-anchors[0][0])
