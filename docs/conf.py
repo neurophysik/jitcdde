@@ -1,17 +1,8 @@
 import sys
 import os
+from unittest.mock import MagicMock as Mock
 from setuptools_scm import get_version
 
-# Mocking to make RTD autobuild the documentation.
-#autodoc_mock_imports = [
-#	'numpy', 'numpy.testing', 'numpy.random',
-#	'scipy',
-#	'symengine',
-#	'jitcdde._python_core',
-#	'jitcxde_common.helpers','jitcxde_common.numerical','jitcxde_common.symbolic','jitcxde_common.transversal'
-#	]
-
-from unittest.mock import MagicMock as Mock
 MOCK_MODULES = [
 	'numpy', 'numpy.testing', 'numpy.random',
 	'scipy',
@@ -20,7 +11,9 @@ MOCK_MODULES = [
 	]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+class GroupHandler_mock(object): pass
+sys.modules['jitcxde_common.transversal'] = Mock(GroupHandler=GroupHandler_mock)
+
 sys.path.insert(0,os.path.abspath("../examples"))
 sys.path.insert(0,os.path.abspath("../jitcdde"))
 
