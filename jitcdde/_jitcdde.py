@@ -794,7 +794,7 @@ class jitcdde(jitcxde):
 		Parameters
 		----------
 		target_time : float
-			time until which the dynamics is evolved
+			time until which the dynamics is evolved. In most cases, this should be larger than the maximum delay.
 		
 		step : float
 			aspired step size. The actual step size may be slightly adapted to make it divide the integration time. If `None`, `0`, or otherwise falsy, the maximum step size as set with `max_step` of `set_integration_parameters` is used.
