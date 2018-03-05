@@ -7,7 +7,7 @@ import symengine
 import numpy as np
 import jitcdde._python_core as python_core
 from jitcxde_common import jitcxde
-from jitcxde_common.helpers import sort_helpers, sympify_helpers
+from jitcxde_common.helpers import sort_helpers, sympify_helpers, find_dependent_helpers
 from jitcxde_common.symbolic import collect_arguments, count_calls, replace_function
 from jitcxde_common.numerical import random_direction, rel_dist
 from jitcxde_common.transversal import GroupHandler
@@ -863,14 +863,10 @@ class jitcdde(jitcxde):
 			return self.DDE.get_current_state()[:self.n_basic]
 
 def _jac(f, helpers, delay, n):
-	dependent_helpers = [[] for i in range(n)]
-	for i in range(n):
-		for helper in helpers:
-			derivative = helper[1].diff(y(i,t-delay))
-			for other_helper in dependent_helpers[i]:
-				derivative += helper[1].diff(other_helper[0]) * other_helper[1]
-			if derivative:
-				dependent_helpers[i].append( (helper[0], derivative) )
+	dependent_helpers = [
+			find_dependent_helpers(helpers,y(i,t-delay))
+			for i in range(n)
+		]
 	
 	def line(f_entry):
 		for j in range(n):
