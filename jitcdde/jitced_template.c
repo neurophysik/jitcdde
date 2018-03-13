@@ -125,7 +125,7 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 	
 	#pragma omp atomic capture
 	this_cursor = self->anchor_mem_cursor++;
-	// Note that the above only ensures that no two threads operate on the same cursor and that there are no race conditions. If two calls of get_past_anchors are executed in the “wrong” order, they will get the “wrong” cursor, i.e., they probably have to search considerably longer to find the right anchors. As this does not affect the correctness of the results but only the runtime, it’s okay to do this. It may void the speed boost from parallelising though. Hope is that even with parallelising there there is a stable order in which get_past_anchors is called and thus every call of get_past_anchor gets its unique cursor.
+	// Note that the above only ensures that no two threads operate on the same cursor and that there are no race conditions. If two calls of get_past_anchors are executed in the "wrong" order, they will get the "wrong" cursor, i.e., they probably have to search considerably longer to find the right anchors. As this does not affect the correctness of the results but only the runtime, it's okay to do this. It may void the speed boost from parallelising though. Hope is that even with parallelising there there is a stable order in which get_past_anchors is called and thus every call of get_past_anchor gets its unique cursor.
 	
 	anchor * ca = *this_cursor;
 	while ( (ca->time > t) && (ca->previous) )
