@@ -1,6 +1,9 @@
 The JiTCDDE module
 ==================
 
+**Note and remember** *that some relevant information can be found in the* `common JiTC*DE documentation`_.
+*This includes installation instructions, compiler issues and optimisation, general performance considerations, how to implement network dynamics, and a small FAQ.*
+
 Introduction
 ------------
 
@@ -28,8 +31,6 @@ This approach has the following advantages:
 	Also, if you are working with SymPy or SymEngine anyway – e.g., to calculate fixed points –, you do not need to bother much with translating your equations.
 
 If compilation fails to work for whatever reason, pure Python functions can be employed as a fallback (which is much slower, however).
-
-For installation instructions, if you face issues with the compiler, want to optimise the speed, or wish to integrate network dynamics, take a look at the `common JiTC*DE documentation`_.
 
 A brief mathematic background
 -----------------------------
