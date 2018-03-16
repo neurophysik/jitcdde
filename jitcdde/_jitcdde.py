@@ -5,8 +5,9 @@ from warnings import warn
 from itertools import count
 import symengine
 import numpy as np
+
 import jitcdde._python_core as python_core
-from jitcxde_common import jitcxde, check
+from jitcxde_common import jitcxde, checker
 from jitcxde_common.helpers import sort_helpers, sympify_helpers, find_dependent_helpers
 from jitcxde_common.symbolic import collect_arguments, count_calls, replace_function
 from jitcxde_common.numerical import random_direction, rel_dist
@@ -153,30 +154,35 @@ class jitcdde(jitcxde):
 			assert new_max_delay >= 0.0, "Negative maximum delay."
 		self._max_delay = new_max_delay
 	
-	@check
+	@checker
 	def _check_non_empty(self):
-		if not self.f_sym():
-			self._fail_check("f_sym is empty.")
+		self._check_assert( self.f_sym(), "f_sym is empty." )
 	
-	@check
+	@checker
 	def _check_valid_arguments(self):
 		for i,entry in enumerate(self.f_sym()):
 			indizes  = [argument[0] for argument in collect_arguments(entry,current_y)]
 			indizes += [argument[1] for argument in collect_arguments(entry,past_y   )]
 			for index in indizes:
-				if index < 0:
-					self._fail_check("y is called with a negative argument (%i) in equation %i." % (index, i))
-				if index >= self.n:
-					self._fail_check("y is called with an argument (%i) higher than the system’s dimension (%i) in equation %i."  % (index, self.n, i))
+				self._check_assert(
+						index >= 0,
+						"y is called with a negative argument (%i) in equation %i." % (index,i),
+					)
+				self._check_assert(
+						index < self.n,
+						"y is called with an argument (%i) higher than the system’s dimension (%i) in equation %i." % (index,self.n,i),
+					)
 	
-	@check
+	@checker
 	def _check_valid_symbols(self):
 		valid_symbols = [t] + [helper[0] for helper in self.helpers] + list(self.control_pars)
 		
 		for i,entry in enumerate(self.f_sym()):
 			for symbol in entry.atoms(symengine.Symbol):
-				if symbol not in valid_symbols:
-					self._fail_check("Invalid symbol (%s) in equation %i."  % (symbol.name, i))
+				self._check_assert(
+						symbol in valid_symbols,
+						"Invalid symbol (%s) in equation %i."  % (symbol.name,i),
+					)
 	
 	def add_past_point(self, time, state, derivative):
 		"""
