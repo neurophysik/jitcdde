@@ -833,7 +833,11 @@ class jitcdde(jitcxde):
 		
 		if not all(symengine.sympify(delay).is_Number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
-		self.delays = [float(delay) for delay in self.delays]
+		self.delays = [
+				# This conversion is due to SymEngine.py issue #227
+				float(symengine.sympify(delay).n().real_part())
+				for delay in self.delays
+			]
 		
 		steps = _propagate_delays(self.delays, propagations, min_distance)
 		steps.remove(0)
