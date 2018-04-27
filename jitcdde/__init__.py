@@ -3,6 +3,7 @@ from ._jitcdde import (
 		t, y, current_y, past_y, anchors,
 		UnsuccessfulIntegration,
 		_find_max_delay, _get_delays,
+		quadrature,
 		)
 
 try:

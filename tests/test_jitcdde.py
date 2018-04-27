@@ -6,6 +6,7 @@ from jitcdde import (
 	t, y,
 	UnsuccessfulIntegration,
 	_find_max_delay, _get_delays,
+	quadrature,
 	)
 import platform
 import symengine
@@ -285,6 +286,19 @@ class TestCheck(unittest.TestCase):
 		DDE = jitcdde([x])
 		with self.assertRaises(ValueError):
 			DDE.check()
+
+class TestQuadrature(unittest.TestCase):
+	def test_formal(self):
+		f = symengine.Function("f")
+		t = symengine.Symbol("t")
+		result = quadrature(f(t),t,0,10,nsteps=5)
+		control = (f(1)+f(3)+f(5)+f(7)+f(9))*2
+		self.assertEqual(control,result)
+	
+	def test_numeric(self):
+		x = symengine.Symbol("x")
+		result = float(quadrature(x**2,x,0,1,nsteps=100).n().real_part())
+		self.assertAlmostEqual( result, 1/3, places=3 )
 
 if __name__ == "__main__":
 	unittest.main(buffer=True)

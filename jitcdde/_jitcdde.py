@@ -51,7 +51,7 @@ def _get_delays(f, helpers=()):
 
 def _find_max_delay(delays):
 	if all(symengine.sympify(delay).is_Number for delay in delays):
-		return float(max(delays))
+		return float(max(delays).n().real_part())
 	else:
 		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
 
@@ -67,6 +67,36 @@ def _propagate_delays(delays, p, threshold=1e-5):
 				else:
 					result.append(new_entry)
 	return result
+
+def quadrature(integrand,variable,lower,upper,nsteps=20,method="midpoint"):
+	"""
+	If your DDE contains an integral over past points, thus utility function helps you to implement it. It returns an estimator of the integral from evaluations of the past at discrete points, employing a numerical quadrature.
+	
+	Parameters
+	----------
+	integrand : symbolic expression
+	
+	variable : symbol
+		variable of integration
+	
+	lower,upper : expressions
+		lower and upper limit of integration
+	
+	nsteps : integer
+		number of sampling steps. This should be chosen sufficiently high to capture all relevant aspects of your dynamics.
+	
+	method : string
+		which method to use for numerical integration. So far, only the midpoint method is available.
+	"""
+	
+	if method != "midpoint":
+		raise NotImplementedError("Only the midpoint method has been implemented yet.")
+	
+	half_step = (symengine.sympify(upper-lower)/symengine.sympify(nsteps)/2).simplify()
+	return 2*half_step*sum(
+			integrand.subs(variable,lower+(1+2*i)*half_step)
+			for i in range(nsteps)
+		)
 
 class UnsuccessfulIntegration(Exception):
 	"""
@@ -838,7 +868,6 @@ class jitcdde(jitcxde):
 				float(symengine.sympify(delay).n().real_part())
 				for delay in self.delays
 			]
-		
 		steps = _propagate_delays(self.delays, propagations, min_distance)
 		steps.remove(0)
 		steps.sort()
