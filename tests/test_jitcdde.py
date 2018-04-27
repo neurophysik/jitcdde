@@ -288,17 +288,24 @@ class TestCheck(unittest.TestCase):
 			DDE.check()
 
 class TestQuadrature(unittest.TestCase):
-	def test_formal(self):
+	def test_midpoint(self):
 		f = symengine.Function("f")
 		t = symengine.Symbol("t")
-		result = quadrature(f(t),t,0,10,nsteps=5)
 		control = (f(1)+f(3)+f(5)+f(7)+f(9))*2
+		result = quadrature(f(t),t,0,10,nsteps=5,method="midpoint")
 		self.assertEqual(control,result)
 	
 	def test_numeric(self):
-		x = symengine.Symbol("x")
-		result = float(quadrature(x**2,x,0,1,nsteps=100).n().real_part())
-		self.assertAlmostEqual( result, 1/3, places=3 )
+		t = symengine.Symbol("t")
+		for method in ["gauss","midpoint"]:
+			with self.subTest(method=method):
+				result = quadrature(t**2,t,0,1,nsteps=100,method=method)
+				self.assertAlmostEqual( float(result.n().real_part()), 1/3, places=3 )
+	
+	def test_no_method(self):
+		t = symengine.Symbol("t")
+		with self.assertRaises(NotImplementedError):
+			quadrature(t**2,t,0,1,method="tai")
 
 if __name__ == "__main__":
 	unittest.main(buffer=True)

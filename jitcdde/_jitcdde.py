@@ -68,9 +68,9 @@ def _propagate_delays(delays, p, threshold=1e-5):
 					result.append(new_entry)
 	return result
 
-def quadrature(integrand,variable,lower,upper,nsteps=20,method="midpoint"):
+def quadrature(integrand,variable,lower,upper,nsteps=20,method="gauss"):
 	"""
-	If your DDE contains an integral over past points, thus utility function helps you to implement it. It returns an estimator of the integral from evaluations of the past at discrete points, employing a numerical quadrature.
+	If your DDE contains an integral over past points, this utility function helps you to implement it. It returns an estimator of the integral from evaluations of the past at discrete points, employing a numerical quadrature. You probably want to disable automatic simplifications when using this.
 	
 	Parameters
 	----------
@@ -85,18 +85,28 @@ def quadrature(integrand,variable,lower,upper,nsteps=20,method="midpoint"):
 	nsteps : integer
 		number of sampling steps. This should be chosen sufficiently high to capture all relevant aspects of your dynamics.
 	
-	method : string
-		which method to use for numerical integration. So far, only the midpoint method is available.
+	method : "midpoint" or "gauss"
+		which method to use for numerical integration. So far Gauß–Legendre quadrature ("gauss", needs SciPy) and the midpoint rule ("midpoint") are available.
+		Use the midpoint rule if you expect your integrand to exhibit structure on a time scale smaller than (`upper`−`lower`)/`nsteps`.
+		Otherwise or when in doubt, use "gauss".
 	"""
+	sample = lambda pos: integrand.subs(variable,pos)
 	
-	if method != "midpoint":
-		raise NotImplementedError("Only the midpoint method has been implemented yet.")
-	
-	half_step = (symengine.sympify(upper-lower)/symengine.sympify(nsteps)/2).simplify()
-	return 2*half_step*sum(
-			integrand.subs(variable,lower+(1+2*i)*half_step)
-			for i in range(nsteps)
-		)
+	if method == "midpoint":
+		half_step = (symengine.sympify(upper-lower)/symengine.sympify(nsteps)/2).simplify()
+		return 2*half_step*sum(
+				sample(lower+(1+2*i)*half_step)
+				for i in range(nsteps)
+			)
+	elif method == "gauss":
+		from scipy.special import roots_legendre
+		factor = (symengine.sympify(upper-lower)/2).simplify()
+		return factor*sum(
+				weight*sample(lower+(1+pos)*factor)
+				for pos,weight in zip(*roots_legendre(nsteps))
+			)
+	else:
+		raise NotImplementedError("I know no integration method named %s."%method)
 
 class UnsuccessfulIntegration(Exception):
 	"""
