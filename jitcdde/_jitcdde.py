@@ -51,7 +51,7 @@ def _get_delays(f, helpers=()):
 
 def _find_max_delay(delays):
 	if all(symengine.sympify(delay).is_Number for delay in delays):
-		return float(max(delays).n().real_part())
+		return float(symengine.sympify(max(delays)).n().real_part())
 	else:
 		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
 
@@ -79,16 +79,16 @@ def quadrature(integrand,variable,lower,upper,nsteps=20,method="gauss"):
 	variable : symbol
 		variable of integration
 	
-	lower,upper : expressions
+	lower, upper : expressions
 		lower and upper limit of integration
 	
 	nsteps : integer
 		number of sampling steps. This should be chosen sufficiently high to capture all relevant aspects of your dynamics.
 	
-	method : "midpoint" or "gauss"
-		which method to use for numerical integration. So far Gauß–Legendre quadrature ("gauss", needs SciPy) and the midpoint rule ("midpoint") are available.
-		Use the midpoint rule if you expect your integrand to exhibit structure on a time scale smaller than (`upper`−`lower`)/`nsteps`.
-		Otherwise or when in doubt, use "gauss".
+	method : `"midpoint"` or `"gauss"`
+		which method to use for numerical integration. So far Gauß–Legendre quadrature (`"gauss"`; needs SciPy) and the midpoint rule (`"midpoint"`) are available.
+		Use the midpoint rule if you expect your integrand to exhibit structure on a time scale smaller than (`upper` − `lower`)/`nsteps`.
+		Otherwise or when in doubt, use `"gauss"`.
 	"""
 	sample = lambda pos: integrand.subs(variable,pos)
 	

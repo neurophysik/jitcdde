@@ -122,8 +122,11 @@ This should not be a problem if your delays change sufficiently slowly in compar
 Note that if you want to make use of this, you must provide the maximum delay manually.
 See `this file <https://github.com/neurophysik/jitcdde/blob/master/examples/state_dependent.py>`_ for an example.
 
-Networks and large equations
-----------------------------
+Multi-dimensional equations and networks
+----------------------------------------
+
+While this particular documentation contains no example for a multi-dimensional equation, their implementation is analgous to `JiTCODE`_.
+An example for a two-dimensional DDE (the sunflower equation) can also be found in `the accompanying paper`_.
 
 JiTCDDE is specifically designed to be able to handle large delay differential equations, as they arise, e.g., in networks.
 The caveats, tools, and tricks when doing this are the same as for JiTCODE; so please refer to its documentation, in particular the sections:
