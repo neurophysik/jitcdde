@@ -86,7 +86,7 @@ def quadrature(integrand,variable,lower,upper,nsteps=20,method="gauss"):
 		number of sampling steps. This should be chosen sufficiently high to capture all relevant aspects of your dynamics.
 	
 	method : `"midpoint"` or `"gauss"`
-		which method to use for numerical integration. So far Gauß–Legendre quadrature (`"gauss"`; needs SciPy) and the midpoint rule (`"midpoint"`) are available.
+		which method to use for numerical integration. So far Gauß–Legendre quadrature (`"gauss"`; needs SymPy) and the midpoint rule (`"midpoint"`) are available.
 		Use the midpoint rule if you expect your integrand to exhibit structure on a time scale smaller than (`upper` − `lower`)/`nsteps`.
 		Otherwise or when in doubt, use `"gauss"`.
 	"""
@@ -99,11 +99,11 @@ def quadrature(integrand,variable,lower,upper,nsteps=20,method="gauss"):
 				for i in range(nsteps)
 			)
 	elif method == "gauss":
-		from scipy.special import roots_legendre
+		from sympy.integrals.quadrature import gauss_legendre
 		factor = (symengine.sympify(upper-lower)/2).simplify()
 		return factor*sum(
 				weight*sample(lower+(1+pos)*factor)
-				for pos,weight in zip(*roots_legendre(nsteps))
+				for pos,weight in zip(*gauss_legendre(nsteps,20))
 			)
 	else:
 		raise NotImplementedError("I know no integration method named %s."%method)
