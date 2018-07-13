@@ -125,14 +125,20 @@ See `this file <https://github.com/neurophysik/jitcdde/blob/master/examples/stat
 Multi-dimensional equations and networks
 ----------------------------------------
 
-While this particular documentation contains no example for a multi-dimensional equation, their implementation is analgous to `JiTCODE`_.
+While this particular documentation contains no example for a small, multi-dimensional equation, their implementation is analogous to `JiTCODE`_.
 An example for a two-dimensional DDE (the sunflower equation) can also be found in `the accompanying paper`_.
 
 JiTCDDE is specifically designed to be able to handle large delay differential equations, as they arise, e.g., in networks.
-The caveats, tools, and tricks when doing this are the same as for JiTCODE; so please refer to its documentation, in particular the sections:
+We give an example for a network on one-dimensional oscillators below.
+As the caveats, tools, and tricks when doing this are the same as for JiTCODE; its documentation may be helpful to you, in particular the sections:
 
 * `Handling very large differential equations <http://jitcode.readthedocs.io/en/latest/#handling-very-large-differential-equations>`_
-* `A more complicated example <http://jitcode.readthedocs.io/en/latest/#module-SW_of_Roesslers>`_
+* `A more complicated example <http://jitcode.readthedocs.io/en/latest/#module-SW_of_Roesslers>`_ (featuring multi-dimensional oscillators)
+
+Example: Kuromato oscillators with distributide delays
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: kuramoto_network
 
 .. _lyapunov:
 

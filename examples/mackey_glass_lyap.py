@@ -6,7 +6,7 @@ For instance, we can calculate and print the Lyapunov exponents for the Mackeyâ€
 
 .. literalinclude:: ../examples/mackey_glass_lyap.py
 	:dedent: 1
-	:lines: 17-52
+	:lines: 17-49
 	:emphasize-lines: 11-12, 19-20, 22, 28, 30-33
 	:linenos:
 
