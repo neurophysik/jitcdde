@@ -54,7 +54,6 @@ class basic_test(unittest.TestCase):
 		self.ODE.purge_past()
 		self.ODE.add_past_point(-1.0, y0, f_of_y0)
 		self.ODE.add_past_point( 0.0, y0, f_of_y0)
-		self.ODE.set_integration_parameters(first_step=0.01)
 	
 	def test_C(self):
 		self.ODE.compile_C(extra_compile_args=compile_args)
@@ -72,6 +71,19 @@ class basic_test(unittest.TestCase):
 class blind_integration(basic_test):
 	def integrate(self):
 		self.ODE.integrate_blindly(0.98,0.01)
+
+class no_derivative(basic_test):
+	def setUp(self):
+		self.ODE.purge_past()
+		self.ODE.add_past_point(-1.0, y0, np.random.random(4))
+		self.ODE.add_past_point( 0.0, y0, np.random.random(4))
+	
+	def integrate(self):
+		self.ODE.step_on_discontinuities()
+
+class no_derivative_blind(basic_test):
+	def integrate(self):
+		self.ODE.integrate_blindly(0.0)
 
 tiny_delay = 1e-15
 f_with_tiny_delay = [

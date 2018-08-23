@@ -801,6 +801,14 @@ class jitcdde(jitcxde):
 		self.DDE.forget(self.max_delay)
 		return result
 	
+	def adjust_diff(self,shift_ratio=1e-4):
+		"""
+			Moves the last anchor by `shift_ratio` times the distance to the previous anchor into the past. Adds a new anchor in its place that has the same state and time but a slope computed using the derivative `f`.
+			
+			This may help with addressing initial discontinuities, but it usually doesn’t suffice – unless you have an ODE.
+		"""
+		self.DDE.adjust_diff(shift_ratio)
+	
 	def _prepare_blind_int(self, target_time, step):
 		self._initiate()
 		
@@ -808,17 +816,26 @@ class jitcdde(jitcxde):
 		assert step>0, "step must be positive"
 		
 		total_integration_time = target_time-self.DDE.get_t()
-		if total_integration_time < step:
-			step = total_integration_time
-		number = int(round(total_integration_time/step))
 		
-		dt = total_integration_time/number
+		if total_integration_time>0:
+			if total_integration_time < step:
+				step = total_integration_time
+			number = int(round(total_integration_time/step))
+			dt = total_integration_time/number
+		elif total_integration_time==0:
+			number = 0
+			dt = 0
+		else:
+			raise ValueError("Can’t integrate backwards in time.")
+		
 		assert abs(number*dt-total_integration_time)<1e-10
 		return dt, number, total_integration_time
 	
 	def integrate_blindly(self, target_time, step=None):
 		"""
 		Evolves the dynamics with a fixed step size ignoring any accuracy concerns. See `discontinuities` as to why you may want to use this. If a delay is smaller than the time step, the state is extrapolated from the previous step.
+		
+		If the target time equals the current time, `adjust_diff` is called automatically.
 		
 		Parameters
 		----------
@@ -836,10 +853,13 @@ class jitcdde(jitcxde):
 		
 		dt,number,_ = self._prepare_blind_int(target_time, step)
 		
-		for _ in range(number):
-			self.DDE.get_next_step(dt)
-			self.DDE.accept_step()
-			self.DDE.forget(self.max_delay)
+		if number == 0:
+			self.adjust_diff()
+		else:
+			for _ in range(number):
+				self.DDE.get_next_step(dt)
+				self.DDE.accept_step()
+				self.DDE.forget(self.max_delay)
 		
 		return self.DDE.get_current_state()
 	
@@ -853,6 +873,8 @@ class jitcdde(jitcxde):
 		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped. See `discontinuities` as to why you may want to use this.
 		
 		This only makes sense if you just defined the past (via `add_past_point`) and start integrating, just reset the integrator, or changed control parameters.
+		
+		In case of an ODE, `adjust_diff` is used automatically.
 		
 		Parameters
 		----------
@@ -892,6 +914,7 @@ class jitcdde(jitcxde):
 			return result
 		else:
 			self._initiate()
+			self.adjust_diff()
 			return self.DDE.get_current_state()[:self.n_basic]
 
 def _jac(f, helpers, delay, n):
