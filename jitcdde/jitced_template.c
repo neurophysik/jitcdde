@@ -282,7 +282,6 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 	self->last_actual_step_start = self->current->time;
 	
 	anchor * new = safe_malloc(sizeof(anchor));
-	assert(new!=NULL);
 	
 	self->past_within_step = 0.0;
 	# define k_1 self->current->diff
@@ -380,6 +379,34 @@ static PyObject * accept_step(dde_integrator * const self)
 	self->current = self->last_anchor;
 	free(self->old_last);
 	self->old_last = NULL;
+	Py_RETURN_NONE;
+}
+
+static PyObject * adjust_diff(dde_integrator * const self, PyObject * args)
+{
+	double delta_t;
+	if (!PyArg_ParseTuple(args, "d", &delta_t))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
+	
+	assert(self->last_anchor);
+	assert(self->first_anchor);
+	
+	anchor * new = safe_malloc(sizeof(anchor));
+
+	new->time = self->current->time;
+	memcpy( new->state, self->current->state, sizeof(double[{{n}}]) );
+	eval_f( self, self->current->time, self->current->state, new->diff );
+	self->current->time -= delta_t;
+	
+	append_anchor(self,new);
+	self->current = self->last_anchor;
+	
+	assert(self->current->time > self->current->previous->time);
+	assert(self->last_anchor==new);
+	assert(self->first_anchor);
 	Py_RETURN_NONE;
 }
 
@@ -940,6 +967,7 @@ static PyMethodDef dde_integrator_methods[] = {
 	{"get_p", (PyCFunction) get_p, METH_VARARGS, NULL},
 	{"check_new_y_diff", (PyCFunction) check_new_y_diff, METH_VARARGS, NULL},
 	{"accept_step", (PyCFunction) accept_step, METH_NOARGS, NULL},
+	{"adjust_diff", (PyCFunction) adjust_diff, METH_VARARGS, NULL},
 	{"forget", (PyCFunction) forget, METH_VARARGS, NULL},
 	{% if n_basic != n: %}
 	{"orthonormalise", (PyCFunction) orthonormalise, METH_VARARGS, NULL},

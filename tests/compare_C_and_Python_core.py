@@ -22,13 +22,16 @@ else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
 	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG","-O0"]
 
+class FailedComparison(Exception):
+	pass
+
 def compare(x,y):
 	try:
 		assert_allclose(x,y,rtol=1e-5,atol=1e-5)
 	except AssertionError as error:
 		print("\n")
 		print (x,y)
-		raise error
+		raise FailedComparison(error.args[0])
 
 number_of_runs = int(argv[1])
 
@@ -52,8 +55,8 @@ seed = np.random.randint(0,100000)
 def past():
 	np.random.seed(seed)
 	return [
-	(-np.random.uniform(-10, -5), np.random.random(n), np.random.random(n)),
-	(0.0                        , np.random.random(n), np.random.random(n))
+	(np.random.uniform(-10, -5), np.random.random(n), np.random.random(n)),
+	(0.0                       , np.random.random(n), np.random.random(n))
 	]
 
 
@@ -152,16 +155,37 @@ for realisation in range(number_of_runs):
 		d = np.random.uniform(0.1*delay, delay)
 		compare(P.normalise_indices(d), C.normalise_indices(d))
 	
+	def adjust_diff():
+		accept_step()
+		delta_t = np.random.uniform(0,P.past[-1][0]-P.past[-2][0])
+		P.adjust_diff(delta_t)
+		C.adjust_diff(delta_t)
+	
 	get_next_step()
 	get_next_step()
 	
-	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_full_state, get_p, accept_step, forget, check_new_y_diff, past_within_step, orthonormalise, remove_projections, normalise_indices]
+	actions = [
+			get_next_step,
+			get_t,
+			get_recent_state,
+			get_current_state,
+			get_full_state,
+			get_p,
+			accept_step,
+			forget,
+			check_new_y_diff,
+			past_within_step,
+			orthonormalise,
+			remove_projections,
+			normalise_indices,
+			adjust_diff
+		]
 	
 	for i in range(30):
 		action = random.sample(actions,1)[0]
 		try:
 			action()
-		except AssertionError as error:
+		except FailedComparison as error:
 			print("\n--------------------")
 			print("Results did not match in realisation %i in action %i:" % (realisation, i))
 			print(action.__name__)

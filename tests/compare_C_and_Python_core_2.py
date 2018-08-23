@@ -99,10 +99,16 @@ for realisation in range(number_of_runs):
 	def past_within_step():
 		compare(P.past_within_step, C.past_within_step)
 	
+	def adjust_diff():
+		accept_step()
+		delta_t = np.random.uniform(0,P.past[-1][0]-P.past[-2][0])
+		P.adjust_diff(delta_t)
+		C.adjust_diff(delta_t)
+	
 	get_next_step()
 	get_next_step()
 	
-	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_full_state, get_p, accept_step, forget, check_new_y_diff, past_within_step]
+	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_full_state, get_p, accept_step, forget, check_new_y_diff, past_within_step, adjust_diff]
 	
 	for i in range(30):
 		action = random.sample(actions,1)[0]

@@ -294,7 +294,22 @@ class dde_integrator(object):
 	def accept_step(self):
 		self.t, self.y, self.diff = self.past[-1]
 		self.old_new_y = None
-
+	
+	def adjust_diff(self,delta_t):
+		"""
+		adds another anchor with the same time and state as the last one but with the derivative computed with f.
+		"""
+		self.diff = self.eval_f(self.t,self.y)
+		new_anchor = (self.t,self.y.copy(),self.diff)
+		self.past[-1] = (
+				self.past[-1][0] - delta_t,
+				self.past[-1][1],
+				self.past[-1][2],
+			)
+		assert self.past[-1][0]>self.past[-2][0]
+		self.past.append(new_anchor)
+		self.t, self.y, self.diff = self.past[-1]
+	
 	def forget(self, delay):
 		"""
 		Remove past points that are “out of reach” of the delay.
