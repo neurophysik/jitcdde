@@ -384,8 +384,8 @@ static PyObject * accept_step(dde_integrator * const self)
 
 static PyObject * adjust_diff(dde_integrator * const self, PyObject * args)
 {
-	double delta_t;
-	if (!PyArg_ParseTuple(args, "d", &delta_t))
+	double shift_ratio;
+	if (!PyArg_ParseTuple(args, "d", &shift_ratio))
 	{
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
 		return NULL;
@@ -395,11 +395,12 @@ static PyObject * adjust_diff(dde_integrator * const self, PyObject * args)
 	assert(self->first_anchor);
 	
 	anchor * new = safe_malloc(sizeof(anchor));
-
+	
 	new->time = self->current->time;
 	memcpy( new->state, self->current->state, sizeof(double[{{n}}]) );
 	eval_f( self, self->current->time, self->current->state, new->diff );
-	self->current->time -= delta_t;
+	double const gap = self->current->time-self->current->previous->time;
+	self->current->time -= shift_ratio*gap;
 	
 	append_anchor(self,new);
 	self->current = self->last_anchor;

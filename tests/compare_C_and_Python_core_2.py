@@ -101,9 +101,9 @@ for realisation in range(number_of_runs):
 	
 	def adjust_diff():
 		accept_step()
-		delta_t = np.random.uniform(0,P.past[-1][0]-P.past[-2][0])
-		P.adjust_diff(delta_t)
-		C.adjust_diff(delta_t)
+		shift_ratio = np.random.uniform(0,1)
+		P.adjust_diff(shift_ratio)
+		C.adjust_diff(shift_ratio)
 	
 	get_next_step()
 	get_next_step()

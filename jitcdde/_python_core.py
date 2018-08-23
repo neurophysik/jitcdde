@@ -295,14 +295,16 @@ class dde_integrator(object):
 		self.t, self.y, self.diff = self.past[-1]
 		self.old_new_y = None
 	
-	def adjust_diff(self,delta_t):
+	def adjust_diff(self,shift_ratio):
 		"""
 		adds another anchor with the same time and state as the last one but with the derivative computed with f.
 		"""
 		self.diff = self.eval_f(self.t,self.y)
 		new_anchor = (self.t,self.y.copy(),self.diff)
+		
+		gap = self.past[-1][0]-self.past[-2][0]
 		self.past[-1] = (
-				self.past[-1][0] - delta_t,
+				self.past[-1][0] - shift_ratio*gap,
 				self.past[-1][1],
 				self.past[-1][2],
 			)
