@@ -6,7 +6,7 @@ Suppose, we want to implement a network of :math:`n=100` delay-coupled Kuramoto 
 
 .. math::
 
-	\\dot{y}_i = ω + \\frac{c}{n-1} \\sum_{j=0}^{n-1} A_{ji} \\sin\\Big(y_j\\kl{t-τ_{ij}}-y_i\\kl{t}\\Big),
+	\\dot{y}_i = ω + \\frac{c}{n-1} \\sum_{j=0}^{n-1} A_{ji} \\sin\\Big(y_j(t-τ_{ij})-y_i(t)\\Big),
 
 where :math:`ω=1`, :math:`c=42`, :math:`τ_{ij} \\sim \\mathcal{U}([\frac{π}{5},2π])`, and :math:`A` is the adjacency matrix of a random unweighted directed network with self-connections where each node exists with a probability :math:`q=0.05`.
 
