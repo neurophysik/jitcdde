@@ -135,7 +135,7 @@ As the caveats, tools, and tricks when doing this are the same as for JiTCODE; i
 * `Handling very large differential equations <http://jitcode.readthedocs.io/en/latest/#handling-very-large-differential-equations>`_
 * `A more complicated example <http://jitcode.readthedocs.io/en/latest/#module-SW_of_Roesslers>`_ (featuring multi-dimensional oscillators)
 
-Example: Kuromato oscillators with distributide delays
+Example: Kuromato oscillators with distributed delays
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: kuramoto_network
