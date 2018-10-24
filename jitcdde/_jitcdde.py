@@ -559,8 +559,8 @@ class jitcdde(jitcxde):
 	
 	def set_parameters(self, *parameters):
 		"""
-		Set the control parameters defined by the `control_pars` argument of the `jitcdde`.
-		
+		Set the control parameters defined by the `control_pars` argument of the `jitcdde`. Note that you probably want to use `purge_past` and address initial discontinuities every time after you do this.
+
 		Parameters
 		----------
 		parameters : floats
