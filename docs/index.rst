@@ -9,7 +9,7 @@ Introduction
 
 JiTCDDE (just-in-time compilation for delay differential equations) is a standalone Python implementation of the DDE integration method proposed by Shampine and Thompson [ST01]_, which in turn employs the Bogacki–Shampine Runge–Kutta pair [BS89]_.
 JiTCDDE is designed in analogy to `JiTCODE`_ (which is handled very similarly to `SciPy’s ODE`_ (`scipy.integrate.ode`)):
-It takes an iterable (or generator function) of symbolic expressions, translates them to C code, compiles them and an integrator wrapped around them on the fly, and allows you to operate this integrator from Python.
+It takes an iterable (or generator function or dictionary) of symbolic expressions, translates them to C code, compiles them and an integrator wrapped around them on the fly, and allows you to operate this integrator from Python.
 Symbolic expressions are mostly handled by `SymEngine`_, `SymPy`_’s compiled-backend-to-be (see `SymPy vs. SymEngine`_ for details).
 
 This approach has the following advantages:

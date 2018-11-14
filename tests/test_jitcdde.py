@@ -24,12 +24,12 @@ omega = np.array([0.88167179, 0.87768425])
 delay = 4.5
 
 f = [
-	omega[0] * (-y(1) - y(2)),
-	omega[0] * (y(0) + 0.165 * y(1)),
-	omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
-	omega[1] * (-y(4) - y(5)) + 0.25 * (y(0,t-delay) - y(3)),
-	omega[1] * (y(3) + 0.165 * y(4)),
-	omega[1] * (0.2 + y(5) * (y(3) - 10.0))
+		omega[0] * (-y(1) - y(2)),
+		omega[0] * (y(0) + 0.165 * y(1)),
+		omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
+		omega[1] * (-y(4) - y(5)) + 0.25 * (y(0,t-delay) - y(3)),
+		omega[1] * (y(3) + 0.165 * y(4)),
+		omega[1] * (0.2 + y(5) * (y(3) - 10.0))
 	]
 
 def get_past_points():
@@ -41,13 +41,13 @@ y_10_ref = np.loadtxt("two_Roessler_y10.dat")
 T = 10
 
 test_parameters = {
-	"rtol": 1e-7,
-	"atol": 1e-7,
-	"pws_rtol": 1e-3,
-	"pws_atol": 1e-3,
-	"first_step": 30,
-	"max_step": 100,
-	"min_step": 1e-30,
+		"rtol": 1e-7,
+		"atol": 1e-7,
+		"pws_rtol": 1e-3,
+		"pws_atol": 1e-3,
+		"first_step": 30,
+		"max_step": 100,
+		"min_step": 1e-30,
 	}
 
 
@@ -123,12 +123,12 @@ class TestIntegrationCSE(TestIntegration):
 
 tiny_delay = 1e-30
 f_with_tiny_delay = [
-	omega[0] * (-y(1) - y(2)),
-	omega[0] * (y(0) + 0.165 * y(1,t-tiny_delay)),
-	omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
-	omega[1] * (-y(4) - y(5)) + 0.25 * (y(0,t-delay) - y(3,t-tiny_delay)),
-	omega[1] * (y(3) + 0.165 * y(4)),
-	omega[1] * (0.2 + y(5) * (y(3) - 10.0))
+		omega[0] * (-y(1) - y(2)),
+		omega[0] * (y(0) + 0.165 * y(1,t-tiny_delay)),
+		omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
+		omega[1] * (-y(4) - y(5)) + 0.25 * (y(0,t-delay) - y(3,t-tiny_delay)),
+		omega[1] * (y(3) + 0.165 * y(4)),
+		omega[1] * (0.2 + y(5) * (y(3) - 10.0))
 	]
 
 class TestPastWithinStep(TestIntegration):
@@ -175,20 +175,29 @@ class TestGeneratorChunking(TestGenerator):
 		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
 
 
+f_dict = { y(i):entry for i,entry in enumerate(f) }
+
+class TestDictionary(TestIntegration):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = jitcdde(f_dict)
+		self.DDE.set_integration_parameters(**test_parameters)
+
+
 delayed_y, y3m10, coupling_term = symengine.symbols("delayed_y y3m10 coupling_term")
 f_alt_helpers = [
-	(delayed_y, y(0,t-delay)),
-	(coupling_term, 0.25 * (delayed_y - y(3))),
-	(y3m10, y(3)-10)
+		(delayed_y, y(0,t-delay)),
+		(coupling_term, 0.25 * (delayed_y - y(3))),
+		(y3m10, y(3)-10)
 	]
 
 f_alt = [
-	omega[0] * (-y(1) - y(2)),
-	omega[0] * (y(0) + 0.165 * y(1)),
-	omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
-	omega[1] * (-y(4) - y(5)) + coupling_term,
-	omega[1] * (y3m10 + 10 + 0.165 * y(4)),
-	omega[1] * (0.2 + y(5) * y3m10)
+		omega[0] * (-y(1) - y(2)),
+		omega[0] * (y(0) + 0.165 * y(1)),
+		omega[0] * (0.2 + y(2) * (y(0) - 10.0)),
+		omega[1] * (-y(4) - y(5)) + coupling_term,
+		omega[1] * (y3m10 + 10 + 0.165 * y(4)),
+		omega[1] * (0.2 + y(5) * y3m10)
 	]
 
 class TestHelpers(TestIntegration):
@@ -208,12 +217,12 @@ class TestHelpersChunking(TestHelpers):
 
 a,b,c,k = symengine.symbols("a b c k")
 f_params = [
-	omega[0] * (-y(1) - y(2)),
-	omega[0] * (y(0) + a * y(1)),
-	omega[0] * (b + y(2) * (y(0) - c)),
-	omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3)),
-	omega[1] * (y(3) + a * y(4)),
-	omega[1] * (b + y(5) * (y(3) - c))
+		omega[0] * (-y(1) - y(2)),
+		omega[0] * (y(0) + a * y(1)),
+		omega[0] * (b + y(2) * (y(0) - c)),
+		omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3)),
+		omega[1] * (y(3) + a * y(4)),
+		omega[1] * (b + y(5) * (y(3) - c))
 	]
 
 class TestParameters(TestIntegration):
