@@ -1410,3 +1410,21 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		
 		return state, lyap, total_integration_time
 
+def test(omp=True,sympy=True):
+	"""
+		Runs a quick simulation to test whether:
+		
+		* a compiler is available and can be interfaced by Setuptools,
+		* OMP libraries are available and can be assessed,
+		* SymPy is available.
+		
+		The latter two tests can be deactivated with the respective argument. This is not a full software test but rather a quick sanity check of your installation.
+	"""
+	if sympy:
+		import sympy
+	DDE = jitcdde( [y(1,t-1),-y(0,t-2)], verbose=False )
+	DDE.compile_C(chunk_size=1,omp=omp)
+	DDE.constant_past([1,2])
+	DDE.step_on_discontinuities()
+	DDE.integrate(DDE.t+1)
+

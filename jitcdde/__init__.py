@@ -4,6 +4,7 @@ from ._jitcdde import (
 		UnsuccessfulIntegration,
 		_find_max_delay, _get_delays,
 		quadrature,
+		test,
 		)
 
 try:

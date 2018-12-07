@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 from jitcdde import (
-	jitcdde,
-	t, y,
-	UnsuccessfulIntegration,
-	_find_max_delay, _get_delays,
-	quadrature,
+		jitcdde,
+		t, y,
+		UnsuccessfulIntegration,
+		_find_max_delay, _get_delays,
+		quadrature,
+		test,
 	)
 import platform
 import symengine
@@ -315,6 +316,12 @@ class TestQuadrature(unittest.TestCase):
 		t = symengine.Symbol("t")
 		with self.assertRaises(NotImplementedError):
 			quadrature(t**2,t,0,1,method="tai")
+
+class TestTest(unittest.TestCase):
+	def test_test(self):
+		for sympy in [False,True]:
+			for omp in [True,False]:
+				test(omp=omp,sympy=sympy)
 
 if __name__ == "__main__":
 	unittest.main(buffer=True)
