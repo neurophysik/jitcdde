@@ -51,7 +51,7 @@ def _get_delays(f, helpers=()):
 
 def _find_max_delay(delays):
 	if all(symengine.sympify(delay).is_Number for delay in delays):
-		return float(symengine.sympify(max(delays)).n().real_part())
+		return float(symengine.sympify(max(delays)).n(real=True))
 	else:
 		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
 
@@ -902,7 +902,7 @@ class jitcdde(jitcxde):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
 		self.delays = [
 				# This conversion is due to SymEngine.py issue #227
-				float(symengine.sympify(delay).n().real_part())
+				float(symengine.sympify(delay).n(real=True))
 				for delay in self.delays
 			]
 		steps = _propagate_delays(self.delays, propagations, min_distance)

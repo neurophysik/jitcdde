@@ -310,7 +310,7 @@ class TestQuadrature(unittest.TestCase):
 		for method in ["gauss","midpoint"]:
 			with self.subTest(method=method):
 				result = quadrature(t**2,t,0,1,nsteps=100,method=method)
-				self.assertAlmostEqual( float(result.n().real_part()), 1/3, places=3 )
+				self.assertAlmostEqual( float(result.n(real=True)), 1/3, places=3 )
 	
 	def test_no_method(self):
 		t = symengine.Symbol("t")
