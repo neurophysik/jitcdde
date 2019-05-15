@@ -391,7 +391,7 @@ class jitcdde(jitcxde):
 		Explicitly initiates a purely Python-based integrator.
 		"""
 		
-		assert len(self.past)>1, "You need to add at least two past points first."
+		assert len(self.past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
 		
 		self.DDE = python_core.dde_integrator(
 			self.f_sym,
@@ -550,7 +550,7 @@ class jitcdde(jitcxde):
 			self._attempt_compilation()
 		
 		if self.DDE is None:
-			assert len(self.past)>1, "You need to add at least two past points first."
+			assert len(self.past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
 			
 			if self.compile_attempt:
 				self.DDE = self.jitced.dde_integrator(self.past)
