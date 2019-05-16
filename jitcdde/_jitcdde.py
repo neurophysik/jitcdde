@@ -709,7 +709,7 @@ class jitcdde(jitcxde):
 					"rtol: %e" % self.rtol,
 					"min_step: %e\n" % self.min_step,
 					"The most likely reasons for this are:",
-					"• You did not sufficiently address initial discontinuities.",
+					"• You did not sufficiently address initial discontinuities. (If your dynamics is fast, did you adjust the maximum step?)",
 					"• The DDE is ill-posed or stiff.",
 				])
 				
@@ -898,7 +898,7 @@ class jitcdde(jitcxde):
 		assert min_distance > 0, "min_distance must be positive."
 		assert isinstance(propagations,int), "Non-integer number of propagations."
 		
-		if not all(symengine.sympify(delay).is_Number for delay in self.delays):
+		if not all(symengine.sympify(delay).is_number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
 		self.delays = [
 				# This conversion is due to SymEngine.py issue #227
