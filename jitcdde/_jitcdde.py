@@ -774,6 +774,9 @@ class jitcdde(jitcxde):
 		"""
 		self._initiate()
 		
+		if self.DDE.get_t() > target_time:
+			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step.")
+		
 		while self.DDE.get_t() < target_time:
 			self.DDE.get_next_step(self.dt)
 			
