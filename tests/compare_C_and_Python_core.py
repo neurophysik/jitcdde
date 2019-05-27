@@ -78,7 +78,7 @@ for realisation in range(number_of_runs):
 	DDE = jitcdde(f)
 	DDE.n_basic = 2
 	DDE.tangent_indices = tangent_indices
-	DDE.compile_C(chunk_size=random.randint(0,7))
+	DDE.compile_C(chunk_size=random.randint(0,7),extra_compile_args=compile_args)
 	C = DDE.jitced.dde_integrator(past())
 	
 	def get_next_step():
@@ -168,6 +168,19 @@ for realisation in range(number_of_runs):
 		P.truncate_past(time)
 		C.truncate_past(time)
 	
+	def apply_jump():
+		accept_step()
+		interval = ( P.get_full_state()[0][0], P.get_full_state()[-1][0] )
+		time = np.random.uniform(*interval)
+		width = 0.1
+		change = np.zeros(n) #np.random.normal(0,0.1,n)
+		P.apply_jump(change,time,width)
+		C.apply_jump(change,time,width)
+		
+		get_next_step()
+		accept_step()
+
+	
 	get_next_step()
 	get_next_step()
 	
@@ -187,6 +200,7 @@ for realisation in range(number_of_runs):
 			normalise_indices,
 			adjust_diff,
 			truncate_past,
+			apply_jump,
 		]
 	
 	for i in range(30):

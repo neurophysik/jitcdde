@@ -86,15 +86,17 @@ void remove_last_anchor(dde_integrator * const self)
 	free(self->old_last);
 	self->old_last = NULL;
 	
+	self->last_anchor = self->last_anchor->previous;
+	free(self->last_anchor->next);
+	self->last_anchor->next = NULL;
+	
 	{% if anchor_mem_length: %}
 	for (int i=0; i<{{anchor_mem_length}}; i++)
 		if (self->anchor_mem[i] == self->last_anchor)
 			self->anchor_mem[i] = self->last_anchor->previous;
 	{% endif %}
 	
-	self->last_anchor = self->last_anchor->previous;
-	free(self->last_anchor->next);
-	self->last_anchor->next = NULL;
+	assert( self->last_anchor != self->first_anchor );
 }
 
 void replace_last_anchor(dde_integrator * const self, anchor * const new_anchor)
@@ -984,14 +986,8 @@ static PyObject * normalise_indices(dde_integrator const * const self, PyObject 
 
 // Functions for jumps
 
-static PyObject * truncate_past(dde_integrator * const self, PyObject * args)
+void truncate_past(dde_integrator * const self, double time)
 {
-	double time;
-	if (!PyArg_ParseTuple(args, "d", &time))
-	{
-		PyErr_SetString(PyExc_ValueError,"Wrong input.");
-		return NULL;
-	}
 	assert( self->first_anchor->time <= time );
 	assert( time <= self->last_anchor->time );
 	
@@ -1009,6 +1005,55 @@ static PyObject * truncate_past(dde_integrator * const self, PyObject * args)
 	}
 	replace_last_anchor(self,new);
 	accept_step(self);
+}
+
+static PyObject * py_truncate_past(dde_integrator * const self, PyObject * args)
+{
+	double time;
+	if (!PyArg_ParseTuple(args, "d", &time))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
+	truncate_past(self,time);
+	Py_RETURN_NONE;
+}
+
+static PyObject * apply_jump(dde_integrator * const self, PyObject * args)
+{
+	PyArrayObject * change;
+	double time;
+	double width = 1e-5;
+	
+	if (!PyArg_ParseTuple( args, "O!d|d", &PyArray_Type, &change, &time, &width ))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
+	
+	if (PyArray_TYPE(change) != NPY_DOUBLE)
+	{
+		PyErr_SetString(PyExc_ValueError,"Change must be float array.");
+		return 0;
+	}
+	
+	anchor * new = safe_malloc(sizeof(anchor));
+	new->time = time+width;
+	
+	anchor left_anchor = *(self->last_anchor->previous);
+	while (left_anchor.time >= new->time)
+		left_anchor = *(left_anchor.previous);
+	
+	for (int i=0; i<{{n}}; i++)
+	{
+		double value = get_past_value(self,new->time,i,left_anchor);
+		double jump = * (double *) PyArray_GETPTR1(change,i);
+		new->state[i] = value + jump;
+	}
+	eval_f(self, new->time, new->state, new->diff);
+	
+	truncate_past(self,time);
+	append_anchor(self,new);
 	
 	Py_RETURN_NONE;
 }
@@ -1043,7 +1088,8 @@ static PyMethodDef dde_integrator_methods[] = {
 	{% if tangent_indices %}
 	{"normalise_indices", (PyCFunction) normalise_indices, METH_VARARGS, NULL},
 	{% endif %}
-	{"truncate_past", (PyCFunction) truncate_past, METH_VARARGS, NULL},
+	{"truncate_past", (PyCFunction) py_truncate_past, METH_VARARGS, NULL},
+	{"apply_jump", (PyCFunction) apply_jump, METH_VARARGS, NULL},
 	{NULL, NULL, 0, NULL}
 };
 
