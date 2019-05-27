@@ -510,6 +510,9 @@ class dde_integrator(object):
 		self.past[i+1] = (time,value,diff)
 		
 		self.past = self.past[:i+2]
+		assert len(self.past)>=1
+		self.anchor_mem = np.minimum(self.anchor_mem,len(self.past)-1)
+		self.accept_step()
 	
 	def apply_jump( self, change, time, width=1e-5 ):
 		new_time = time+width
@@ -519,6 +522,4 @@ class dde_integrator(object):
 		
 		self.truncate_past(time)
 		self.past.append((new_time,new_value,new_diff))
-
-
 

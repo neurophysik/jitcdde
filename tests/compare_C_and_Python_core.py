@@ -161,6 +161,13 @@ for realisation in range(number_of_runs):
 		P.adjust_diff(shift_ratio)
 		C.adjust_diff(shift_ratio)
 	
+	def truncate_past():
+		accept_step()
+		interval = ( P.get_full_state()[0][0], P.get_full_state()[-1][0] )
+		time = np.random.uniform(*interval)
+		P.truncate_past(time)
+		C.truncate_past(time)
+	
 	get_next_step()
 	get_next_step()
 	
@@ -178,7 +185,8 @@ for realisation in range(number_of_runs):
 			orthonormalise,
 			remove_projections,
 			normalise_indices,
-			adjust_diff
+			adjust_diff,
+			truncate_past,
 		]
 	
 	for i in range(30):

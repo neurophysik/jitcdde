@@ -81,6 +81,22 @@ void remove_first_anchor(dde_integrator * const self)
 	free(old_first_anchor);
 }
 
+void remove_last_anchor(dde_integrator * const self)
+{
+	free(self->old_last);
+	self->old_last = NULL;
+	
+	{% if anchor_mem_length: %}
+	for (int i=0; i<{{anchor_mem_length}}; i++)
+		if (self->anchor_mem[i] == self->last_anchor)
+			self->anchor_mem[i] = self->last_anchor->previous;
+	{% endif %}
+	
+	self->last_anchor = self->last_anchor->previous;
+	free(self->last_anchor->next);
+	self->last_anchor->next = NULL;
+}
+
 void replace_last_anchor(dde_integrator * const self, anchor * const new_anchor)
 {
 	free(self->old_last);
@@ -161,6 +177,23 @@ double get_past_value(
 	double const d = w.diff[index] * q;
 	
 	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x*x) + c;
+}
+
+double get_past_diff(
+	dde_integrator const * const self,
+	double const t,
+	unsigned int const index,
+	anchor const v)
+{
+	anchor const w = *(v.next);
+	double const q = w.time-v.time;
+	double const x = (t - v.time)/q;
+	double const a = v.state[index];
+	double const b = v.diff[index] * q;
+	double const c = w.state[index];
+	double const d = w.diff[index] * q;
+	
+	return ( (1-x)*(b-x*3*(2*(a-c)+b+d)) + d*x ) /q;
 }
 
 static PyObject * get_recent_state(dde_integrator const * const self, PyObject * args)
@@ -949,10 +982,41 @@ static PyObject * normalise_indices(dde_integrator const * const self, PyObject 
 
 {% endif %}
 
+// Functions for jumps
+
+static PyObject * truncate_past(dde_integrator * const self, PyObject * args)
+{
+	double time;
+	if (!PyArg_ParseTuple(args, "d", &time))
+	{
+		PyErr_SetString(PyExc_ValueError,"Wrong input.");
+		return NULL;
+	}
+	assert( self->first_anchor->time <= time );
+	assert( time <= self->last_anchor->time );
+	
+	while (self->last_anchor->previous->time >= time)
+		remove_last_anchor(self);
+	
+	anchor left_anchor = *(self->last_anchor->previous);
+	
+	anchor * new = safe_malloc(sizeof(anchor));
+	new->time = time;
+	for (int i=0; i<{{n}}; i++)
+	{
+		new->state[i] = get_past_value(self,time,i,left_anchor);
+		new->diff [i] = get_past_diff (self,time,i,left_anchor);
+	}
+	replace_last_anchor(self,new);
+	accept_step(self);
+	
+	Py_RETURN_NONE;
+}
+
 // ======================================================
 
 static PyMemberDef dde_integrator_members[] = {
- 	{"past_within_step", T_DOUBLE, offsetof(dde_integrator, past_within_step), 0, "past_within_step"},
+	{"past_within_step", T_DOUBLE, offsetof(dde_integrator, past_within_step), 0, "past_within_step"},
 	{NULL}  /* Sentinel */
 };
 
@@ -979,6 +1043,7 @@ static PyMethodDef dde_integrator_methods[] = {
 	{% if tangent_indices %}
 	{"normalise_indices", (PyCFunction) normalise_indices, METH_VARARGS, NULL},
 	{% endif %}
+	{"truncate_past", (PyCFunction) truncate_past, METH_VARARGS, NULL},
 	{NULL, NULL, 0, NULL}
 };
 
