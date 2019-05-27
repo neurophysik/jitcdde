@@ -490,3 +490,35 @@ class dde_integrator(object):
 		for anchor in self.past:
 			anchor[2][self.n_basic+index] = 0.0
 	
+	# ------------------
+	
+	def last_index_before(self,time):
+		i = len(self.past)-2
+		while self.past[i][0] >= time:
+			i -= 1
+		return i
+	
+	def truncate_past(self,time):
+		"""
+		Interpolates an anchor at time and removes all later anchors.
+		"""
+		assert self.past[0][0]<=time<=self.past[-1][0], "truncation time must be within current past"
+		i = self.last_index_before(time)
+		
+		value =     interpolate_vec(time,(self.past[i],self.past[i+1]))
+		diff = interpolate_diff_vec(time,(self.past[i],self.past[i+1]))
+		self.past[i+1] = (time,value,diff)
+		
+		self.past = self.past[:i+2]
+	
+	def apply_jump( self, change, time, width=1e-5 ):
+		new_time = time+width
+		i = self.last_index_before(new_time)
+		new_value = interpolate_vec(new_time,(self.past[i],self.past[i+1])) + change
+		new_diff = self.eval_f(new_time,new_value)
+		
+		self.truncate_past(time)
+		self.past.append((new_time,new_value,new_diff))
+
+
+

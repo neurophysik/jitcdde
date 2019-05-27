@@ -317,8 +317,58 @@ class remove_projection_test(unittest.TestCase):
 		for anchor_A, anchor_B in zip(past_copy, self.DDE.past):
 			assert_allclose(anchor_A[1], anchor_B[1])
 			assert_allclose(anchor_A[2], anchor_B[2])
+
+class truncation_test(unittest.TestCase):
+	def test_truncation(self):
+		self.DDE = dde_integrator(lambda:[],past[:])
+		self.DDE.anchor_mem = np.ones(1000, dtype=int)
 		
+		truncation_time = np.random.uniform(past[-2][0],past[-1][0])
+		self.DDE.truncate_past(truncation_time)
+		truncated_past = self.DDE.past
 		
+		assert truncated_past[-1][0] == truncation_time
+		
+		anchors = (past[-2], past[-1])
+		anchors_trunc = (truncated_past[-2],truncated_past[-1])
+		for t in np.linspace(past[-2][0],truncation_time,30):
+			for j in range(m):
+				self.assertAlmostEqual(
+						interpolate( t, j, anchors       ),
+						interpolate( t, j, anchors_trunc ),
+					)
+				self.assertAlmostEqual(
+						interpolate_diff( t, j, anchors       ),
+						interpolate_diff( t, j, anchors_trunc ),
+					)
+
+class jump_test(unittest.TestCase):
+	def test_jump(self):
+		n = 10
+		τ = 10
+		width = 10**np.random.uniform(-7,0)*τ
+		factor = np.random.random(n)
+		
+		times = sorted(np.random.uniform(0,τ,5))
+		past = [
+				(time,np.random.random(n),0.1*np.random.random(n))
+				for time in times
+			]
+		jump_time = np.random.uniform(past[-2][0],past[-1][0])
+		jump_size = np.random.random(n)
+		
+		# Use a derivative for which it is clear how a jump affects it:
+		f = lambda: [ factor[i]*y(i) + y(i,t-τ) for i in range(n) ]
+		self.DDE = dde_integrator(f,past)
+		
+		state = self.DDE.get_recent_state(jump_time+width)
+		derivative = self.DDE.eval_f(jump_time+width,state)
+		
+		self.DDE.apply_jump(jump_size,jump_time,width)
+		
+		assert self.DDE.past[-1][0] == jump_time+width
+		assert_allclose( self.DDE.past[-1][1], state+jump_size )
+		assert_allclose( self.DDE.past[-1][2], derivative+factor*jump_size )
 
 if __name__ == "__main__":
 	unittest.main(buffer=True)
