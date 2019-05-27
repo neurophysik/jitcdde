@@ -370,7 +370,7 @@ class jump_test(unittest.TestCase):
 		assert_allclose( self.DDE.past[-1][1], state+jump_size )
 		assert_allclose( self.DDE.past[-1][2], derivative+factor*jump_size )
 
-class arg_extreme_test(unittest.TestCase):
+class extrema_test(unittest.TestCase):
 	def test_arg_extreme_given_extrema(self):
 		n = 3
 		positions = np.random.random(2)
@@ -378,9 +378,8 @@ class arg_extreme_test(unittest.TestCase):
 				( position, np.random.random(n), np.zeros(n) )
 				for position in positions
 			]
-		result = arg_extreme(past)
-		for i in range(n):
-			assert_allclose(sorted(result[i]),sorted(positions))
+		for _,result in arg_extreme(past):
+			assert_allclose(sorted(result),sorted(positions))
 	
 	def test_arg_extreme_simple_polynomial(self):
 		T = symengine.Symbol("T")
@@ -391,8 +390,24 @@ class arg_extreme_test(unittest.TestCase):
 				( t, arrify(poly,t), arrify(poly.diff(T),t) )
 				for t in times
 			]
-		result = arg_extreme(past)[0]
+		_,result = next(arg_extreme(past))
 		assert_allclose(sorted(result),[-2,3])
+	
+	def test_extrema_in_last_step(self):
+		n = 10
+		past = [
+				(time,np.random.random(n),0.1*np.random.random(n))
+				for time in sorted(np.random.uniform(-10,10,3))
+			]
+		DDE = dde_integrator(lambda: [], past)
+		DDE.anchor_mem = np.ones(1000, dtype=int)
+		values = np.vstack(
+				DDE.get_recent_state(time)
+				for time in np.linspace(past[-2][0],past[-1][0],10000)
+			)
+		minima,maxima = DDE.extrema_in_last_step()
+		assert_allclose( minima, np.min(values,axis=0), atol=1e-3 )
+		assert_allclose( maxima, np.max(values,axis=0), atol=1e-3 )
 
 if __name__ == "__main__":
 	unittest.main(buffer=True)

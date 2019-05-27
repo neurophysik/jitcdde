@@ -40,7 +40,7 @@ def interpolate_diff_vec(t,anchors):
 
 def arg_extreme(anchors):
 	"""
-		Returns a list of sets containing for each component the positions of local extrema of the cubic Hermite interpolant of the anchors.
+		Generates of enumerated sets containing for each component the positions of local extrema of the cubic Hermite interpolant of the anchors.
 	"""
 	q = (anchors[1][0]-anchors[0][0])
 	retransform = lambda x: q*x+anchors[0][0]
@@ -54,16 +54,14 @@ def arg_extreme(anchors):
 	B = a + 2*b/3 - c + d/3
 	
 	n = len(anchors[0][1])
-	result = []
 	for i in range(n):
 		if radicant[i]<0:
-			result.append(set())
+			yield i, set()
 		else:
-			result.append({
+			yield i, {
 					retransform((B[i]+sign*np.sqrt(radicant[i])/3)*A[i])
 					for sign in (-1,1)
-				})
-	return result
+				}
 
 sumsq = lambda x: np.sum(x**2)
 
@@ -541,6 +539,22 @@ class dde_integrator(object):
 		self.anchor_mem = np.minimum(self.anchor_mem,len(self.past)-1)
 		self.accept_step()
 	
+	def extrema_in_last_step(self):
+		minima = np.empty(self.n)
+		maxima = np.empty(self.n)
+		for i,times in arg_extreme(self.past[-2:]):
+			candidates = [
+					self.get_recent_state(time)[i]
+					for time in times
+					if self.past[-2][0] < time < self.past[-1][0]
+				]
+			candidates.append(self.past[-2][1][i])
+			candidates.append(self.past[-1][1][i])
+			minima[i] = min(candidates)
+			maxima[i] = max(candidates)
+		assert i == self.n-1
+		return minima, maxima
+
 	def apply_jump( self, change, time, width=1e-5 ):
 		new_time = time+width
 		i = self.last_index_before(new_time)
@@ -549,4 +563,4 @@ class dde_integrator(object):
 		
 		self.truncate_past(time)
 		self.past.append((new_time,new_value,new_diff))
-
+		return self.extrema_in_last_step()
