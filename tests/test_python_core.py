@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate
+from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate, interpolate_diff
 from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 
 import symengine
@@ -43,15 +43,27 @@ class interpolation_test(unittest.TestCase):
 			t = past[s][0]
 			anchors = (past[s],past[s+1])
 			for j in range(m):
-				value = interpolate(t, j, anchors)
-				self.assertAlmostEqual(past[s][1][j], value)
+				self.assertAlmostEqual(
+						past[s][1][j],
+						interpolate(t, j, anchors),
+					)
+				self.assertAlmostEqual(
+						past[s][2][j],
+						interpolate_diff(t, j, anchors),
+					)
 	
 	def test_interpolation(self):
 		anchors = (past[0], past[1])
 		for t in np.linspace(past[0][0],past[1][0],100):
 			for j in range(m):
-				value = interpolate(t, j, anchors)
-				self.assertAlmostEqual(poly[j](t), value)
+				self.assertAlmostEqual(
+						poly[j](t),
+						interpolate(t, j, anchors),
+					)
+				self.assertAlmostEqual(
+						diff[j](t),
+						interpolate_diff(t, j, anchors),
+					)
 
 class get_anchors_test(unittest.TestCase):
 	@classmethod

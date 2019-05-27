@@ -22,6 +22,22 @@ def interpolate_vec(t,anchors):
 	
 	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
 
+def interpolate_diff(t,i,anchors):
+	return interpolate_diff_vec(t,anchors)[i]
+
+def interpolate_diff_vec(t,anchors):
+	"""
+		Returns the derivative of a cubic Hermite interpolant of the anchors at time t.
+	"""
+	q = (anchors[1][0]-anchors[0][0])
+	x = (t-anchors[0][0]) / q
+	a = anchors[0][1]
+	b = anchors[0][2] * q
+	c = anchors[1][1]
+	d = anchors[1][2] * q
+	
+	return ( (1-x)*(b-x*3*(2*(a-c)+b+d)) + d*x ) /q
+
 sumsq = lambda x: np.sum(x**2)
 
 # The matrix induced by the scalar product of the cubic Hermite interpolants of two anchors, if their distance is normalised to 1.
@@ -473,5 +489,4 @@ class dde_integrator(object):
 	def remove_diff_component(self, index):
 		for anchor in self.past:
 			anchor[2][self.n_basic+index] = 0.0
-	
 	
