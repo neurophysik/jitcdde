@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate, interpolate_diff
+from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate, interpolate_diff, arg_extreme
 from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 
 import symengine
@@ -369,6 +369,30 @@ class jump_test(unittest.TestCase):
 		assert self.DDE.past[-1][0] == jump_time+width
 		assert_allclose( self.DDE.past[-1][1], state+jump_size )
 		assert_allclose( self.DDE.past[-1][2], derivative+factor*jump_size )
+
+class arg_extreme_test(unittest.TestCase):
+	def test_arg_extreme_given_extrema(self):
+		n = 3
+		positions = np.random.random(2)
+		past = [
+				( position, np.random.random(n), np.zeros(n) )
+				for position in positions
+			]
+		result = arg_extreme(past)
+		for i in range(n):
+			assert_allclose(sorted(result[i]),sorted(positions))
+	
+	def test_arg_extreme_simple_polynomial(self):
+		T = symengine.Symbol("T")
+		poly = 2*T**3 - 3*T**2 - 36*T + 17
+		times = np.random.uniform(-10,10,2)
+		arrify = lambda expr,t: np.atleast_1d(float(expr.subs({T:t})))
+		past = [
+				( t, arrify(poly,t), arrify(poly.diff(T),t) )
+				for t in times
+			]
+		result = arg_extreme(past)[0]
+		assert_allclose(sorted(result),[-2,3])
 
 if __name__ == "__main__":
 	unittest.main(buffer=True)

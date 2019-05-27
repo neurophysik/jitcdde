@@ -38,6 +38,33 @@ def interpolate_diff_vec(t,anchors):
 	
 	return ( (1-x)*(b-x*3*(2*(a-c)+b+d)) + d*x ) /q
 
+def arg_extreme(anchors):
+	"""
+		Returns a list of sets containing for each component the positions of local extrema of the cubic Hermite interpolant of the anchors.
+	"""
+	q = (anchors[1][0]-anchors[0][0])
+	retransform = lambda x: q*x+anchors[0][0]
+	a = anchors[0][1]
+	b = anchors[0][2] * q
+	c = anchors[1][1]
+	d = anchors[1][2] * q
+	
+	radicant = 9*a**2 + 6*a*b - 18*a*c + 6*a*d + b**2 - 6*b*c + b*d + 9*c**2 - 6*c*d + d**2
+	A = 1/(2*a + b - 2*c + d)
+	B = a + 2*b/3 - c + d/3
+	
+	n = len(anchors[0][1])
+	result = []
+	for i in range(n):
+		if radicant[i]<0:
+			result.append(set())
+		else:
+			result.append({
+					retransform((B[i]+sign*np.sqrt(radicant[i])/3)*A[i])
+					for sign in (-1,1)
+				})
+	return result
+
 sumsq = lambda x: np.sum(x**2)
 
 # The matrix induced by the scalar product of the cubic Hermite interpolants of two anchors, if their distance is normalised to 1.
