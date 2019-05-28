@@ -196,6 +196,40 @@ double get_past_diff(
 	return ( (1-x)*(b-x*3*(2*(a-c)+b+d)) + d*x ) /q;
 }
 
+void extrema(
+	unsigned int const index,
+	anchor const v,
+	double * const minimum,
+	double * const maximum)
+{
+	anchor const w = *(v.next);
+	double const q = w.time-v.time;
+	double const a = v.state[index];
+	double const b = v.diff[index] * q;
+	double const c = w.state[index];
+	double const d = w.diff[index] * q;
+	
+	*minimum = fmin(a,c);
+	*maximum = fmax(a,c);
+	
+	double const radicant = b*b + b*d + d*d + 3*(a-c)*(3*(a-c) + 2*(b+d));
+	if (radicant>=0)
+	{
+		double const A = 1/(2*a + b - 2*c + d);
+		double const B = a + 2*b/3 - c + d/3;
+		for (char sign=-1; sign<=1; sign+=2)
+		{
+			double const x = (B+sign*sqrt(radicant)/3) * A;
+			if (0<x && x<1)
+			{
+				double const value = (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x*x) + c;
+				*minimum = fmin(*minimum,value);
+				*maximum = fmax(*maximum,value);
+			}
+		}
+	}
+}
+
 static PyObject * get_recent_state(dde_integrator const * const self, PyObject * args)
 {
 	assert(self->last_anchor);
@@ -1042,7 +1076,7 @@ static PyObject * apply_jump(dde_integrator * const self, PyObject * args)
 	while (left_anchor.time >= new->time)
 		left_anchor = *(left_anchor.previous);
 	
-	for (int i=0; i<{{n}}; i++)
+	for (unsigned int i=0; i<{{n}}; i++)
 	{
 		double value = get_past_value(new->time,i,left_anchor);
 		double jump = * (double *) PyArray_GETPTR1(change,i);
@@ -1053,7 +1087,18 @@ static PyObject * apply_jump(dde_integrator * const self, PyObject * args)
 	truncate_past(self,time);
 	append_anchor(self,new);
 	
-	Py_RETURN_NONE;
+	npy_intp dims[1] = { {{n}} };
+	PyArrayObject * minima = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
+	PyArrayObject * maxima = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
+	for (unsigned int i=0; i<{{n}}; i++)
+		extrema(
+				i,
+				*(self->last_anchor->previous),
+				(double *) PyArray_GETPTR1(minima,i),
+				(double *) PyArray_GETPTR1(maxima,i)
+			);
+	
+	return PyTuple_Pack( 2, (PyObject *) minima, (PyObject *) maxima );
 }
 
 // ======================================================

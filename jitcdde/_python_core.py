@@ -51,8 +51,8 @@ def extrema(anchors):
 	
 	minima = np.minimum(anchors[0][1],anchors[1][1])
 	maxima = np.maximum(anchors[0][1],anchors[1][1])
-
-	radicant = 9*a**2 + 6*a*b - 18*a*c + 6*a*d + b**2 - 6*b*c + b*d + 9*c**2 - 6*c*d + d**2
+	
+	radicant = b**2 + b*d + d**2 + 3*(a-c)*(3*(a-c) + 2*(b+d))
 	A = 1/(2*a + b - 2*c + d)
 	B = a + 2*b/3 - c + d/3
 	

@@ -123,8 +123,10 @@ for realisation in range(number_of_runs):
 		time = np.random.uniform(*reduced_interval())
 		width = 0.1
 		change = np.random.normal(0,0.1,1)
-		P.apply_jump(change,time,width)
-		C.apply_jump(change,time,width)
+		compare(
+				P.apply_jump(change,time,width),
+				C.apply_jump(change,time,width),
+			)
 	
 	get_next_step()
 	get_next_step()
