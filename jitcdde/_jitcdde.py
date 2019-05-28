@@ -922,7 +922,7 @@ class jitcdde(jitcxde):
 			self.adjust_diff()
 			return self.DDE.get_current_state()[:self.n_basic]
 	
-	def jump( self, change, time, width=1e-5, forward=True ):
+	def jump( self, amplitude, time, width=1e-5, forward=True ):
 		"""
 		Applies a jump to the state. Since this naturally introduces a discontinuity to the state, it can only be approximated. This is done by adding two anchors in a short temporal distance `width`. With other words, the jump is not instantaneous but just a strong change of the state over a small interval of length `width`. The slope after the jump is computed using the derivative `f`.
 		
@@ -935,7 +935,7 @@ class jitcdde(jitcxde):
 		
 		Parameters
 		----------
-		change : NumPy array of floats
+		amplitude : NumPy array of floats
 			The amplitude of the jump.
 		
 		time : float
@@ -954,13 +954,13 @@ class jitcdde(jitcxde):
 			The minima or maxima, respectively, of each component during the jump interval. See above on why you may want these.
 		"""
 		assert width>=0
-		change = np.atleast_1d(np.array(change,dtype=float))
-		assert change.shape == (self.n,)
+		amplitude = np.atleast_1d(np.array(amplitude,dtype=float))
+		assert amplitude.shape == (self.n,)
 		
 		if forward:
-			return self.DDE.apply_jump( change, time      , width )
+			return self.DDE.apply_jump( amplitude, time      , width )
 		else:
-			return self.DDE.apply_jump( change, time-width, width )
+			return self.DDE.apply_jump( amplitude, time-width, width )
 
 def _jac(f, helpers, delay, n):
 	dependent_helpers = [
