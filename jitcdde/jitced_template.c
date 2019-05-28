@@ -165,7 +165,6 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 
 
 double get_past_value(
-	dde_integrator const * const self,
 	double const t,
 	unsigned int const index,
 	anchor const v)
@@ -182,7 +181,6 @@ double get_past_value(
 }
 
 double get_past_diff(
-	dde_integrator const * const self,
 	double const t,
 	unsigned int const index,
 	anchor const v)
@@ -266,7 +264,7 @@ static PyObject * get_full_state(dde_integrator const * const self)
 
 # define set_dy(i, value) (dY[i] = value)
 # define current_y(i) (y[i])
-# define past_y(t, i, anchor) (get_past_value(self, t, i, anchor))
+# define past_y(t, i, anchor) (get_past_value(t, i, anchor))
 # define anchors(t) (get_past_anchors(self, t))
 
 # define get_f_helper(i) ((f_helper[i]))
@@ -1000,8 +998,8 @@ void truncate_past(dde_integrator * const self, double time)
 	new->time = time;
 	for (int i=0; i<{{n}}; i++)
 	{
-		new->state[i] = get_past_value(self,time,i,left_anchor);
-		new->diff [i] = get_past_diff (self,time,i,left_anchor);
+		new->state[i] = get_past_value(time,i,left_anchor);
+		new->diff [i] = get_past_diff (time,i,left_anchor);
 	}
 	replace_last_anchor(self,new);
 	accept_step(self);
@@ -1046,7 +1044,7 @@ static PyObject * apply_jump(dde_integrator * const self, PyObject * args)
 	
 	for (int i=0; i<{{n}}; i++)
 	{
-		double value = get_past_value(self,new->time,i,left_anchor);
+		double value = get_past_value(new->time,i,left_anchor);
 		double jump = * (double *) PyArray_GETPTR1(change,i);
 		new->state[i] = value + jump;
 	}
