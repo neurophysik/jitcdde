@@ -99,12 +99,6 @@ for realisation in range(number_of_runs):
 	def past_within_step():
 		compare(P.past_within_step, C.past_within_step)
 	
-	def adjust_diff():
-		accept_step()
-		shift_ratio = np.random.uniform(0,1)
-		P.adjust_diff(shift_ratio)
-		C.adjust_diff(shift_ratio)
-	
 	def reduced_interval():
 		interval = ( C.get_full_state()[0][0], C.get_full_state()[-1][0] )
 		return (
@@ -131,7 +125,7 @@ for realisation in range(number_of_runs):
 	get_next_step()
 	get_next_step()
 	
-	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_full_state, get_p, accept_step, forget, check_new_y_diff, past_within_step, adjust_diff, truncate_past, apply_jump]
+	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_full_state, get_p, accept_step, forget, check_new_y_diff, past_within_step, truncate_past, apply_jump]
 	
 	for i in range(30):
 		action = random.sample(actions,1)[0]

@@ -156,12 +156,6 @@ for realisation in range(number_of_runs):
 		d = RNG.uniform(0.1*delay, delay)
 		compare(P.normalise_indices(d), C.normalise_indices(d))
 	
-	def adjust_diff():
-		accept_step()
-		shift_ratio = RNG.uniform(0,1)
-		P.adjust_diff(shift_ratio)
-		C.adjust_diff(shift_ratio)
-	
 	def reduced_interval():
 		interval = ( C.get_full_state()[0][0], C.get_full_state()[-1][0] )
 		return (
@@ -202,7 +196,6 @@ for realisation in range(number_of_runs):
 			orthonormalise,
 			remove_projections,
 			normalise_indices,
-			adjust_diff,
 			truncate_past,
 			apply_jump,
 		]

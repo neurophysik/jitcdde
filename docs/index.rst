@@ -75,7 +75,7 @@ To make this happen, you have four options:
 
 * `integrate_blindly` – this integrates the system for some time with a fixed step size, ignoring the error estimate. You have to take care that all parameters are reasonable. This is a good choice if you have a lot of different delays or time- or state-dependent delays. The time you integrate with this should be larger than your largest delay.
 
-* `jump` (with zero `amplitude`) – this smoothens out the derivative on a small time interval, effectively causing a dent in the history. The disadvantage of this is that the derivative ma assume extreme values causing problems later on.
+* `adjust_diff` – this smoothens out the derivative on a small time interval, effectively causing a dent in the history. The disadvantage of this is that the derivative ma assume extreme values causing problems later on.
 
 * Carefully chosen initial conditions – of course, you can define the past such that the derivative for the last anchor is identical to the value of :math:`f` as determined with the anchors. To find such initial conditions, you usally have to solve a non-linear equation system. If you are not interested in the general dynamics of the system, but the evolution of a very particular initial condition, this may be given by default (otherwise your model is probably worthless).
 

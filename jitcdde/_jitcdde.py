@@ -808,12 +808,19 @@ class jitcdde(jitcxde):
 	
 	def adjust_diff(self,shift_ratio=1e-4):
 		"""
-			Moves the last anchor by `shift_ratio` times the distance to the previous anchor into the past. Adds a new anchor in its place that has the same state and time but a slope computed using the derivative `f`.
+		Performs a zero-amplitude (backwards) `jump` whose `width` is `shift_ratio` times the distance to the previous anchor into the past. This may help with addressing initial discontinuities. See the documentation of `jump` for the caveats of this.
 			
-			This may help with addressing initial discontinuities, but it usually doesn’t suffice – unless you have an ODE.
+		Returns
+		-------
+		minima : NumPy array of floats
+		maxima : NumPy array of floats
+			The minima or maxima, respectively, of each component during the jump interval. See the documentation of `jump` on why you may want these.
 		"""
 		self._initiate()
-		self.DDE.adjust_diff(shift_ratio)
+		past = self.get_state()
+		width = shift_ratio*(past[-1][0]-past[-2][0])
+		time = past[-1][0]
+		return self.jump(np.zeros(self.n),time,width,forward=False)
 	
 	def _prepare_blind_int(self, target_time, step):
 		self._initiate()
