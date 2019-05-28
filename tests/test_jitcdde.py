@@ -87,6 +87,12 @@ class TestIntegration(unittest.TestCase):
 		assert_allclose(value, y_10_ref)
 		self.assert_consistency_with_previous(value)
 	
+	def test_integration_with_adjust_diff(self):
+		self.DDE.adjust_diff()
+		value = self.DDE.integrate(T)
+		assert_allclose(value, y_10_ref)
+		self.assert_consistency_with_previous(value)
+	
 	def test_integration_with_zero_jump(self):
 		self.DDE.integrate(T/2)
 		self.DDE.jump(np.zeros(self.n),T/2)

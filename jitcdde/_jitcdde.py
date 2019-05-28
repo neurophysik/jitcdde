@@ -812,6 +812,7 @@ class jitcdde(jitcxde):
 			
 			This may help with addressing initial discontinuities, but it usually doesn’t suffice – unless you have an ODE.
 		"""
+		self._initiate()
 		self.DDE.adjust_diff(shift_ratio)
 	
 	def _prepare_blind_int(self, target_time, step):
@@ -953,6 +954,7 @@ class jitcdde(jitcxde):
 		maxima : NumPy array of floats
 			The minima or maxima, respectively, of each component during the jump interval. See above on why you may want these.
 		"""
+		self._initiate()
 		assert width>=0
 		amplitude = np.atleast_1d(np.array(amplitude,dtype=float))
 		assert amplitude.shape == (self.n,)
