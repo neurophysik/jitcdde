@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate, interpolate_diff, arg_extreme
+from jitcdde._python_core import dde_integrator, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate, interpolate_diff, extrema
 from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 
 import symengine
@@ -374,24 +374,27 @@ class extrema_test(unittest.TestCase):
 	def test_arg_extreme_given_extrema(self):
 		n = 3
 		positions = np.random.random(2)
+		state = np.random.random(n)
 		past = [
-				( position, np.random.random(n), np.zeros(n) )
-				for position in positions
+				( positions[0], state                       , np.zeros(n) ),
+				( positions[1], state+np.random.uniform(0,5), np.zeros(n) ),
 			]
-		for _,result in arg_extreme(past):
-			assert_allclose(sorted(result),sorted(positions))
+		minima,maxima = extrema(past)
+		assert_allclose(minima,past[0][1])
+		assert_allclose(maxima,past[1][1])
 	
 	def test_arg_extreme_simple_polynomial(self):
 		T = symengine.Symbol("T")
 		poly = 2*T**3 - 3*T**2 - 36*T + 17
-		times = np.random.uniform(-10,10,2)
+		arg_extremes = [-2,3]
 		arrify = lambda expr,t: np.atleast_1d(float(expr.subs({T:t})))
 		past = [
 				( t, arrify(poly,t), arrify(poly.diff(T),t) )
-				for t in times
+				for t in arg_extremes
 			]
-		_,result = next(arg_extreme(past))
-		assert_allclose(sorted(result),[-2,3])
+		minimum,maximum = extrema(past)
+		assert_allclose(minimum,arrify(poly,arg_extremes[1]))
+		assert_allclose(maximum,arrify(poly,arg_extremes[0]))
 	
 	def test_extrema_in_last_step(self):
 		n = 10
@@ -400,7 +403,6 @@ class extrema_test(unittest.TestCase):
 				for time in sorted(np.random.uniform(-10,10,3))
 			]
 		DDE = dde_integrator(lambda: [], past)
-		DDE.anchor_mem = np.ones(1000, dtype=int)
 		values = np.vstack(
 				DDE.get_recent_state(time)
 				for time in np.linspace(past[-2][0],past[-1][0],10000)
