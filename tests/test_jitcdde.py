@@ -32,6 +32,7 @@ f = [
 		omega[1] * (y(3) + 0.165 * y(4)),
 		omega[1] * (0.2 + y(5) * (y(3) - 10.0))
 	]
+n = len(f)
 
 def get_past_points():
 	data = np.loadtxt("two_Roessler_past.dat")
@@ -56,7 +57,6 @@ class TestIntegration(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
 		self.DDE = jitcdde(f)
-		self.n = len(f)
 		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def generator(self):
@@ -95,14 +95,14 @@ class TestIntegration(unittest.TestCase):
 	
 	def test_integration_with_zero_jump(self):
 		self.DDE.integrate(T/2)
-		self.DDE.jump(np.zeros(self.n),T/2)
+		self.DDE.jump(np.zeros(n),T/2)
 		value = self.DDE.integrate(T)
 		assert_allclose(value, y_10_ref)
 		self.assert_consistency_with_previous(value)
 	
 	def test_integration_with_annihilating_jumps(self):
 		self.DDE.integrate(T/2)
-		change = np.random.normal(0,10,self.n)
+		change = np.random.normal(0,10,n)
 		self.DDE.jump(change,T/2)
 		self.DDE.jump(-change,T/2)
 		value = self.DDE.integrate(T)
@@ -160,12 +160,22 @@ class TestPastWithinStep(TestIntegration):
 	def setUpClass(self):
 		self.DDE = jitcdde(f_with_tiny_delay)
 		self.DDE.set_integration_parameters(pws_fuzzy_increase=False, **test_parameters)
+	
+	# Because the minimum delay must be larger than the jump width:
+	def test_integration_with_adjust_diff(self): pass
+	def test_integration_with_zero_jump(self): pass
+	def test_integration_with_annihilating_jumps(self): pass
 
 class TestPastWithinStepFuzzy(TestIntegration):
 	@classmethod
 	def setUpClass(self):
 		self.DDE = jitcdde(f)
 		self.DDE.set_integration_parameters(pws_fuzzy_increase=True, **test_parameters)
+	
+	# Because the minimum delay must be larger than the jump width:
+	def test_integration_with_adjust_diff(self): pass
+	def test_integration_with_zero_jump(self): pass
+	def test_integration_with_annihilating_jumps(self): pass
 
 class TestPastWithinStepLambda(TestPastWithinStep):
 	def generator(self):
@@ -289,7 +299,6 @@ class TestIntegrationParameters(unittest.TestCase):
 class TestJump(unittest.TestCase):
 	def test_jump(self):
 		DDE = jitcdde(f)
-		n = len(f)
 		DDE.set_integration_parameters(**test_parameters)
 		for point in get_past_points():
 			DDE.add_past_point(*point)
