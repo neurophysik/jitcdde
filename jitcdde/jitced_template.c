@@ -1086,6 +1086,7 @@ static PyObject * apply_jump(dde_integrator * const self, PyObject * args)
 	
 	truncate_past(self,time);
 	append_anchor(self,new);
+	accept_step(self);
 	
 	npy_intp dims[1] = { {{n}} };
 	PyArrayObject * minima = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);

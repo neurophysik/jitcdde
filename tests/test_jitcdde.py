@@ -56,6 +56,7 @@ class TestIntegration(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
 		self.DDE = jitcdde(f)
+		self.n = len(f)
 		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def generator(self):
@@ -82,6 +83,22 @@ class TestIntegration(unittest.TestCase):
 		self.assert_consistency_with_previous(value)
 		
 	def test_integration_one_big_step(self):
+		value = self.DDE.integrate(T)
+		assert_allclose(value, y_10_ref)
+		self.assert_consistency_with_previous(value)
+	
+	def test_integration_with_zero_jump(self):
+		self.DDE.integrate(T/2)
+		self.DDE.jump(np.zeros(self.n),T/2)
+		value = self.DDE.integrate(T)
+		assert_allclose(value, y_10_ref)
+		self.assert_consistency_with_previous(value)
+	
+	def test_integration_with_annihilating_jumps(self):
+		self.DDE.integrate(T/2)
+		change = np.random.normal(0,10,self.n)
+		self.DDE.jump(change,T/2)
+		self.DDE.jump(-change,T/2)
 		value = self.DDE.integrate(T)
 		assert_allclose(value, y_10_ref)
 		self.assert_consistency_with_previous(value)
@@ -262,6 +279,26 @@ class TestIntegrationParameters(unittest.TestCase):
 		self.DDE.set_integration_parameters(min_step=1e-3, rtol=0, atol=1e-10)
 		with self.assertRaises(UnsuccessfulIntegration):
 			self.DDE.integrate(1000)
+
+class TestJump(unittest.TestCase):
+	def test_jump(self):
+		DDE = jitcdde(f)
+		n = len(f)
+		DDE.set_integration_parameters(**test_parameters)
+		for point in get_past_points():
+			DDE.add_past_point(*point)
+		DDE.compile_C(extra_compile_args=compile_args)
+		old_state = DDE.integrate(T)
+		
+		width = 1e-5
+		change = np.random.normal(0,5,n)
+		DDE.jump(change,T,width)
+		past = DDE.get_state()
+		
+		assert past[-2][0] == T
+		assert past[-1][0] == T+width
+		assert_allclose( past[-2][1], old_state )
+		assert_allclose( past[-1][1], old_state+change, rtol=1e-3 )
 
 class TestFindMaxDelay(unittest.TestCase):
 	def test_default(self):

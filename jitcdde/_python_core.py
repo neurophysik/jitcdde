@@ -557,5 +557,6 @@ class dde_integrator(object):
 		
 		self.truncate_past(time)
 		self.past.append((new_time,new_value,new_diff))
+		self.accept_step()
 		return self.extrema_in_last_step()
 

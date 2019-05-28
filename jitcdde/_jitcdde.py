@@ -775,7 +775,7 @@ class jitcdde(jitcxde):
 		self._initiate()
 		
 		if self.DDE.get_t() > target_time:
-			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step.")
+			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step. You may see this just because your sampling step is small, in which case there is no need to worry.")
 		
 		while self.DDE.get_t() < target_time:
 			self.DDE.get_next_step(self.dt)
@@ -921,6 +921,46 @@ class jitcdde(jitcxde):
 			self._initiate()
 			self.adjust_diff()
 			return self.DDE.get_current_state()[:self.n_basic]
+	
+	def jump( self, change, time, width=1e-5, forward=True ):
+		"""
+		Applies a jump to the state. Since this naturally introduces a discontinuity to the state, it can only be approximated. This is done by adding two anchors in a short temporal distance `width`. With other words, the jump is not instantaneous but just a strong change of the state over a small interval of length `width`. The slope after the jump is computed using the derivative `f`.
+		
+		A potential source of numerical issues is that the Hermite interpolant becomes extreme during the jump (due to Runge’s phenomenon). Whether this is a problem primarily depends on how these extrema influence delayed dependencies of your derivative. To allow you to estimate the magnitude of this, this function returns the extrema during the jump interval. There are two ways to address this:
+
+		* Integrate with steps such that past values from the jump interval are avoided. You can use `integrate_blindly` to do this.
+		* Increase the `width`.
+		
+		Note that due to the adapted derivative, there are no initial discontinuities after this.
+		
+		Parameters
+		----------
+		change : NumPy array of floats
+			The amplitude of the jump.
+		
+		time : float
+			The time at which the jump shall happen. Usually this would be the last time to which you integrated.
+		
+		width : float
+			The size of the jump interval (see above). The smaller you choose this, the sharper the jump, but the more likely are numerical problems in its wake. This should be smaller than all delays in the system.
+		
+		forward : boolean
+			Whether the jump interval should begin after `time`. Otherwise it will end at `time` (equivalent to a forward jump starting at `time`−`width`).
+		
+		Returns
+		-------
+		minima : NumPy array of floats
+		maxima : NumPy array of floats
+			The minima or maxima, respectively, of each component during the jump interval. See above on why you may want these.
+		"""
+		assert width>=0
+		change = np.atleast_1d(np.array(change,dtype=float))
+		assert change.shape == (self.n,)
+		
+		if forward:
+			return self.DDE.apply_jump( change, time      , width )
+		else:
+			return self.DDE.apply_jump( change, time-width, width )
 
 def _jac(f, helpers, delay, n):
 	dependent_helpers = [
