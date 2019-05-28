@@ -353,7 +353,7 @@ class dde_integrator(object):
 		self.past.append(new_anchor)
 		self.t, self.y, self.diff = self.past[-1]
 	
-	def forget(self, delay):
+	def forget(self, delay, max_garbage=MAX_GARBAGE):
 		"""
 		Remove past points that are “out of reach” of the delay.
 		"""
@@ -361,7 +361,7 @@ class dde_integrator(object):
 		while self.past[self.last_garbage+2][0] < threshold:
 			self.last_garbage += 1
 		
-		if self.last_garbage >= MAX_GARBAGE:
+		if self.last_garbage >= max_garbage:
 			self.past = self.past[self.last_garbage+1:]
 			self.anchor_mem -= self.last_garbage+1
 			self.last_garbage = -1
@@ -564,3 +564,4 @@ class dde_integrator(object):
 		self.truncate_past(time)
 		self.past.append((new_time,new_value,new_diff))
 		return self.extrema_in_last_step()
+

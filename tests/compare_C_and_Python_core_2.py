@@ -88,7 +88,7 @@ for realisation in range(number_of_runs):
 		C.accept_step()
 	
 	def forget():
-		P.forget(tau)
+		P.forget(tau,max_garbage=0)
 		C.forget(tau)
 	
 	def check_new_y_diff():
@@ -105,10 +105,31 @@ for realisation in range(number_of_runs):
 		P.adjust_diff(shift_ratio)
 		C.adjust_diff(shift_ratio)
 	
+	def reduced_interval():
+		interval = ( C.get_full_state()[0][0], C.get_full_state()[-1][0] )
+		return (
+				0.9*interval[0]+0.1*interval[1],
+				0.1*interval[0]+0.9*interval[1],
+			)
+	
+	def truncate_past():
+		accept_step()
+		time = np.random.uniform(*reduced_interval())
+		P.truncate_past(time)
+		C.truncate_past(time)
+
+	def apply_jump():
+		accept_step()
+		time = np.random.uniform(*reduced_interval())
+		width = 0.1
+		change = np.random.normal(0,0.1,1)
+		P.apply_jump(change,time,width)
+		C.apply_jump(change,time,width)
+	
 	get_next_step()
 	get_next_step()
 	
-	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_full_state, get_p, accept_step, forget, check_new_y_diff, past_within_step, adjust_diff]
+	actions = [get_next_step, get_t, get_recent_state, get_current_state, get_full_state, get_p, accept_step, forget, check_new_y_diff, past_within_step, adjust_diff, truncate_past, apply_jump]
 	
 	for i in range(30):
 		action = random.sample(actions,1)[0]

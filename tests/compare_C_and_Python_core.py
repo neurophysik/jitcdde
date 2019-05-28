@@ -27,7 +27,7 @@ class FailedComparison(Exception):
 
 def compare(x,y):
 	try:
-		assert_allclose(x,y,rtol=1e-5,atol=1e-5)
+		assert_allclose(x,y,rtol=1e-3,atol=1e-5)
 	except AssertionError as error:
 		print("\n")
 		print (x,y)
@@ -51,14 +51,12 @@ def f():
 
 n = 8
 
-seed = np.random.randint(0,100000)
-def past():
-	np.random.seed(seed)
+def past(seed):
+	RNG = np.random.RandomState(seed)
 	return [
-	(np.random.uniform(-10, -5), np.random.random(n), np.random.random(n)),
-	(0.0                       , np.random.random(n), np.random.random(n))
+		( time, RNG.rand(n), 0.1*RNG.rand(n) )
+		for time in sorted(RNG.uniform(-10,0,RNG.randint(2,10)))
 	]
-
 
 errors = 0
 
@@ -66,11 +64,14 @@ for realisation in range(number_of_runs):
 	print(".", end="")
 	stdout.flush()
 	
-	tangent_indices = random.sample(range(n),random.randint(1,n-1))
+	RNG = np.random.RandomState()
 	
+	tangent_indices = random.sample(range(n),RNG.randint(1,n-1))
+	
+	past_seed = RNG.randint(1000000)
 	P = py_dde_integrator(
 			f,
-			past(),
+			past(past_seed),
 			n_basic = 2,
 			tangent_indices = tangent_indices
 		)
@@ -78,11 +79,11 @@ for realisation in range(number_of_runs):
 	DDE = jitcdde(f)
 	DDE.n_basic = 2
 	DDE.tangent_indices = tangent_indices
-	DDE.compile_C(chunk_size=random.randint(0,7),extra_compile_args=compile_args)
-	C = DDE.jitced.dde_integrator(past())
+	DDE.compile_C(chunk_size=RNG.randint(0,7),extra_compile_args=compile_args)
+	C = DDE.jitced.dde_integrator(past(past_seed))
 	
 	def get_next_step():
-		r = random.uniform(1e-5,1e-3)
+		r = RNG.uniform(1e-5,1e-3)
 		P.get_next_step(r)
 		C.get_next_step(r)
 	
@@ -90,7 +91,7 @@ for realisation in range(number_of_runs):
 		compare(P.get_t(), C.get_t())
 	
 	def get_recent_state():
-		time = P.get_t()+random.uniform(-0.1, 0.1)
+		time = P.get_t()+RNG.uniform(-0.1, 0.1)
 		compare(P.get_recent_state(time), C.get_recent_state(time))
 	
 	def get_current_state():
@@ -105,8 +106,8 @@ for realisation in range(number_of_runs):
 			compare(a[2], b[2])
 
 	def get_p():
-		r = 10**random.uniform(-10,-5)
-		q = 10**random.uniform(-10,-5)
+		r = 10**RNG.uniform(-10,-5)
+		q = 10**RNG.uniform(-10,-5)
 		compare(P.get_p(r,q), C.get_p(r,q))
 	
 	def accept_step():
@@ -114,37 +115,37 @@ for realisation in range(number_of_runs):
 		C.accept_step()
 	
 	def forget():
-		P.forget(delay)
+		P.forget(delay,max_garbage=0)
 		C.forget(delay)
 	
 	def check_new_y_diff():
-		r = 10**random.uniform(-10,-5)
-		q = 10**random.uniform(-10,-5)
+		r = 10**RNG.uniform(-10,-5)
+		q = 10**RNG.uniform(-10,-5)
 		compare(P.check_new_y_diff(r,q), C.check_new_y_diff(r,q))
 	
 	def past_within_step():
 		compare(P.past_within_step, C.past_within_step)
 	
 	def orthonormalise():
-		d = np.random.uniform(0.1*delay, delay)
+		d = RNG.uniform(0.1*delay, delay)
 		compare(P.orthonormalise(3, d), C.orthonormalise(3, d))
 	
 	def remove_projections():
-		if np.random.random()>0.1:
+		if RNG.rand()>0.1:
 			
-			d = np.random.uniform(0.1*delay, delay)
-			if np.random.randint(0,2):
-				vector = tuple(np.random.uniform(-1,1,(2,2)))
+			d = RNG.uniform(0.1*delay, delay)
+			if RNG.randint(0,2):
+				vector = tuple(RNG.uniform(-1,1,(2,2)))
 			else:
-				vector = tuple(np.random.randint(-1,2,(2,2)).astype(float))
+				vector = tuple(RNG.randint(-1,2,(2,2)).astype(float))
 			
 			A = P.remove_projections(d,[vector])
 			B = C.remove_projections(d,[vector])
 			compare(A , B)
 		
 		else:
-			i = np.random.randint(0,2)
-			if np.random.randint(0,2):
+			i = RNG.randint(0,2)
+			if RNG.randint(0,2):
 				P.remove_state_component(i)
 				C.remove_state_component(i)
 			else:
@@ -152,34 +153,35 @@ for realisation in range(number_of_runs):
 				C.remove_diff_component(i)
 	
 	def normalise_indices():
-		d = np.random.uniform(0.1*delay, delay)
+		d = RNG.uniform(0.1*delay, delay)
 		compare(P.normalise_indices(d), C.normalise_indices(d))
 	
 	def adjust_diff():
 		accept_step()
-		shift_ratio = np.random.uniform(0,1)
+		shift_ratio = RNG.uniform(0,1)
 		P.adjust_diff(shift_ratio)
 		C.adjust_diff(shift_ratio)
 	
+	def reduced_interval():
+		interval = ( C.get_full_state()[0][0], C.get_full_state()[-1][0] )
+		return (
+				0.9*interval[0]+0.1*interval[1],
+				0.1*interval[0]+0.9*interval[1],
+			)
+	
 	def truncate_past():
 		accept_step()
-		interval = ( P.get_full_state()[0][0], P.get_full_state()[-1][0] )
-		time = np.random.uniform(*interval)
+		time = RNG.uniform(*reduced_interval())
 		P.truncate_past(time)
 		C.truncate_past(time)
-	
+
 	def apply_jump():
 		accept_step()
-		interval = ( P.get_full_state()[0][0], P.get_full_state()[-1][0] )
-		time = np.random.uniform(*interval)
+		time = RNG.uniform(*reduced_interval())
 		width = 0.1
-		change = np.zeros(n) #np.random.normal(0,0.1,n)
+		change = RNG.normal(0,0.1,n)
 		P.apply_jump(change,time,width)
 		C.apply_jump(change,time,width)
-		
-		get_next_step()
-		accept_step()
-
 	
 	get_next_step()
 	get_next_step()
@@ -203,7 +205,7 @@ for realisation in range(number_of_runs):
 			apply_jump,
 		]
 	
-	for i in range(30):
+	for i in range(10):
 		action = random.sample(actions,1)[0]
 		try:
 			action()
