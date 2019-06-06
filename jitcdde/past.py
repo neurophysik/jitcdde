@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+NORM_THRESHOLD = 1e-30
+
 import numpy as np
 
 def interpolate(t,i,anchors):
@@ -37,7 +39,16 @@ def interpolate_diff_vec(t,anchors):
 
 def extrema(anchors):
 	"""
-		Returns two arrays containing the minima and maxima of the Hermite interpolant for the anchors (within the interval spanned by them).
+		Finds the extrema of the Hermite interpolant for the anchors (within the interval spanned by them).
+		Returns two arrays containing the minima and maxima of the Hermite interpolant for the anchors (within the interval spanned by them) as well as two arrays containing the position of these extrema.
+		
+		Returns
+		-------
+		minimal, maxima : NumPy arrays
+			the values of the extrema for each component
+		
+		arg_min, arg_max : NumPy arrays
+			the positions of the extrema for each component
 	"""
 	q = (anchors[1][0]-anchors[0][0])
 	retransform = lambda x: q*x+anchors[0][0]
@@ -46,6 +57,9 @@ def extrema(anchors):
 	c = anchors[1][1]
 	d = anchors[1][2] * q
 	
+	condition = anchors[1][1]>anchors[0][1]
+	arg_min = np.where(condition,anchors[0][0],anchors[1][0])
+	arg_max = np.where(condition,anchors[1][0],anchors[0][0])
 	minima = np.minimum(anchors[0][1],anchors[1][1])
 	maxima = np.maximum(anchors[0][1],anchors[1][1])
 	
@@ -56,16 +70,18 @@ def extrema(anchors):
 	n = len(anchors[0][1])
 	for i in range(n):
 		if radicant[i]>=0:
-			times = { retransform((B[i]+sign*np.sqrt(radicant[i])/3)*A[i]) for sign in (-1,1) }
-			values = [
-					interpolate(time,i,anchors)
-					for time in times
-					if anchors[0][0] < time < anchors[1][0]
-				]
-			minima[i] = min(values+[minima[i]])
-			maxima[i] = max(values+[maxima[i]])
+			for sign in (-1,1):
+				x = (B[i]+sign*np.sqrt(radicant[i])/3)*A[i]
+				if 0<x<1:
+					value = (1-x) * ( (1-x) * (b[i]*x + (a[i]-c[i])*(2*x+1)) - d[i]*x**2) + c[i]
+					if value<minima[i]:
+						minima[i] = value
+						arg_min[i] = retransform(x)
+					elif value>maxima[i]:
+						maxima[i] = value
+						arg_max[i] = retransform(x)
 	
-	return minima,maxima
+	return minima,maxima,arg_min,arg_max
 
 sumsq = lambda x: np.sum(x**2)
 
@@ -186,12 +202,19 @@ def scalar_product_partial(anchors, indices_1, indices_2, start):
 		)*q
 
 class Past(list):
-	def __init__(self,past=None):
+	def __init__(self,past=None,n_basic=None,tangent_indices=()):
 		super().__init__(past or [])
+		self.n = len(self[0][1]) if self else None
+		self.n_basic = n_basic or self.n
+		self.tangent_indices = tangent_indices
 	
 	def copy(self):
-		return Past(super().copy())
+		return Past(super().copy(),self.n_basic,self.tangent_indices)
 	
+	def clear_from(self,n):
+		while len(self)>n:
+			self.pop()
+
 	@property
 	def t(self):
 		"""
@@ -218,7 +241,7 @@ class Past(list):
 	def get_recent_state(self, t):
 		"""
 		Interpolate the state at time `t` from the last two anchors.
-		With other words, this assumes that `t` lies within the last integration step.
+		With other words, this assumes that `t` lies between the last two anchors.
 		"""
 		anchors = self[-2], self[-1]
 		output = interpolate_vec(t,anchors)
@@ -231,17 +254,13 @@ class Past(list):
 	def get_full_state(self):
 		return self
 	
-	def forget(self, delay, max_garbage=10):
+	def forget(self, delay):
 		"""
-		Remove all but `max_garbage` past points that are “out of reach” of the delay with respect to `self.t`.
+		Remove all past points that are “out of reach” of the delay with respect to `self.t`.
 		"""
 		threshold = self.t - delay
-		last_garbage = -1
-		while self[last_garbage+2][0] < threshold:
-			last_garbage += 1
-		
-		if last_garbage >= max_garbage:
-			self.__init__(self[last_garbage+1:])
+		while self[1][0]<threshold:
+			self.pop(0)
 	
 	def norm(self, delay, indices):
 		"""
@@ -305,6 +324,9 @@ class Past(list):
 		"""
 			Returns the index of the last anchor before `time`.
 		"""
+		assert len(self)>=2
+		assert self[0][0]<=time
+		
 		i = len(self)-2
 		while self[i][0] >= time:
 			i -= 1
@@ -314,18 +336,108 @@ class Past(list):
 		"""
 		Interpolates an anchor at `time` and removes all later anchors.
 		"""
-		assert self[0][0]<=time<=self[-1][0], "truncation time must be within current range of anchors"
+		assert self[0][0]<=time<=self[-1][0], f"Truncation time must be within current range of anchors."
 		i = self.last_index_before(time)
 		
 		value =     interpolate_vec(time,(self[i],self[i+1]))
 		diff = interpolate_diff_vec(time,(self[i],self[i+1]))
 		self[i+1] = (time,value,diff)
 		
-		self.__init__(self[:i+2])
+		self.clear_from(i+2)
 		assert len(self)>=1
-		# TODO: self.anchor_mem = np.minimum(self.anchor_mem,len(self.past)-1)
-		# TODO: self.accept_step()
 	
-	def extrema_in_last_step(self):
-		return extrema(self[-2:])
+	def orthonormalise(self, n_lyap, delay):
+		"""
+		Orthonormalise separation functions (with Gram-Schmidt) and return their norms after orthogonalisation (but before normalisation).
+		"""
+		
+		vectors = np.split(np.arange(self.n, dtype=int), n_lyap+1)[1:]
+		
+		norms = []
+		for i,vector in enumerate(vectors):
+			for j in range(i):
+				sp = self.scalar_product(delay, vector, vectors[j])
+				self.subtract(vector, vectors[j], sp)
+			norm = self.norm(delay, vector)
+			if norm > NORM_THRESHOLD:
+				self.scale(vector, 1./norm)
+			norms.append(norm)
+		
+		return np.array(norms)
+	
+	def remove_projections(self, delay, vectors):
+		"""
+		Remove projections of separation function to vectors and return norm after normalisation.
+		"""
+		
+		sep_func = np.arange(self.n_basic, 2*self.n_basic, 1, dtype=int)
+		assert np.all(sep_func == np.split(np.arange(self.n, dtype=int), 2+2*len(vectors))[1])
+		assert self.n_basic == len(sep_func)
+		d = len(vectors)*2
+		
+		def get_dummy(index):
+			return np.arange((index+2)*self.n_basic, (index+3)*self.n_basic)
+		
+		dummy_num = 0
+		len_dummies = 0
+		for anchor in self:
+			for vector in vectors:
+				# Setup dummy 
+				dummy = get_dummy(dummy_num)
+				for other_anchor in self:
+					other_anchor[1][dummy] = np.zeros(self.n_basic)
+					other_anchor[2][dummy] = np.zeros(self.n_basic)
+				anchor[1][dummy] = vector[0]
+				anchor[2][dummy] = vector[1]
+				
+				# Orthonormalise dummies
+				past_dummies = [get_dummy( (dummy_num-i-1) % d ) for i in range(len_dummies)]
+				
+				for past_dummy in past_dummies:
+					sp = self.scalar_product(delay, dummy, past_dummy)
+					self.subtract(dummy, past_dummy, sp)
+				
+				norm = self.norm(delay, dummy)
+				if norm > NORM_THRESHOLD:
+					self.scale(dummy, 1./norm)
+					
+					# remove projection to dummy
+					sp = self.scalar_product(delay, sep_func, dummy)
+					self.subtract(sep_func, dummy, sp)
+				else:
+					self.scale(dummy, 0.0)
+				
+				len_dummies += 1
+				dummy_num = (dummy_num+1)%d
+			
+			if len_dummies > len(vectors):
+				len_dummies -= len(vectors)
+		
+		for anchor in self:
+			anchor[1][2*self.n_basic:] = 0.0
+			anchor[2][2*self.n_basic:] = 0.0
+		
+		# Normalise separation function
+		norm = self.norm(delay, sep_func)
+		self.scale(sep_func, 1./norm)
+		
+		return norm
+	
+	def normalise_indices(self, delay):
+		"""
+		Normalise the separation function of the tangent indices (with Gram-Schmidt) and return the norms (before normalisation).
+		"""
+		
+		norm = self.norm(delay,self.tangent_indices)
+		if norm > NORM_THRESHOLD:
+			self.scale(self.tangent_indices,1./norm)
+		return norm
+	
+	def remove_state_component(self, index):
+		for anchor in self:
+			anchor[1][self.n_basic+index] = 0.0
+	
+	def remove_diff_component(self, index):
+		for anchor in self:
+			anchor[2][self.n_basic+index] = 0.0
 

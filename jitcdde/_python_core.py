@@ -2,193 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from jitcdde.past import Past, interpolate, interpolate_vec, interpolate_diff, extrema
 
-MAX_GARBAGE = 10
 NORM_THRESHOLD = 1e-30
 
-def interpolate(t,i,anchors):
-	return interpolate_vec(t,anchors)[i]
-
-def interpolate_vec(t,anchors):
-	"""
-		Returns the value of a cubic Hermite interpolant of the anchors at time t.
-	"""
-	q = (anchors[1][0]-anchors[0][0])
-	x = (t-anchors[0][0]) / q
-	a = anchors[0][1]
-	b = anchors[0][2] * q
-	c = anchors[1][1]
-	d = anchors[1][2] * q
-	
-	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
-
-def interpolate_diff(t,i,anchors):
-	return interpolate_diff_vec(t,anchors)[i]
-
-def interpolate_diff_vec(t,anchors):
-	"""
-		Returns the derivative of a cubic Hermite interpolant of the anchors at time t.
-	"""
-	q = (anchors[1][0]-anchors[0][0])
-	x = (t-anchors[0][0]) / q
-	a = anchors[0][1]
-	b = anchors[0][2] * q
-	c = anchors[1][1]
-	d = anchors[1][2] * q
-	
-	return ( (1-x)*(b-x*3*(2*(a-c)+b+d)) + d*x ) /q
-
-def extrema(anchors):
-	"""
-		Returns two arrays containing the minima and maxima of the Hermite interpolant for the anchors (within the interval spanned by them).
-	"""
-	q = (anchors[1][0]-anchors[0][0])
-	retransform = lambda x: q*x+anchors[0][0]
-	a = anchors[0][1]
-	b = anchors[0][2] * q
-	c = anchors[1][1]
-	d = anchors[1][2] * q
-	
-	minima = np.minimum(anchors[0][1],anchors[1][1])
-	maxima = np.maximum(anchors[0][1],anchors[1][1])
-	
-	radicant = b**2 + b*d + d**2 + 3*(a-c)*(3*(a-c) + 2*(b+d))
-	A = 1/(2*a + b - 2*c + d)
-	B = a + 2*b/3 - c + d/3
-	
-	n = len(anchors[0][1])
-	for i in range(n):
-		if radicant[i]>=0:
-			times = { retransform((B[i]+sign*np.sqrt(radicant[i])/3)*A[i]) for sign in (-1,1) }
-			values = [
-					interpolate(time,i,anchors)
-					for time in times
-					if anchors[0][0] < time < anchors[1][0]
-				]
-			minima[i] = min(values+[minima[i]])
-			maxima[i] = max(values+[maxima[i]])
-	
-	return minima,maxima
-
-sumsq = lambda x: np.sum(x**2)
-
-# The matrix induced by the scalar product of the cubic Hermite interpolants of two anchors, if their distance is normalised to 1.
-sp_matrix = np.array([
-			[156,  22,  54, -13],
-			[ 22,   4,  13,  -3],
-			[ 54,  13, 156, -22],
-			[-13,  -3, -22,   4],
-		])/420
-
-# The matrix induced by the scalar product of the cubic Hermite interpolants of two anchors, if their distance is normalised to 1, but the initial portion z of the interval is not considered for the scalar product.
-def partial_sp_matrix(z):
-	h_1 = - 120*z**7 - 350*z**6 - 252*z**5
-	h_2 = -  60*z**7 - 140*z**6 -  84*z**5
-	h_3 = - 120*z**7 - 420*z**6 - 378*z**5
-	h_4 = -  70*z**6 - 168*z**5 - 105*z**4
-	h_6 =            - 105*z**4 - 140*z**3
-	h_7 =            - 210*z**4 - 420*z**3
-	h_5 = 2*h_2 + 3*h_4
-	h_8 = - h_5 + h_7 - h_6 - 210*z**2
-	
-	return np.array([
-			[  2*h_3   , h_1    , h_7-2*h_3        , h_5              ],
-			[    h_1   , h_2    , h_6-h_1          , h_2+h_4          ],
-			[ h_7-2*h_3, h_6-h_1, 2*h_3-2*h_7-420*z, h_8              ],
-			[   h_5    , h_2+h_4, h_8              , -h_1+h_2+h_5+h_6 ]
-		])/420
-
-def norm_sq_interval(anchors, indizes):
-	"""
-		Returns the norm of the interpolant of `anchors` for the `indizes`.
-	"""
-	q = (anchors[1][0]-anchors[0][0])
-	vector = np.vstack([
-			anchors[0][1][indizes]    , # a
-			anchors[0][2][indizes] * q, # b
-			anchors[1][1][indizes]    , # c
-			anchors[1][2][indizes] * q, # d
-		])
-	
-	return np.einsum(
-			vector   , [0,2],
-			sp_matrix, [0,1],
-			vector   , [1,2],
-		)*q
-
-def norm_sq_partial(anchors, indizes, start):
-	"""
-		Returns the norm of the interpolant of `anchors` for the `indizes`, but only taking into account the time after `start`.
-	"""
-	q = (anchors[1][0]-anchors[0][0])
-	z = (start-anchors[1][0]) / q
-	vector = np.vstack([
-			anchors[0][1][indizes]    , # a
-			anchors[0][2][indizes] * q, # b
-			anchors[1][1][indizes]    , # c
-			anchors[1][2][indizes] * q, # d
-		])
-	
-	return np.einsum(
-			vector              , [0,2],
-			partial_sp_matrix(z), [0,1],
-			vector              , [1,2],
-		)*q
-
-def scalar_product_interval(anchors, indizes_1, indizes_2):
-	"""
-		Returns the scalar product of the interpolants of `anchors` for `indizes_1` (one side of the product) and `indizes_2` (other side).
-	"""
-	q = (anchors[1][0]-anchors[0][0])
-	
-	vector_1 = np.vstack([
-		anchors[0][1][indizes_1],     # a_1
-		anchors[0][2][indizes_1] * q, # b_1
-		anchors[1][1][indizes_1],     # c_1
-		anchors[1][2][indizes_1] * q, # d_1
-	])
-	
-	vector_2 = np.vstack([
-		anchors[0][1][indizes_2],     # a_2
-		anchors[0][2][indizes_2] * q, # b_2
-		anchors[1][1][indizes_2],     # c_2
-		anchors[1][2][indizes_2] * q, # d_2
-	])
-	
-	return np.einsum(
-		vector_1, [0,2],
-		sp_matrix, [0,1],
-		vector_2, [1,2]
-		)*q
-
-def scalar_product_partial(anchors, indizes_1, indizes_2, start):
-	"""
-		Returns the scalar product of the interpolants of `anchors` for `indizes_1` (one side of the product) and `indizes_2` (other side), but only taking into account the time after `start`.
-	"""
-	q = (anchors[1][0]-anchors[0][0])
-	z = (start-anchors[1][0]) / q
-	
-	vector_1 = np.vstack([
-		anchors[0][1][indizes_1],     # a_1
-		anchors[0][2][indizes_1] * q, # b_1
-		anchors[1][1][indizes_1],     # c_1
-		anchors[1][2][indizes_1] * q, # d_1
-	])
-	
-	vector_2 = np.vstack([
-		anchors[0][1][indizes_2],     # a_2
-		anchors[0][2][indizes_2] * q, # b_2
-		anchors[1][1][indizes_2],     # c_2
-		anchors[1][2][indizes_2] * q, # d_2
-	])
-	
-	return np.einsum(
-		vector_1, [0,2],
-		partial_sp_matrix(z), [0,1],
-		vector_2, [1,2]
-		)*q
-
-class dde_integrator(object):
+class dde_integrator(Past):
 	"""
 	Class for the Shampine–Thompson integrator.
 	"""
@@ -200,12 +18,8 @@ class dde_integrator(object):
 				n_basic = None,
 				tangent_indices = (),
 			):
-		self.past = past
-		self.t, self.y, self.diff = self.past[-1]
-		self.n = len(self.y)
-		self.n_basic = n_basic or self.n
-		self.tangent_indices = tangent_indices
-		self.last_garbage = -1
+		super().__init__(past,n_basic,tangent_indices)
+		self.t, self.y, self.diff = self[-1]
 		self.old_new_y = None
 		
 		self.parameters = []
@@ -227,7 +41,7 @@ class dde_integrator(object):
 				f_wc,
 				[
 					{
-						anchors.name: self.get_past_anchors,
+						anchors.name: self.get_anchors,
 						past_y .name: interpolate
 					},
 					"math"
@@ -236,9 +50,17 @@ class dde_integrator(object):
 		
 		self.f = lambda *args: np.array(F(*args)).flatten()
 		
-		# storage of search positions (cursors) for lookup of anchors corresponding to a given time (see `get_past_anchors`)
+		# storage of search positions (cursors) for lookup of anchors corresponding to a given time (see `get_anchors`)
 		# Note that this approach is tailored to mimic the C implementation (using linked lists) as good as possible and therefore is rather clunky in Python.
 		self.anchor_mem = (len(past)-1)*np.ones(past_calls, dtype=int)
+	
+	@property
+	def t(self):
+		return self._t
+	
+	@t.setter
+	def t(self,value):
+		self._t = value
 	
 	def set_parameters(self, *parameters):
 		self.parameters = parameters
@@ -246,7 +68,7 @@ class dde_integrator(object):
 	def get_t(self):
 		return self.t
 	
-	def get_past_anchors(self, t):
+	def get_anchors(self, t):
 		"""
 			Find the two anchors neighbouring `t`.
 			If `t` is outside the ranges of times covered by the anchors, return the two nearest anchors.
@@ -254,34 +76,18 @@ class dde_integrator(object):
 		s = self.anchor_mem[self.anchor_mem_index]
 		
 		if t > self.t:
-			s = len(self.past)-2
+			s = len(self)-2
 			self.past_within_step = max(self.past_within_step,t-self.t)
 		else:
-			while self.past[s][0]>=t and s>0:
+			while self[s][0]>=t and s>0:
 				s -= 1
-			while self.past[s+1][0]<t:
+			while self[s+1][0]<t:
 				s += 1
 		
 		self.anchor_mem[self.anchor_mem_index] = s
 		self.anchor_mem_index += 1
 		
-		return (self.past[s], self.past[s+1])
-	
-	def get_recent_state(self, t):
-		"""
-		Interpolate the state at time `t` from the last two anchors.
-		With other words, this assumes that `t` lies within the last integration step.
-		"""
-		anchors = self.past[-2], self.past[-1]
-		output = interpolate_vec(t,anchors)
-		assert type(output) == np.ndarray
-		return output
-	
-	def get_current_state(self):
-		return self.past[-1][1]
-	
-	def get_full_state(self):
-		return self.past
+		return (self[s], self[s+1])
 	
 	def eval_f(self, t, y):
 		self.anchor_mem_index = 0
@@ -308,15 +114,15 @@ class dde_integrator(object):
 			new_t = self.t + delta_t
 			self.error = np.array(self.n*[np.inf])
 		
-		if self.past[-1][0]==self.t:
-			self.past.append((new_t, new_y, new_diff))
+		if self[-1][0]==self.t:
+			self.append((new_t, new_y, new_diff))
 		else:
 			try:
-				self.old_new_y = self.past[-1][1]
+				self.old_new_y = self[-1][1]
 			except AttributeError:
 				pass
 			
-			self.past[-1] = (new_t, new_y, new_diff)
+			self[-1] = (new_t, new_y, new_diff)
 	
 	def get_p(self, atol, rtol):
 		"""
@@ -325,7 +131,7 @@ class dde_integrator(object):
 		with np.errstate(divide='ignore', invalid='ignore'):
 			return np.nanmax(
 					np.abs(self.error)
-					/(atol + rtol*np.abs(self.past[-1][1]))
+					/(atol + rtol*np.abs(self[-1][1]))
 				)
 	
 	def check_new_y_diff(self, atol, rtol):
@@ -333,213 +139,40 @@ class dde_integrator(object):
 			For past-within-step iterations: Checks whether the difference between the new and old approximation of the next step is below the given tolerance level.
 		"""
 		if self.old_new_y is not None:
-			difference = np.abs(self.past[-1][1]-self.old_new_y)
-			tolerance = atol + np.abs(rtol*self.past[-1][1])
+			difference = np.abs(self[-1][1]-self.old_new_y)
+			tolerance = atol + np.abs(rtol*self[-1][1])
 			return np.all(difference <= tolerance)
 		else:
 			return False
 	
 	def accept_step(self):
-		self.t, self.y, self.diff = self.past[-1]
+		self.t, self.y, self.diff = self[-1]
 		self.old_new_y = None
 	
-	def forget(self, delay, max_garbage=MAX_GARBAGE):
+	def forget(self, delay):
 		"""
 		Remove past points that are “out of reach” of the delay.
 		"""
-		threshold = self.t - delay
-		while self.past[self.last_garbage+2][0] < threshold:
-			self.last_garbage += 1
-		
-		if self.last_garbage >= max_garbage:
-			self.past = self.past[self.last_garbage+1:]
-			self.anchor_mem -= self.last_garbage+1
-			self.last_garbage = -1
+		super().forget(delay)
+		self.anchor_mem = np.minimum(self.anchor_mem,len(self)-1)
 	
-	# ------------------------------------
-	
-	def norm(self, delay, indizes):
-		"""
-			Computes the norm between the Hermite interpolants of the past for the given indizes taking into account the time between self.t − delay and self.t.
-		"""
-		threshold = self.t - delay
-		
-		i = 0
-		while self.past[i+1][0] < threshold:
-			i += 1
-		
-		# partial norm of first relevant interval
-		anchors = (self.past[i],self.past[i+1])
-		norm_sq = norm_sq_partial(anchors, indizes, threshold)
-		
-		# full norms of all others
-		for i in range(i+1, len(self.past)-1):
-			anchors = (self.past[i],self.past[i+1])
-			norm_sq += norm_sq_interval(anchors, indizes)
-		
-		return np.sqrt(norm_sq)
-	
-	def scalar_product(self, delay, indizes_1, indizes_2):
-		"""
-			Computes the scalar product of the Hermite interpolants of the past between `indizes_1` (one side of the product) and `indizes_2` (other side) taking into account the time between self.t − delay and self.t.
-		"""
-		threshold = self.t - delay
-		
-		i = 0
-		while self.past[i+1][0] < threshold:
-			i += 1
-		
-		# partial scalar product of first relevant interval
-		anchors = (self.past[i],self.past[i+1])
-		sp = scalar_product_partial(anchors, indizes_1, indizes_2, threshold)
-		
-		# full scalar product of all others
-		for i in range(i+1, len(self.past)-1):
-			anchors = (self.past[i],self.past[i+1])
-			sp += scalar_product_interval(anchors, indizes_1, indizes_2)
-		
-		return sp
-	
-	def scale_past(self, indizes, factor):
-		for anchor in self.past:
-			anchor[1][indizes] *= factor
-			anchor[2][indizes] *= factor
-	
-	def subtract_from_past(self, indizes_1, indizes_2, factor):
-		for anchor in self.past:
-			anchor[1][indizes_1] -= factor*anchor[1][indizes_2]
-			anchor[2][indizes_1] -= factor*anchor[2][indizes_2]
-	
-	def orthonormalise(self, n_lyap, delay):
-		"""
-		Orthonormalise separation functions (with Gram-Schmidt) and return their norms after orthogonalisation (but before normalisation).
-		"""
-		
-		vectors = np.split(np.arange(self.n, dtype=int), n_lyap+1)[1:]
-		
-		norms = []
-		for i,vector in enumerate(vectors):
-			for j in range(i):
-				sp = self.scalar_product(delay, vector, vectors[j])
-				self.subtract_from_past(vector, vectors[j], sp)
-			norm = self.norm(delay, vector)
-			if norm > NORM_THRESHOLD:
-				self.scale_past(vector, 1./norm)
-			norms.append(norm)
-		
-		return np.array(norms)
-	
-	def remove_projections(self, delay, vectors):
-		"""
-		Remove projections of separation function to vectors and return norm after normalisation.
-		"""
-		
-		sep_func = np.arange(self.n_basic, 2*self.n_basic, 1, dtype=int)
-		assert np.all(sep_func == np.split(np.arange(self.n, dtype=int), 2+2*len(vectors))[1])
-		assert self.n_basic == len(sep_func)
-		d = len(vectors)*2
-		
-		def get_dummy(index):
-			return np.arange((index+2)*self.n_basic, (index+3)*self.n_basic)
-		
-		dummy_num = 0
-		len_dummies = 0
-		for anchor in self.past:
-			for vector in vectors:
-				# Setup dummy 
-				dummy = get_dummy(dummy_num)
-				for other_anchor in self.past:
-					other_anchor[1][dummy] = np.zeros(self.n_basic)
-					other_anchor[2][dummy] = np.zeros(self.n_basic)
-				anchor[1][dummy] = vector[0]
-				anchor[2][dummy] = vector[1]
-				
-				# Orthonormalise dummies
-				past_dummies = [get_dummy( (dummy_num-i-1) % d ) for i in range(len_dummies)]
-				
-				for past_dummy in past_dummies:
-					sp = self.scalar_product(delay, dummy, past_dummy)
-					self.subtract_from_past(dummy, past_dummy, sp)
-				
-				norm = self.norm(delay, dummy)
-				if norm > NORM_THRESHOLD:
-					self.scale_past(dummy, 1./norm)
-					
-					# remove projection to dummy
-					sp = self.scalar_product(delay, sep_func, dummy)
-					self.subtract_from_past(sep_func, dummy, sp)
-				else:
-					self.scale_past(dummy, 0.0)
-				
-				len_dummies += 1
-				dummy_num = (dummy_num+1)%d
-			
-			if len_dummies > len(vectors):
-				len_dummies -= len(vectors)
-		
-		for anchor in self.past:
-			anchor[1][2*self.n_basic:] = 0.0
-			anchor[2][2*self.n_basic:] = 0.0
-		
-		# Normalise separation function
-		norm = self.norm(delay, sep_func)
-		self.scale_past(sep_func, 1./norm)
-		
-		return norm
-	
-	def normalise_indices(self, delay):
-		"""
-		Normalise the separation function of the tangent indices (with Gram-Schmidt) and return the norms (before normalisation).
-		"""
-		
-		norm = self.norm(delay,self.tangent_indices)
-		if norm > NORM_THRESHOLD:
-			self.scale_past(self.tangent_indices,1./norm)
-		return norm
-	
-	def remove_state_component(self, index):
-		for anchor in self.past:
-			anchor[1][self.n_basic+index] = 0.0
-	
-	def remove_diff_component(self, index):
-		for anchor in self.past:
-			anchor[2][self.n_basic+index] = 0.0
-	
-	# ------------------
-	
-	def last_index_before(self,time):
-		i = len(self.past)-2
-		while self.past[i][0] >= time:
-			i -= 1
-		return i
-	
-	def truncate_past(self,time):
-		"""
-		Interpolates an anchor at time and removes all later anchors.
-		"""
-		assert self.past[0][0]<=time<=self.past[-1][0], "truncation time must be within current past"
-		i = self.last_index_before(time)
-		
-		value =     interpolate_vec(time,(self.past[i],self.past[i+1]))
-		diff = interpolate_diff_vec(time,(self.past[i],self.past[i+1]))
-		self.past[i+1] = (time,value,diff)
-		
-		self.past = self.past[:i+2]
-		assert len(self.past)>=1
-		self.anchor_mem = np.minimum(self.anchor_mem,len(self.past)-1)
+	def truncate(self,time):
+		super().truncate(time)
+		self.anchor_mem = np.minimum(self.anchor_mem,len(self)-1)
 		self.accept_step()
 	
 	def extrema_in_last_step(self):
-		return extrema(self.past[-2:])
+		minima,maxima,*_ =  extrema(self[-2:])
+		return minima,maxima
 	
 	def apply_jump( self, change, time, width=1e-5 ):
 		new_time = time+width
 		i = self.last_index_before(new_time)
-		new_value = interpolate_vec(new_time,(self.past[i],self.past[i+1])) + change
+		new_value = interpolate_vec(new_time,(self[i],self[i+1])) + change
 		new_diff = self.eval_f(new_time,new_value)
 		
-		self.truncate_past(time)
-		self.past.append((new_time,new_value,new_diff))
+		self.truncate(time)
+		self.append((new_time,new_value,new_diff))
 		self.accept_step()
 		return self.extrema_in_last_step()
 

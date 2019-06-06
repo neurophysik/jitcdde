@@ -1102,7 +1102,7 @@ static PyMethodDef dde_integrator_methods[] = {
 	{% if tangent_indices %}
 	{"normalise_indices", (PyCFunction) normalise_indices, METH_VARARGS, NULL},
 	{% endif %}
-	{"truncate_past", (PyCFunction) py_truncate_past, METH_VARARGS, NULL},
+	{"truncate", (PyCFunction) py_truncate_past, METH_VARARGS, NULL},
 	{"apply_jump", (PyCFunction) apply_jump, METH_VARARGS, NULL},
 	{NULL, NULL, 0, NULL}
 };

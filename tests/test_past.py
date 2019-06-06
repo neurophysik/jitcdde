@@ -6,7 +6,6 @@ from jitcdde.past import Past, scalar_product_interval, scalar_product_partial, 
 import symengine
 import numpy as np
 from numpy.testing import assert_allclose
-from itertools import chain
 import unittest
 
 m = 4
@@ -153,6 +152,18 @@ class metrics_test(unittest.TestCase):
 			sp = scalar_product_interval(anchors, indizes_1, indizes_2)
 			psp = scalar_product_partial(anchors, indizes_1, indizes_2, anchors[0][0])
 			self.assertAlmostEqual(sp, psp)
+	
+	def test_orthonormalisation(self):
+		delay = np.random.uniform(0.0,2.0)
+		self.past.orthonormalise(m-1, delay)
+		
+		for j in range(1,m):
+			self.assertAlmostEqual(self.past.norm(delay, j), 1.0)
+			
+			for k in range(j,m):
+				control = 1.0 if k==j else 0.0
+				sp = self.past.scalar_product(delay, j, k)
+				self.assertAlmostEqual(sp, control)
 
 class truncation_test(unittest.TestCase):
 	def test_truncation(self):
@@ -184,9 +195,11 @@ class extrema_test(unittest.TestCase):
 				( positions[0], state                       , np.zeros(n) ),
 				( positions[1], state+np.random.uniform(0,5), np.zeros(n) ),
 			]
-		minima,maxima = extrema(past)
+		minima,maxima,arg_min,arg_max = extrema(past)
 		assert_allclose(minima,past[0][1])
 		assert_allclose(maxima,past[1][1])
+		assert_allclose(arg_min,past[0][0])
+		assert_allclose(arg_max,past[1][0])
 	
 	def test_arg_extreme_simple_polynomial(self):
 		T = symengine.Symbol("T")
@@ -197,9 +210,11 @@ class extrema_test(unittest.TestCase):
 				( t, arrify(poly,t), arrify(poly.diff(T),t) )
 				for t in arg_extremes
 			]
-		minimum,maximum = extrema(past)
+		minimum,maximum,arg_min,arg_max = extrema(past)
 		assert_allclose(minimum,arrify(poly,arg_extremes[1]))
 		assert_allclose(maximum,arrify(poly,arg_extremes[0]))
+		assert_allclose(arg_min,arg_extremes[1])
+		assert_allclose(arg_max,arg_extremes[0])
 	
 	def test_extrema_in_last_step(self):
 		n = 10
@@ -207,13 +222,70 @@ class extrema_test(unittest.TestCase):
 				(time,np.random.random(n),0.1*np.random.random(n))
 				for time in sorted(np.random.uniform(-10,10,3))
 			])
-		values = np.vstack(
-				past.get_recent_state(time)
-				for time in np.linspace(past[-2][0],past[-1][0],10000)
-			)
-		minima,maxima = past.extrema_in_last_step()
+		
+		times = np.linspace(past[-2][0],past[-1][0],10000)
+		values = np.vstack( past.get_recent_state(time) for time in times )
+		
+		minima,maxima,arg_min,arg_max = extrema(past[-2:])
 		assert_allclose( minima, np.min(values,axis=0), atol=1e-3 )
 		assert_allclose( maxima, np.max(values,axis=0), atol=1e-3 )
+		assert_allclose( arg_min, times[np.argmin(values,axis=0)], atol=1e-3)
+		assert_allclose( arg_max, times[np.argmax(values,axis=0)], atol=1e-3)
+
+class remove_projection_test(unittest.TestCase):
+	def setUp(self):
+		self.n_basic = 3
+		self.n = 6*self.n_basic
+		
+		self.original_past = []
+		for i in range(np.random.randint(3,10)):
+			if i==0:
+				time = np.random.uniform(-10,10)
+			else:
+				time = self.original_past[-1][0] + 0.1 + np.random.random()
+			state = np.random.random(self.n)
+			diff  = np.random.random(self.n)
+			self.original_past.append((time, state, diff))
+		
+		self.past = Past(self.original_past.copy(), n_basic=self.n_basic)
+	
+	def test_remove_first_component(self):
+		empty = lambda: np.zeros(self.n_basic)
+		vectors = [
+				(empty(), empty()),
+				(empty(), empty())
+			]
+		component = np.random.randint(0,self.n_basic)
+		vectors[0][0][component] = 1
+		vectors[1][1][component] = 1
+		delay = self.original_past[-1][0]-self.original_past[0][0]
+		
+		self.past.remove_projections(delay, vectors)
+		for anchor in self.past:
+			self.assertAlmostEqual(anchor[1][self.n_basic+component], 0.0)
+			self.assertAlmostEqual(anchor[2][self.n_basic+component], 0.0)
+	
+	def test_double_removal(self):
+		random_vector = lambda: np.random.random(self.n_basic)
+		vectors = [
+			(random_vector(), random_vector()),
+			(random_vector(), random_vector())
+			]
+		delay = (self.original_past[-1][0]-self.original_past[0][0])*np.random.uniform(0.5,1.5)
+		
+		self.past.remove_projections(delay, vectors)
+		past_copy = [(anchor[0], np.copy(anchor[1]), np.copy(anchor[2])) for anchor in self.past]
+		for anchor_A, anchor_B in zip(past_copy, self.past):
+			assert_allclose(anchor_A[1], anchor_B[1])
+			assert_allclose(anchor_A[2], anchor_B[2])
+		
+		norm = self.past.remove_projections(delay, vectors)
+		self.assertAlmostEqual(norm, 1.0)
+		
+		for anchor_A, anchor_B in zip(past_copy, self.past):
+			assert_allclose(anchor_A[1], anchor_B[1])
+			assert_allclose(anchor_A[2], anchor_B[2])
+
 
 if __name__ == "__main__":
 	unittest.main(buffer=True)

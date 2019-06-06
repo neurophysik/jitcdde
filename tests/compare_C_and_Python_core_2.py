@@ -88,7 +88,7 @@ for realisation in range(number_of_runs):
 		C.accept_step()
 	
 	def forget():
-		P.forget(tau,max_garbage=0)
+		P.forget(tau)
 		C.forget(tau)
 	
 	def check_new_y_diff():
@@ -100,7 +100,9 @@ for realisation in range(number_of_runs):
 		compare(P.past_within_step, C.past_within_step)
 	
 	def reduced_interval():
-		interval = ( C.get_full_state()[0][0], C.get_full_state()[-1][0] )
+		interval   = ( C.get_full_state()[0][0], C.get_full_state()[-1][0] )
+		interval_2 = ( P.get_full_state()[0][0], P.get_full_state()[-1][0] )
+		assert_allclose(interval,interval_2)
 		return (
 				0.9*interval[0]+0.1*interval[1],
 				0.1*interval[0]+0.9*interval[1],
@@ -109,8 +111,8 @@ for realisation in range(number_of_runs):
 	def truncate_past():
 		accept_step()
 		time = np.random.uniform(*reduced_interval())
-		P.truncate_past(time)
-		C.truncate_past(time)
+		P.truncate(time)
+		C.truncate(time)
 
 	def apply_jump():
 		accept_step()

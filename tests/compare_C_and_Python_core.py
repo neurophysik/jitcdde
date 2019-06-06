@@ -60,13 +60,14 @@ def past(seed):
 
 errors = 0
 
-for realisation in range(number_of_runs):
+for i,realisation in enumerate(range(number_of_runs)):
 	print(".", end="")
 	stdout.flush()
 	
 	RNG = np.random.RandomState()
+	py_RNG = random.Random(RNG.randint(1000000))
 	
-	tangent_indices = random.sample(range(n),RNG.randint(1,n-1))
+	tangent_indices = py_RNG.sample(range(n),RNG.randint(1,n-1))
 	
 	past_seed = RNG.randint(1000000)
 	P = py_dde_integrator(
@@ -115,7 +116,7 @@ for realisation in range(number_of_runs):
 		C.accept_step()
 	
 	def forget():
-		P.forget(delay,max_garbage=0)
+		P.forget(delay)
 		C.forget(delay)
 	
 	def check_new_y_diff():
@@ -157,7 +158,9 @@ for realisation in range(number_of_runs):
 		compare(P.normalise_indices(d), C.normalise_indices(d))
 	
 	def reduced_interval():
-		interval = ( C.get_full_state()[0][0], C.get_full_state()[-1][0] )
+		interval   = ( C.get_full_state()[0][0], C.get_full_state()[-1][0] )
+		interval_2 = ( P.get_full_state()[0][0], P.get_full_state()[-1][0] )
+		assert_allclose(interval,interval_2)
 		return (
 				0.9*interval[0]+0.1*interval[1],
 				0.1*interval[0]+0.9*interval[1],
@@ -166,8 +169,8 @@ for realisation in range(number_of_runs):
 	def truncate_past():
 		accept_step()
 		time = RNG.uniform(*reduced_interval())
-		P.truncate_past(time)
-		C.truncate_past(time)
+		P.truncate(time)
+		C.truncate(time)
 
 	def apply_jump():
 		accept_step()
@@ -201,7 +204,7 @@ for realisation in range(number_of_runs):
 		]
 	
 	for i in range(10):
-		action = random.sample(actions,1)[0]
+		action = py_RNG.sample(actions,1)[0]
 		try:
 			action()
 		except FailedComparison as error:
