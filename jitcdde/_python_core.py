@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from jitcdde.past import Past, interpolate, interpolate_vec, interpolate_diff, extrema
+from jitcdde.past import Past, Anchor, interpolate, interpolate_vec, interpolate_diff, extrema
 
 NORM_THRESHOLD = 1e-30
 
@@ -115,14 +115,14 @@ class dde_integrator(Past):
 			self.error = np.array(self.n*[np.inf])
 		
 		if self[-1][0]==self.t:
-			self.append((new_t, new_y, new_diff))
+			self.append(Anchor(new_t, new_y, new_diff))
 		else:
 			try:
 				self.old_new_y = self[-1][1]
 			except AttributeError:
 				pass
 			
-			self[-1] = (new_t, new_y, new_diff)
+			self[-1] = Anchor(new_t, new_y, new_diff)
 	
 	def get_p(self, atol, rtol):
 		"""
@@ -172,7 +172,7 @@ class dde_integrator(Past):
 		new_diff = self.eval_f(new_time,new_value)
 		
 		self.truncate(time)
-		self.append((new_time,new_value,new_diff))
+		self.append(Anchor(new_time,new_value,new_diff))
 		self.accept_step()
 		return self.extrema_in_last_step()
 

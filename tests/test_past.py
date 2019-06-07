@@ -191,10 +191,10 @@ class extrema_test(unittest.TestCase):
 		n = 3
 		positions = np.random.random(2)
 		state = np.random.random(n)
-		past = [
+		past = Past([
 				( positions[0], state                       , np.zeros(n) ),
 				( positions[1], state+np.random.uniform(0,5), np.zeros(n) ),
-			]
+			])
 		minima,maxima,arg_min,arg_max = extrema(past)
 		assert_allclose(minima,past[0][1])
 		assert_allclose(maxima,past[1][1])
@@ -206,10 +206,10 @@ class extrema_test(unittest.TestCase):
 		poly = 2*T**3 - 3*T**2 - 36*T + 17
 		arg_extremes = [-2,3]
 		arrify = lambda expr,t: np.atleast_1d(float(expr.subs({T:t})))
-		past = [
+		past = Past([
 				( t, arrify(poly,t), arrify(poly.diff(T),t) )
 				for t in arg_extremes
-			]
+			])
 		minimum,maximum,arg_min,arg_max = extrema(past)
 		assert_allclose(minimum,arrify(poly,arg_extremes[1]))
 		assert_allclose(maximum,arrify(poly,arg_extremes[0]))

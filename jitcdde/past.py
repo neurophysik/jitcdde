@@ -1,9 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import numpy as np
+from collections import namedtuple
+
 NORM_THRESHOLD = 1e-30
 
-import numpy as np
+Anchor = namedtuple("Anchor", ["time","state","diff"])
 
 def interpolate(t,i,anchors):
 	return interpolate_vec(t,anchors)[i]
@@ -12,12 +15,12 @@ def interpolate_vec(t,anchors):
 	"""
 		Returns the value of a cubic Hermite interpolant of the anchors at time t.
 	"""
-	q = (anchors[1][0]-anchors[0][0])
-	x = (t-anchors[0][0]) / q
-	a = anchors[0][1]
-	b = anchors[0][2] * q
-	c = anchors[1][1]
-	d = anchors[1][2] * q
+	q = (anchors[1].time-anchors[0].time)
+	x = (t-anchors[0].time) / q
+	a = anchors[0].state
+	b = anchors[0].diff * q
+	c = anchors[1].state
+	d = anchors[1].diff * q
 	
 	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x**2) + c
 
@@ -28,12 +31,12 @@ def interpolate_diff_vec(t,anchors):
 	"""
 		Returns the derivative of a cubic Hermite interpolant of the anchors at time t.
 	"""
-	q = (anchors[1][0]-anchors[0][0])
-	x = (t-anchors[0][0]) / q
-	a = anchors[0][1]
-	b = anchors[0][2] * q
-	c = anchors[1][1]
-	d = anchors[1][2] * q
+	q = (anchors[1].time-anchors[0].time)
+	x = (t-anchors[0].time) / q
+	a = anchors[0].state
+	b = anchors[0].diff * q
+	c = anchors[1].state
+	d = anchors[1].diff * q
 	
 	return ( (1-x)*(b-x*3*(2*(a-c)+b+d)) + d*x ) /q
 
@@ -50,24 +53,24 @@ def extrema(anchors):
 		arg_min, arg_max : NumPy arrays
 			the positions of the extrema for each component
 	"""
-	q = (anchors[1][0]-anchors[0][0])
-	retransform = lambda x: q*x+anchors[0][0]
-	a = anchors[0][1]
-	b = anchors[0][2] * q
-	c = anchors[1][1]
-	d = anchors[1][2] * q
+	q = (anchors[1].time-anchors[0].time)
+	retransform = lambda x: q*x+anchors[0].time
+	a = anchors[0].state
+	b = anchors[0].diff * q
+	c = anchors[1].state
+	d = anchors[1].diff * q
 	
-	condition = anchors[1][1]>anchors[0][1]
-	arg_min = np.where(condition,anchors[0][0],anchors[1][0])
-	arg_max = np.where(condition,anchors[1][0],anchors[0][0])
-	minima = np.minimum(anchors[0][1],anchors[1][1])
-	maxima = np.maximum(anchors[0][1],anchors[1][1])
+	condition = anchors[1].state>anchors[0].state
+	arg_min = np.where(condition,anchors[0].time,anchors[1].time)
+	arg_max = np.where(condition,anchors[1].time,anchors[0].time)
+	minima = np.minimum(anchors[0].state,anchors[1].state)
+	maxima = np.maximum(anchors[0].state,anchors[1].state)
 	
 	radicant = b**2 + b*d + d**2 + 3*(a-c)*(3*(a-c) + 2*(b+d))
 	A = 1/(2*a + b - 2*c + d)
 	B = a + 2*b/3 - c + d/3
 	
-	n = len(anchors[0][1])
+	n = len(anchors[0].state)
 	for i in range(n):
 		if radicant[i]>=0:
 			for sign in (-1,1):
@@ -115,12 +118,12 @@ def norm_sq_interval(anchors, indices):
 	"""
 		Returns the norm of the interpolant of `anchors` for the `indices`.
 	"""
-	q = (anchors[1][0]-anchors[0][0])
+	q = (anchors[1].time-anchors[0].time)
 	vector = np.vstack([
-			anchors[0][1][indices]    , # a
-			anchors[0][2][indices] * q, # b
-			anchors[1][1][indices]    , # c
-			anchors[1][2][indices] * q, # d
+			anchors[0].state[indices]   , # a
+			anchors[0].diff[indices] * q, # b
+			anchors[1].state[indices]   , # c
+			anchors[1].diff[indices] * q, # d
 		])
 	
 	return np.einsum(
@@ -133,13 +136,13 @@ def norm_sq_partial(anchors, indices, start):
 	"""
 		Returns the norm of the interpolant of `anchors` for the `indices`, but only taking into account the time after `start`.
 	"""
-	q = (anchors[1][0]-anchors[0][0])
-	z = (start-anchors[1][0]) / q
+	q = (anchors[1].time-anchors[0].time)
+	z = (start-anchors[1].time) / q
 	vector = np.vstack([
-			anchors[0][1][indices]    , # a
-			anchors[0][2][indices] * q, # b
-			anchors[1][1][indices]    , # c
-			anchors[1][2][indices] * q, # d
+			anchors[0].state[indices]   , # a
+			anchors[0].diff[indices] * q, # b
+			anchors[1].state[indices]   , # c
+			anchors[1].diff[indices] * q, # d
 		])
 	
 	return np.einsum(
@@ -152,20 +155,20 @@ def scalar_product_interval(anchors, indices_1, indices_2):
 	"""
 		Returns the scalar product of the interpolants of `anchors` for `indices_1` (one side of the product) and `indices_2` (other side).
 	"""
-	q = (anchors[1][0]-anchors[0][0])
+	q = (anchors[1].time-anchors[0].time)
 	
 	vector_1 = np.vstack([
-		anchors[0][1][indices_1],     # a_1
-		anchors[0][2][indices_1] * q, # b_1
-		anchors[1][1][indices_1],     # c_1
-		anchors[1][2][indices_1] * q, # d_1
+		anchors[0].state[indices_1],    # a_1
+		anchors[0].diff[indices_1] * q, # b_1
+		anchors[1].state[indices_1],    # c_1
+		anchors[1].diff[indices_1] * q, # d_1
 	])
 	
 	vector_2 = np.vstack([
-		anchors[0][1][indices_2],     # a_2
-		anchors[0][2][indices_2] * q, # b_2
-		anchors[1][1][indices_2],     # c_2
-		anchors[1][2][indices_2] * q, # d_2
+		anchors[0].state[indices_2],    # a_2
+		anchors[0].diff[indices_2] * q, # b_2
+		anchors[1].state[indices_2],    # c_2
+		anchors[1].diff[indices_2] * q, # d_2
 	])
 	
 	return np.einsum(
@@ -178,21 +181,21 @@ def scalar_product_partial(anchors, indices_1, indices_2, start):
 	"""
 		Returns the scalar product of the interpolants of `anchors` for `indices_1` (one side of the product) and `indices_2` (other side), but only taking into account the time after `start`.
 	"""
-	q = (anchors[1][0]-anchors[0][0])
-	z = (start-anchors[1][0]) / q
+	q = (anchors[1].time-anchors[0].time)
+	z = (start-anchors[1].time) / q
 	
 	vector_1 = np.vstack([
-		anchors[0][1][indices_1],     # a_1
-		anchors[0][2][indices_1] * q, # b_1
-		anchors[1][1][indices_1],     # c_1
-		anchors[1][2][indices_1] * q, # d_1
+		anchors[0].state[indices_1],     # a_1
+		anchors[0].diff[indices_1] * q, # b_1
+		anchors[1].state[indices_1],     # c_1
+		anchors[1].diff[indices_1] * q, # d_1
 	])
 	
 	vector_2 = np.vstack([
-		anchors[0][1][indices_2],     # a_2
-		anchors[0][2][indices_2] * q, # b_2
-		anchors[1][1][indices_2],     # c_2
-		anchors[1][2][indices_2] * q, # d_2
+		anchors[0].state[indices_2],     # a_2
+		anchors[0].diff[indices_2] * q, # b_2
+		anchors[1].state[indices_2],     # c_2
+		anchors[1].diff[indices_2] * q, # d_2
 	])
 	
 	return np.einsum(
@@ -203,8 +206,8 @@ def scalar_product_partial(anchors, indices_1, indices_2, start):
 
 class Past(list):
 	def __init__(self,past=None,n_basic=None,tangent_indices=()):
-		super().__init__(past or [])
-		self.n = len(self[0][1]) if self else None
+		super().__init__( [Anchor(*anchor) for anchor in past] or [] )
+		self.n = len(self[0].state) if self else None
 		self.n_basic = n_basic or self.n
 		self.tangent_indices = tangent_indices
 	
@@ -214,13 +217,13 @@ class Past(list):
 	def clear_from(self,n):
 		while len(self)>n:
 			self.pop()
-
+	
 	@property
 	def t(self):
 		"""
 		The time of the last anchor. This may be overwritten in subclasses.
 		"""
-		return self[-1][0]
+		return self[-1].time
 	
 	def get_anchors(self, time):
 		"""
@@ -232,9 +235,9 @@ class Past(list):
 			return (self[-2], self[-1])
 		else:
 			s = 0
-			while self[s][0]>=time and s>0:
+			while self[s].time>=time and s>0:
 				s -= 1
-			while self[s+1][0]<time:
+			while self[s+1].time<time:
 				s += 1
 			return (self[s], self[s+1])
 	
@@ -249,7 +252,7 @@ class Past(list):
 		return output
 	
 	def get_current_state(self):
-		return self[-1][1]
+		return self[-1].state
 	
 	def get_full_state(self):
 		return self
@@ -259,7 +262,7 @@ class Past(list):
 		Remove all past points that are “out of reach” of the delay with respect to `self.t`.
 		"""
 		threshold = self.t - delay
-		while self[1][0]<threshold:
+		while self[1].time<threshold:
 			self.pop(0)
 	
 	def norm(self, delay, indices):
@@ -269,7 +272,7 @@ class Past(list):
 		threshold = self.t - delay
 		
 		i = 0
-		while self[i+1][0] < threshold:
+		while self[i+1].time < threshold:
 			i += 1
 		
 		# partial norm of first relevant interval
@@ -290,7 +293,7 @@ class Past(list):
 		threshold = self.t - delay
 		
 		i = 0
-		while self[i+1][0] < threshold:
+		while self[i+1].time < threshold:
 			i += 1
 		
 		# partial scalar product of first relevant interval
@@ -309,26 +312,26 @@ class Past(list):
 			Scales the past and derivative for `indices` by `factor`.
 		"""
 		for anchor in self:
-			anchor[1][indices] *= factor
-			anchor[2][indices] *= factor
+			anchor.state[indices] *= factor
+			anchor.diff [indices] *= factor
 	
 	def subtract(self, indices_1, indices_2, factor):
 		"""
 			Substract the past and derivative for `indices_2` multiplied by `factor` from `indices_1`.
 		"""
 		for anchor in self:
-			anchor[1][indices_1] -= factor*anchor[1][indices_2]
-			anchor[2][indices_1] -= factor*anchor[2][indices_2]
+			anchor.state[indices_1] -= factor*anchor.state[indices_2]
+			anchor.diff [indices_1] -= factor*anchor.diff [indices_2]
 	
 	def last_index_before(self,time):
 		"""
 			Returns the index of the last anchor before `time`.
 		"""
 		assert len(self)>=2
-		assert self[0][0]<=time
+		assert self[0].time<=time
 		
 		i = len(self)-2
-		while self[i][0] >= time:
+		while self[i].time >= time:
 			i -= 1
 		return i
 	
@@ -336,12 +339,12 @@ class Past(list):
 		"""
 		Interpolates an anchor at `time` and removes all later anchors.
 		"""
-		assert self[0][0]<=time<=self[-1][0], f"Truncation time must be within current range of anchors."
+		assert self[0].time<=time<=self[-1].time, f"Truncation time must be within current range of anchors."
 		i = self.last_index_before(time)
 		
 		value =     interpolate_vec(time,(self[i],self[i+1]))
 		diff = interpolate_diff_vec(time,(self[i],self[i+1]))
-		self[i+1] = (time,value,diff)
+		self[i+1] = Anchor(time,value,diff)
 		
 		self.clear_from(i+2)
 		assert len(self)>=1
@@ -385,10 +388,10 @@ class Past(list):
 				# Setup dummy 
 				dummy = get_dummy(dummy_num)
 				for other_anchor in self:
-					other_anchor[1][dummy] = np.zeros(self.n_basic)
-					other_anchor[2][dummy] = np.zeros(self.n_basic)
-				anchor[1][dummy] = vector[0]
-				anchor[2][dummy] = vector[1]
+					other_anchor.state[dummy] = np.zeros(self.n_basic)
+					other_anchor.diff [dummy] = np.zeros(self.n_basic)
+				anchor.state[dummy] = vector[0]
+				anchor.diff [dummy] = vector[1]
 				
 				# Orthonormalise dummies
 				past_dummies = [get_dummy( (dummy_num-i-1) % d ) for i in range(len_dummies)]
@@ -414,8 +417,8 @@ class Past(list):
 				len_dummies -= len(vectors)
 		
 		for anchor in self:
-			anchor[1][2*self.n_basic:] = 0.0
-			anchor[2][2*self.n_basic:] = 0.0
+			anchor.state[2*self.n_basic:] = 0.0
+			anchor.diff[2*self.n_basic:] = 0.0
 		
 		# Normalise separation function
 		norm = self.norm(delay, sep_func)
@@ -435,9 +438,9 @@ class Past(list):
 	
 	def remove_state_component(self, index):
 		for anchor in self:
-			anchor[1][self.n_basic+index] = 0.0
+			anchor.state[self.n_basic+index] = 0.0
 	
 	def remove_diff_component(self, index):
 		for anchor in self:
-			anchor[2][self.n_basic+index] = 0.0
+			anchor.diff[self.n_basic+index] = 0.0
 
