@@ -116,7 +116,7 @@ class TestIntegration(unittest.TestCase):
 		self.assert_consistency_with_previous(value)
 		
 	def tearDown(self):
-		self.DDE.past = []
+		self.DDE.purge_past()
 
 class TestIntegrationLambda(TestIntegration):
 	def generator(self):

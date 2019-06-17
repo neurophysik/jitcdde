@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from jitcdde.past import Past, Anchor, interpolate, interpolate_vec, interpolate_diff, extrema
+from jitcdde.past import Past, interpolate, interpolate_vec, interpolate_diff, extrema
 
 NORM_THRESHOLD = 1e-30
 
@@ -79,9 +79,9 @@ class dde_integrator(Past):
 			s = len(self)-2
 			self.past_within_step = max(self.past_within_step,t-self.t)
 		else:
-			while self[s][0]>=t and s>0:
+			while self[s].time>=t and s>0:
 				s -= 1
-			while self[s+1][0]<t:
+			while self[s+1].time<t:
 				s += 1
 		
 		self.anchor_mem[self.anchor_mem_index] = s
@@ -114,15 +114,15 @@ class dde_integrator(Past):
 			new_t = self.t + delta_t
 			self.error = np.array(self.n*[np.inf])
 		
-		if self[-1][0]==self.t:
-			self.append(Anchor(new_t, new_y, new_diff))
+		if self[-1].time==self.t:
+			self.append((new_t, new_y, new_diff))
 		else:
 			try:
-				self.old_new_y = self[-1][1]
+				self.old_new_y = self[-1].state
 			except AttributeError:
 				pass
 			
-			self[-1] = Anchor(new_t, new_y, new_diff)
+			self[-1] = (new_t, new_y, new_diff)
 	
 	def get_p(self, atol, rtol):
 		"""
@@ -131,7 +131,7 @@ class dde_integrator(Past):
 		with np.errstate(divide='ignore', invalid='ignore'):
 			return np.nanmax(
 					np.abs(self.error)
-					/(atol + rtol*np.abs(self[-1][1]))
+					/(atol + rtol*np.abs(self[-1].state))
 				)
 	
 	def check_new_y_diff(self, atol, rtol):
@@ -139,8 +139,8 @@ class dde_integrator(Past):
 			For past-within-step iterations: Checks whether the difference between the new and old approximation of the next step is below the given tolerance level.
 		"""
 		if self.old_new_y is not None:
-			difference = np.abs(self[-1][1]-self.old_new_y)
-			tolerance = atol + np.abs(rtol*self[-1][1])
+			difference = np.abs(self[-1].state-self.old_new_y)
+			tolerance = atol + np.abs(rtol*self[-1].state)
 			return np.all(difference <= tolerance)
 		else:
 			return False
@@ -172,7 +172,7 @@ class dde_integrator(Past):
 		new_diff = self.eval_f(new_time,new_value)
 		
 		self.truncate(time)
-		self.append(Anchor(new_time,new_value,new_diff))
+		self.append((new_time,new_value,new_diff))
 		self.accept_step()
 		return self.extrema_in_last_step()
 

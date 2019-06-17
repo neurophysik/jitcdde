@@ -6,6 +6,7 @@ from itertools import count
 import symengine
 import numpy as np
 
+from jitcdde.past import Past, Anchor
 import jitcdde._python_core as python_core
 from jitcxde_common import jitcxde, checker
 from jitcxde_common.helpers import sort_helpers, sympify_helpers, find_dependent_helpers
@@ -164,7 +165,7 @@ class jitcdde(jitcxde):
 			self.n_basic = self.n
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
 		self.control_pars = control_pars
-		self.past = []
+		self.past = Past()
 		self.integration_parameters_set = False
 		self.DDE = None
 		self.verbose = verbose
@@ -258,12 +259,12 @@ class jitcdde(jitcxde):
 			assert state.shape == (self.n,), "State has wrong shape."
 			assert derivative.shape == (self.n,), "Derivative has wrong shape."
 			
-			if time in [anchor[0] for anchor in self.past]:
+			if time in [anchor.time for anchor in self.past]:
 				raise ValueError("There already is an anchor with that time.")
 			
 			self.past.append((time, state, derivative))
 		
-		self.past.sort(key = lambda anchor: anchor[0])
+		self.past.sort()
 	
 	def constant_past(self,state,time=0):
 		"""
@@ -331,12 +332,12 @@ class jitcdde(jitcxde):
 			def get_anchor(time):
 				evaluate = lambda expr: sympy.sympify(expr).evalf(tol,subs={t:time})
 				value = np.fromiter(
-					(evaluate(comp) for comp in function),
-					dtype = float,
+						(evaluate(comp) for comp in function),
+						dtype = float,
 					)
 				derivative = np.fromiter(
-					(evaluate(comp.diff(t)) for comp in function),
-					dtype = float,
+						(evaluate(comp.diff(t)) for comp in function),
+						dtype = float,
 					)
 				return [time,value,derivative,None]
 		
@@ -347,10 +348,13 @@ class jitcdde(jitcxde):
 			for i in range(len(anchors)-2,-1,-1):
 				# Check whether anchors are already sufficiently interpolated by their neighbours or temporally close.
 				if not anchors[i][3]:
-					guess = python_core.interpolate_vec(anchors[i][0],(anchors[i-1],anchors[i+1]))
+					guess = python_core.interpolate_vec(
+							anchors[i][0],
+							(Anchor(*anchors[i-1][:3]),Anchor(*anchors[i+1][:3]))
+						)
 					anchors[i][3] = any((
-						rel_dist(guess,anchors[i][1]) < 10**-tol,
-						rel_dist(anchors[i+1][0],anchors[i-1][0]) < 10**-tol
+							rel_dist(guess,anchors[i][1]) < 10**-tol,
+							rel_dist(anchors[i+1][0],anchors[i-1][0]) < 10**-tol
 						))
 				
 				# Add new anchors, if needed
@@ -377,7 +381,7 @@ class jitcdde(jitcxde):
 		Cleans the past and resets the integrator. You need to define a new past (using `add_past_point`) after this.
 		"""
 		
-		self.past = []
+		self.past = Past()
 		self.reset_integrator()
 	
 	def reset_integrator(self):
@@ -553,7 +557,7 @@ class jitcdde(jitcxde):
 			assert len(self.past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
 			
 			if self.compile_attempt:
-				self.DDE = self.jitced.dde_integrator(self.past)
+				self.DDE = self.jitced.dde_integrator(python_core.Past(self.past))
 			else:
 				self.generate_lambdas()
 		

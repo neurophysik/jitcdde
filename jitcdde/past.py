@@ -2,11 +2,24 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from collections import namedtuple
 
 NORM_THRESHOLD = 1e-30
 
-Anchor = namedtuple("Anchor", ["time","state","diff"])
+
+class Anchor(tuple):
+	def __new__( cls, time, state, diff ):
+		state = np.atleast_1d(state)
+		diff  = np.atleast_1d(diff)
+		if len(state.shape) != 1:
+			raise ValueError("State must be a number or one-dimensional iterable.")
+		if state.shape != diff.shape:
+			raise ValueError("State and diff do not match in shape.")
+		return super().__new__(cls,(time,state,diff))
+	
+	def __init__(self, *args):
+		self.time  = self[0]
+		self.state = self[1]
+		self.diff  = self[2]
 
 def interpolate(t,i,anchors):
 	return interpolate_vec(t,anchors)[i]
@@ -199,20 +212,61 @@ def scalar_product_partial(anchors, indices_1, indices_2, start):
 	])
 	
 	return np.einsum(
-		vector_1, [0,2],
-		partial_sp_matrix(z), [0,1],
-		vector_2, [1,2]
+			vector_1, [0,2],
+			partial_sp_matrix(z), [0,1],
+			vector_2, [1,2]
 		)*q
 
 class Past(list):
 	def __init__(self,past=None,n_basic=None,tangent_indices=()):
-		super().__init__( [Anchor(*anchor) for anchor in past] or [] )
-		self.n = len(self[0].state) if self else None
+		self.n = None
+		if past:
+			super().__init__( self.prepare_anchor(anchor) for anchor in past )
+		self.sort()
 		self.n_basic = n_basic or self.n
 		self.tangent_indices = tangent_indices
 	
+	def prepare_anchor(self,x):
+		x = x if isinstance(x,Anchor) else Anchor(*x)
+		if self.n is None:
+			self.n = len(x.state)
+		elif x.state.shape != (self.n,):
+			raise ValueError("State has wrong shape.")
+		return x
+	
+	def append(self,anchor):
+		anchor = self.prepare_anchor(anchor)
+		if self and anchor.time <= self[-1].time:
+			raise ValueError("Anchor must follow last one in time. Consider using `add` instead.")
+		super().append(anchor)
+	
+	def extend(self,anchors):
+		for anchor in anchors:
+			self.append(anchor)
+	
 	def copy(self):
 		return Past(super().copy(),self.n_basic,self.tangent_indices)
+	
+	def __setitem__(self,key,item):
+		anchor = self.prepare_anchor(item)
+		if (
+					(key!= 0 and key!=-len(self)   and self[key-1].time>=anchor.time)
+				or  (key!=-1 and key!= len(self)-1 and self[key+1].time<=anchor.time)
+			):
+			raise ValueError("Anchor’s time does not fit.")
+		super().__setitem__(key,anchor)
+	
+	def sort(self):
+		self.check_for_duplicate_times()
+		super().sort( key = lambda anchor: anchor.time )
+	
+	def check_for_duplicate_times(self):
+		if len(set(anchor.time for anchor in self)) != len(self):
+			raise ValueError("You cannot have twa anchors with the same time.")
+	
+	def add(self,anchor):
+		super().append( self.prepare_anchor(self.append(anchor)) )
+		self.sort()
 	
 	def clear_from(self,n):
 		while len(self)>n:
