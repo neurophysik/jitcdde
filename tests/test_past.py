@@ -189,17 +189,17 @@ class truncation_test(unittest.TestCase):
 class extrema_test(unittest.TestCase):
 	def test_arg_extreme_given_extrema(self):
 		n = 3
-		positions = np.random.random(2)
+		positions = sorted(np.random.random(2))
 		state = np.random.random(n)
 		past = Past([
 				( positions[0], state                       , np.zeros(n) ),
 				( positions[1], state+np.random.uniform(0,5), np.zeros(n) ),
 			])
 		minima,maxima,arg_min,arg_max = extrema(past)
+		assert_allclose(arg_min,past[0].time)
+		assert_allclose(arg_max,past[1].time)
 		assert_allclose(minima,past[0][1])
 		assert_allclose(maxima,past[1][1])
-		assert_allclose(arg_min,past[0][0])
-		assert_allclose(arg_max,past[1][0])
 	
 	def test_arg_extreme_simple_polynomial(self):
 		T = symengine.Symbol("T")
@@ -285,6 +285,23 @@ class remove_projection_test(unittest.TestCase):
 		for anchor_A, anchor_B in zip(past_copy, self.past):
 			assert_allclose(anchor_A[1], anchor_B[1])
 			assert_allclose(anchor_A[2], anchor_B[2])
+
+class TestErrors(unittest.TestCase):
+	def test_wrong_shape(self):
+		with self.assertRaises(ValueError):
+			Past([ (0,[0],[0]), (1,[2,3],[4,5]) ])
+	
+	def test_wrong_diff_shape(self):
+		with self.assertRaises(ValueError):
+			Past([ (0,[0],[0]), (1,[2],[3,4]) ])
+	
+	def test_wrong_time(self):
+		with self.assertRaises(ValueError):
+			Past([ (0,[0],[0]), (0,[1],[2]) ])
+	
+	def test_replace_with_same(self):
+		past = Past([ (0,[0],[0]) ])
+		past[-1] = (0,[1],[2])
 
 
 if __name__ == "__main__":
