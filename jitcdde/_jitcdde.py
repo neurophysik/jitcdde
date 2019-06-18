@@ -165,7 +165,7 @@ class jitcdde(jitcxde):
 			self.n_basic = self.n
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
 		self.control_pars = control_pars
-		self.past = Past()
+		self.past = Past(n_basic=self.n_basic)
 		self.integration_parameters_set = False
 		self.DDE = None
 		self.verbose = verbose
@@ -252,19 +252,8 @@ class jitcdde(jitcxde):
 			Each tuple must have components corresponding to the arguments of `add_past_point`.
 		"""
 		self.reset_integrator()
-		
-		for time, state, derivative in anchors:
-			state = np.array(state, copy=True, dtype=float)
-			derivative = np.array(derivative, copy=True, dtype=float)
-			assert state.shape == (self.n,), "State has wrong shape."
-			assert derivative.shape == (self.n,), "Derivative has wrong shape."
-			
-			if time in [anchor.time for anchor in self.past]:
-				raise ValueError("There already is an anchor with that time.")
-			
-			self.past.append((time, state, derivative))
-		
-		self.past.sort()
+		for anchor in anchors:
+			self.past.add(anchor)
 	
 	def constant_past(self,state,time=0):
 		"""
@@ -381,7 +370,7 @@ class jitcdde(jitcxde):
 		Cleans the past and resets the integrator. You need to define a new past (using `add_past_point`) after this.
 		"""
 		
-		self.past = Past()
+		self.past = Past(self.n_basic)
 		self.reset_integrator()
 	
 	def reset_integrator(self):
@@ -398,12 +387,12 @@ class jitcdde(jitcxde):
 		assert len(self.past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
 		
 		self.DDE = python_core.dde_integrator(
-			self.f_sym,
-			self.past,
-			self.helpers,
-			self.control_pars,
-			self.n_basic,
-			self.tangent_indices if isinstance(self,jitcdde_transversal_lyap) else None
+				self.f_sym,
+				self.past,
+				self.helpers,
+				self.control_pars,
+				self.n_basic,
+				self.tangent_indices if isinstance(self,jitcdde_transversal_lyap) else None
 			)
 		self.compile_attempt = False
 	
@@ -1059,24 +1048,21 @@ class jitcdde_lyap(jitcdde):
 			)
 		
 		super(jitcdde_lyap, self).__init__(
-			f_lyap,
-			n = self.n_basic*(self._n_lyap+1),
-			**kwargs
+				f_lyap,
+				n = self.n_basic*(self._n_lyap+1),
+				**kwargs
 			)
 		
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 	
 	def add_past_points(self,anchors):
-		def new_anchors():
-			for time,state,derivative in anchors:
-				new_state = [state]
-				new_derivative = [derivative]
-				for _ in range(self._n_lyap):
-					new_state.append(random_direction(self.n_basic))
-					new_derivative.append(random_direction(self.n_basic))
-				yield time, np.hstack(new_state), np.hstack(new_derivative)
-		
-		super(jitcdde_lyap,self).add_past_points(new_anchors())
+		for time,state,derivative in anchors:
+			new_state = [state]
+			new_derivative = [derivative]
+			for _ in range(self._n_lyap):
+				new_state.append(random_direction(self.n_basic))
+				new_derivative.append(random_direction(self.n_basic))
+			self.past.add((time, np.hstack(new_state), np.hstack(new_derivative)))
 	
 	def integrate(self, target_time):
 		"""

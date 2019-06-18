@@ -8,8 +8,8 @@ NORM_THRESHOLD = 1e-30
 
 class Anchor(tuple):
 	def __new__( cls, time, state, diff ):
-		state = np.atleast_1d(state)
-		diff  = np.atleast_1d(diff)
+		state = np.atleast_1d(np.array(state,dtype=float,copy=True))
+		diff  = np.atleast_1d(np.array(diff ,dtype=float,copy=True))
 		if len(state.shape) != 1:
 			raise ValueError("State must be a number or one-dimensional iterable.")
 		if state.shape != diff.shape:
@@ -185,9 +185,9 @@ def scalar_product_interval(anchors, indices_1, indices_2):
 	])
 	
 	return np.einsum(
-		vector_1, [0,2],
-		sp_matrix, [0,1],
-		vector_2, [1,2]
+			vector_1, [0,2],
+			sp_matrix, [0,1],
+			vector_2, [1,2]
 		)*q
 
 def scalar_product_partial(anchors, indices_1, indices_2, start):
@@ -198,16 +198,16 @@ def scalar_product_partial(anchors, indices_1, indices_2, start):
 	z = (start-anchors[1].time) / q
 	
 	vector_1 = np.vstack([
-		anchors[0].state[indices_1],     # a_1
+		anchors[0].state[indices_1],    # a_1
 		anchors[0].diff[indices_1] * q, # b_1
-		anchors[1].state[indices_1],     # c_1
+		anchors[1].state[indices_1],    # c_1
 		anchors[1].diff[indices_1] * q, # d_1
 	])
 	
 	vector_2 = np.vstack([
-		anchors[0].state[indices_2],     # a_2
+		anchors[0].state[indices_2],    # a_2
 		anchors[0].diff[indices_2] * q, # b_2
-		anchors[1].state[indices_2],     # c_2
+		anchors[1].state[indices_2],    # c_2
 		anchors[1].diff[indices_2] * q, # d_2
 	])
 	
@@ -265,7 +265,7 @@ class Past(list):
 			raise ValueError("You cannot have twa anchors with the same time.")
 	
 	def add(self,anchor):
-		super().append( self.prepare_anchor(self.append(anchor)) )
+		super().append( self.prepare_anchor(anchor) )
 		self.sort()
 	
 	def clear_from(self,n):
