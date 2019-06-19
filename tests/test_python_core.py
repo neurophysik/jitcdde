@@ -20,10 +20,10 @@ def f():
 
 y0 = 0.8
 dy0 = -0.0794952762375263
-past = Past( [
+past = Past(1,[
 		( -1.0, np.array([y0-dy0]), np.array([dy0])),
 		(  0.0, np.array([y0    ]), np.array([dy0])),
-	] )
+	])
 
 expected_y = 0.724447497727209
 expected_error = -1.34096023725590e-5
@@ -60,7 +60,7 @@ class integration_test_with_helpers(integration_test):
 
 class double_integration_test(unittest.TestCase):
 	def test_integration(self):
-		double_past = Past()
+		double_past = Past(2*past.n)
 		for entry in past:
 			double_past.append((
 				entry[0],
@@ -100,7 +100,7 @@ class jump_test(unittest.TestCase):
 		factor = np.random.random(n)
 		
 		times = sorted(np.random.uniform(0,τ,5))
-		past = Past([
+		past = Past(n, [
 				(time,np.random.random(n),0.1*np.random.random(n))
 				for time in times
 			])

@@ -298,7 +298,7 @@ class TestJump(unittest.TestCase):
 	def test_jump(self):
 		DDE = jitcdde(f)
 		DDE.set_integration_parameters(**test_parameters)
-		self.DDE.add_past_points(get_past_points())
+		DDE.add_past_points(get_past_points())
 		DDE.compile_C(extra_compile_args=compile_args)
 		old_state = DDE.integrate(T)
 		

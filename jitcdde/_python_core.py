@@ -15,11 +15,9 @@ class dde_integrator(Past):
 				past,
 				helpers = (),
 				control_pars = (),
-				n_basic = None,
-				tangent_indices = (),
 			):
 		assert isinstance(past,Past)
-		super().__init__(past)
+		super().__init__(past=past)
 		self.t, self.y, self.diff = self[-1]
 		self.old_new_y = None
 		

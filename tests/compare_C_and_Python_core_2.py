@@ -27,11 +27,9 @@ compare = lambda x,y: assert_allclose(x,y,rtol=1e-7,atol=1e-7)
 
 number_of_runs = int(argv[1])
 
-past = Past([
-		( 0.0, np.array([random.random()]), np.array([random.random()]) ),
-		( 0.5, np.array([random.random()]), np.array([random.random()]) ),
-		( 2.0, np.array([random.random()]), np.array([random.random()]) )
-	])
+past = Past(n=1)
+for time in [0.0,0.5,2.0]:
+	past.append(( time, np.array([random.random()]), np.array([random.random()]) ))
 
 tau = 15
 p = 10

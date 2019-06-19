@@ -167,9 +167,8 @@ class jitcdde(jitcxde):
 		self.control_pars = control_pars
 		
 		self.past = Past(
-				n_basic=self.n_basic, n=self.n,
+				n=self.n, n_basic=self.n_basic,
 				tangent_indices = self.tangent_indices if hasattr(self,"tangent_indices") else [],
-				main_indices = self.main_indices if hasattr(self,"main_indices") else [],
 			)
 		
 		self.integration_parameters_set = False
@@ -246,7 +245,8 @@ class jitcdde(jitcxde):
 		derivative : iterable of floats
 			the derivative at the anchor. The dimension of the array must match the dimension of the differential equation (`n`).
 		"""
-		self.add_past_points([(time,state,derivative)])
+		self.reset_integrator()
+		self.past.add((time,state,derivative))
 
 	def add_past_points(self, anchors):
 		"""
@@ -397,8 +397,6 @@ class jitcdde(jitcxde):
 				self.past,
 				self.helpers,
 				self.control_pars,
-				self.n_basic,
-				self.tangent_indices if isinstance(self,jitcdde_transversal_lyap) else None
 			)
 		self.compile_attempt = False
 	

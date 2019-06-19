@@ -17,7 +17,7 @@ diff = [lambda x, j=j: sum(np.arange(1,4)*coeff[j,1:]*(x**np.arange(3))) for j i
 assert poly[0](1.0) != poly[1](1.0)
 assert diff[0](1.0) != diff[1](1.0)
 
-past = Past([
+past = Past(m, [
 		(
 			0.0,
 			np.array([ poly[j](0.0) for j in range(m) ]),
@@ -191,7 +191,7 @@ class extrema_test(unittest.TestCase):
 		n = 3
 		positions = sorted(np.random.random(2))
 		state = np.random.random(n)
-		past = Past([
+		past = Past(n, [
 				( positions[0], state                       , np.zeros(n) ),
 				( positions[1], state+np.random.uniform(0,5), np.zeros(n) ),
 			])
@@ -206,7 +206,7 @@ class extrema_test(unittest.TestCase):
 		poly = 2*T**3 - 3*T**2 - 36*T + 17
 		arg_extremes = [-2,3]
 		arrify = lambda expr,t: np.atleast_1d(float(expr.subs({T:t})))
-		past = Past([
+		past = Past(1, [
 				( t, arrify(poly,t), arrify(poly.diff(T),t) )
 				for t in arg_extremes
 			])
@@ -218,7 +218,7 @@ class extrema_test(unittest.TestCase):
 	
 	def test_extrema_in_last_step(self):
 		n = 10
-		past = Past([
+		past = Past(n, [
 				(time,np.random.random(n),0.1*np.random.random(n))
 				for time in sorted(np.random.uniform(-10,10,3))
 			])
@@ -237,7 +237,7 @@ class remove_projection_test(unittest.TestCase):
 		self.n_basic = 3
 		self.n = 6*self.n_basic
 		
-		self.original_past = []
+		self.original_past = Past(n=self.n,n_basic=self.n_basic)
 		for i in range(np.random.randint(3,10)):
 			if i==0:
 				time = np.random.uniform(-10,10)
@@ -247,7 +247,7 @@ class remove_projection_test(unittest.TestCase):
 			diff  = np.random.random(self.n)
 			self.original_past.append((time, state, diff))
 		
-		self.past = Past(self.original_past.copy(), n_basic=self.n_basic)
+		self.past = self.original_past.copy()
 	
 	def test_remove_first_component(self):
 		empty = lambda: np.zeros(self.n_basic)
@@ -289,18 +289,18 @@ class remove_projection_test(unittest.TestCase):
 class TestErrors(unittest.TestCase):
 	def test_wrong_shape(self):
 		with self.assertRaises(ValueError):
-			Past([ (0,[0],[0]), (1,[2,3],[4,5]) ])
+			Past( 1, [ (1,[2,3],[4,5]) ] )
 	
 	def test_wrong_diff_shape(self):
 		with self.assertRaises(ValueError):
-			Past([ (0,[0],[0]), (1,[2],[3,4]) ])
+			Past( 1, [ (1,[2],[3,4]) ] )
 	
 	def test_wrong_time(self):
 		with self.assertRaises(ValueError):
-			Past([ (0,[0],[0]), (0,[1],[2]) ])
+			Past( 1, [ (0,[0],[0]), (0,[1],[2]) ] )
 	
 	def test_replace_with_same(self):
-		past = Past([ (0,[0],[0]) ])
+		past = Past( 1, [(0,[0],[0])])
 		past[-1] = (0,[1],[2])
 
 

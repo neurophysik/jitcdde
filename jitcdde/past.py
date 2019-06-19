@@ -219,35 +219,20 @@ def scalar_product_partial(anchors, indices_1, indices_2, start):
 		)*q
 
 class Past(list):
-	def __init__(self,past=None,**kwargs):
-		# Temporary complications while changing the interface
-		n = kwargs.pop("n",None)
-		n_basic = kwargs.pop("n_basic",None)
-		self.tangent_indices = kwargs.pop("tangent_indices",())
-		if isinstance(past,Past):
-			n = n or past.n
-			assert n==past.n
-			n_basic = n_basic or past.n_basic
-			assert n_basic==past.n_basic
-			self.tangent_indices = self.tangent_indices or past.tangent_indices
-			assert self.tangent_indices==past.tangent_indices
-		if self.tangent_indices:
-			try:
-				self.main_indices = kwargs.pop("main_indices")
-			except KeyError:
-				self.main_indices = [i for i in range(n) if i not in self.tangent_indices]
-			else:
-				n = len(self.tangent_indices)+len(self.main_indices)
+	def __init__(self,n=None,past=(),n_basic=None,tangent_indices=()):
+		if n is None:
+			assert isinstance(past,Past)
+			Past.__init__( self, past.n, past, n_basic=past.n_basic, tangent_indices=past.tangent_indices )
 		else:
-			assert not kwargs.pop("main_indices",[])
-		
-		assert not kwargs, f"{kwargs}"
-		
-		self.n = n
-		self.n_basic = n_basic or self.n
-		if past:
-			super().__init__( self.prepare_anchor(anchor) for anchor in past )
-		self.sort()
+			self.n = n
+			self.n_basic = n_basic or self.n
+			self.tangent_indices = tangent_indices
+			
+			if self.tangent_indices:
+				self.main_indices = [i for i in range(n) if i not in self.tangent_indices]
+			
+			super().__init__( [self.prepare_anchor(anchor) for anchor in past] )
+			self.sort()
 	
 	def prepare_anchor(self,x):
 		x = x if isinstance(x,Anchor) else Anchor(*x)
@@ -265,11 +250,6 @@ class Past(list):
 			
 			x = Anchor(x.time,new_state,new_diff)
 		
-		if self.n is None and self.n_basic is None:
-			self.n = len(x.state)
-		self.n_basic = self.n_basic or self.n
-		if self.n is None:
-			self.n = len(x.state)
 		if x.state.shape not in [ (self.n,), (self.n_basic,) ]:
 			raise ValueError("State has wrong shape.")
 		
@@ -296,7 +276,7 @@ class Past(list):
 			self.append(anchor)
 	
 	def copy(self):
-		return Past(self)
+		return Past(past=self)
 	
 	def __setitem__(self,key,item):
 		anchor = self.prepare_anchor(item)
