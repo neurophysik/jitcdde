@@ -51,6 +51,11 @@ class TestIntegration(unittest.TestCase):
 	def test_step_on_discontinuities(self):
 		self.DDE.step_on_discontinuities(max_step=0.1)
 	
+	## Takes forever:
+	# def test_Python_core(self):
+	# 	self.DDE.generate_lambdas()
+	# 	self.DDE.step_on_discontinuities(max_step=0.1)
+	
 	def tearDown(self):
 		lyaps = []
 		weights = []

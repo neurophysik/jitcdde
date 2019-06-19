@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from jitcxde_common.numerical import random_direction
 
 NORM_THRESHOLD = 1e-30
 
@@ -218,22 +219,60 @@ def scalar_product_partial(anchors, indices_1, indices_2, start):
 		)*q
 
 class Past(list):
-	def __init__(self,past=None,n_basic=None,tangent_indices=()):
-		self.n = None
+	def __init__(self,past=None,**kwargs):
+		# Temporary complications while changing the interface
+		n = kwargs.pop("n",None)
+		n_basic = kwargs.pop("n_basic",None)
+		tangent_indices = kwargs.pop("tangent_indices",())
+		if isinstance(past,Past):
+			n = n or past.n
+			assert n==past.n
+			n_basic = n_basic or past.n_basic
+			assert n_basic==past.n_basic
+			tangent_indices = tangent_indices or past.tangent_indices
+			assert tangent_indices==past.tangent_indices
+		
+		self.n = n
+		self.n_basic = n_basic or self.n
 		if past:
 			super().__init__( self.prepare_anchor(anchor) for anchor in past )
 		self.sort()
-		self.n_basic = n_basic or self.n
 		self.tangent_indices = tangent_indices
 	
 	def prepare_anchor(self,x):
 		x = x if isinstance(x,Anchor) else Anchor(*x)
+		
+		# if self.tangent_indices and len(x.state)<self.n:
+		# 	assert len(x.state)+len(self.tangent_indices)==self.n
+		# 	new_state = np.empty(self.n)
+		# 	new_state[self.main_indices] = state
+		# 	new_state[self.tangent_indices] = random_direction(len(self.tangent_indices))
+		# 	
+		# 	new_derivative = np.empty(self.n)
+		# 	new_derivative[self.main_indices] = derivative
+		# 	new_derivative[self.tangent_indices] = random_direction(len(self.tangent_indices))
+		# 	
+		#
+		#
+		if self.n is None and self.n_basic is None:
+			self.n = len(x.state)
+		self.n_basic = self.n_basic or self.n
 		if self.n is None:
 			self.n = len(x.state)
-		elif x.state.shape != (self.n,):
+		if x.state.shape not in [ (self.n,), (self.n_basic,) ]:
 			raise ValueError("State has wrong shape.")
+		
+		if self.n_basic<self.n and x.state.shape==(self.n_basic,):
+			assert self.n%self.n_basic == 0
+			x.state.resize(self.n)
+			x.diff .resize(self.n)
+			for i in range(1,self.n//self.n_basic):
+				indices = slice(i*n_basic,(i+1)*n_basic)
+				x.state[indices] = random_direction(self.n_basic)
+				x.diff [indices] = random_direction(self.n_basic)
+		
 		return x
-	
+
 	def append(self,anchor):
 		anchor = self.prepare_anchor(anchor)
 		if self and anchor.time <= self[-1].time:
@@ -245,7 +284,7 @@ class Past(list):
 			self.append(anchor)
 	
 	def copy(self):
-		return Past(super().copy(),self.n_basic,self.tangent_indices)
+		return Past(self)
 	
 	def __setitem__(self,key,item):
 		anchor = self.prepare_anchor(item)
@@ -271,6 +310,9 @@ class Past(list):
 	def clear_from(self,n):
 		while len(self)>n:
 			self.pop()
+	
+	def clear(self):
+		super().__init__()
 	
 	@property
 	def t(self):
@@ -439,7 +481,7 @@ class Past(list):
 		len_dummies = 0
 		for anchor in self:
 			for vector in vectors:
-				# Setup dummy 
+				# Setup dummy
 				dummy = get_dummy(dummy_num)
 				for other_anchor in self:
 					other_anchor.state[dummy] = np.zeros(self.n_basic)
@@ -482,7 +524,7 @@ class Past(list):
 	
 	def normalise_indices(self, delay):
 		"""
-		Normalise the separation function of the tangent indices (with Gram-Schmidt) and return the norms (before normalisation).
+		Normalise the separation function of the tangent indices and return the norm (before normalisation).
 		"""
 		
 		norm = self.norm(delay,self.tangent_indices)

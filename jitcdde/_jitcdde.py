@@ -370,7 +370,7 @@ class jitcdde(jitcxde):
 		Cleans the past and resets the integrator. You need to define a new past (using `add_past_point`) after this.
 		"""
 		
-		self.past = Past(self.n_basic)
+		self.past.clear()
 		self.reset_integrator()
 	
 	def reset_integrator(self):
@@ -400,15 +400,15 @@ class jitcdde(jitcxde):
 		self.compile_C(*args, **kwargs)
 	
 	def compile_C(
-		self,
-		simplify = None,
-		do_cse = False,
-		chunk_size = 100,
-		extra_compile_args = None,
-		extra_link_args = None,
-		verbose = False,
-		modulename = None,
-		omp = False,
+			self,
+			simplify = None,
+			do_cse = False,
+			chunk_size = 100,
+			extra_compile_args = None,
+			extra_link_args = None,
+			verbose = False,
+			modulename = None,
+			omp = False,
 		):
 		"""
 		translates the derivative to C code using SymEngine’s `C-code printer <https://github.com/symengine/symengine/pull/1054>`_.
@@ -525,15 +525,15 @@ class jitcdde(jitcxde):
 		self._process_modulename(modulename)
 		
 		self._render_template(
-			n = self.n,
-			number_of_helpers = helper_i,
-			number_of_anchor_helpers = anchor_i,
-			has_any_helpers = anchor_i or helper_i,
-			anchor_mem_length = self.past_calls,
-			n_basic = self.n_basic,
-			control_pars = [par.name for par in self.control_pars],
-			tangent_indices = self.tangent_indices if hasattr(self,"tangent_indices") else [],
-			chunk_size = chunk_size, # only for OMP
+				n = self.n,
+				number_of_helpers = helper_i,
+				number_of_anchor_helpers = anchor_i,
+				has_any_helpers = anchor_i or helper_i,
+				anchor_mem_length = self.past_calls,
+				n_basic = self.n_basic,
+				control_pars = [par.name for par in self.control_pars],
+				tangent_indices = self.tangent_indices if hasattr(self,"tangent_indices") else [],
+				chunk_size = chunk_size, # only for OMP
 			)
 		
 		self._compile_and_load(verbose,extra_compile_args,extra_link_args,omp)
@@ -546,7 +546,7 @@ class jitcdde(jitcxde):
 			assert len(self.past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
 			
 			if self.compile_attempt:
-				self.DDE = self.jitced.dde_integrator(python_core.Past(self.past))
+				self.DDE = self.jitced.dde_integrator(self.past)
 			else:
 				self.generate_lambdas()
 		
@@ -1184,19 +1184,19 @@ class jitcdde_restricted_lyap(jitcdde):
 				raise ValueError("One vector contains only zeros.")
 		
 		f_lyap = tangent_vector_f(
-			f = f_basic,
-			helpers = kwargs["helpers"],
-			n = self.n_basic,
-			n_lyap = 1,
-			delays = kwargs["delays"],
-			zero_padding = 2*self.n_basic*len(self.vectors),
-			simplify = simplify
+				f = f_basic,
+				helpers = kwargs["helpers"],
+				n = self.n_basic,
+				n_lyap = 1,
+				delays = kwargs["delays"],
+				zero_padding = 2*self.n_basic*len(self.vectors),
+				simplify = simplify
 			)
 		
 		super(jitcdde_restricted_lyap, self).__init__(
-			f_lyap,
-			n = self.n_basic*(2+2*len(self.vectors)),
-			**kwargs
+				f_lyap,
+				n = self.n_basic*(2+2*len(self.vectors)),
+				**kwargs
 			)
 		
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
