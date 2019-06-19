@@ -8,6 +8,7 @@ The argument is the number of runs.
 """
 
 from jitcdde._python_core import dde_integrator as py_dde_integrator
+from jitcdde.past import Past
 from jitcdde import jitcdde, t, y
 
 import numpy as np
@@ -26,11 +27,11 @@ compare = lambda x,y: assert_allclose(x,y,rtol=1e-7,atol=1e-7)
 
 number_of_runs = int(argv[1])
 
-past = [
-	( 0.0, np.array([random.random()]), np.array([random.random()]) ),
-	( 0.5, np.array([random.random()]), np.array([random.random()]) ),
-	( 2.0, np.array([random.random()]), np.array([random.random()]) )
-	]
+past = Past([
+		( 0.0, np.array([random.random()]), np.array([random.random()]) ),
+		( 0.5, np.array([random.random()]), np.array([random.random()]) ),
+		( 2.0, np.array([random.random()]), np.array([random.random()]) )
+	])
 
 tau = 15
 p = 10
@@ -40,20 +41,17 @@ def f():
 	yield 0.25 * y(0,t-tau) / (1.0 + y(0,t-tau)**p) - 0.1*y(0,t-tiny_delay)
 past_calls = 3
 
-def past_points():
-	return [anchor for anchor in past]
-
 errors = 0
 
 for realisation in range(number_of_runs):
 	print(".", end="")
 	stdout.flush()
 	
-	P = py_dde_integrator(f, past_points())
+	P = py_dde_integrator(f, past)
 	
 	DDE = jitcdde(f)
 	DDE.compile_C()
-	C = DDE.jitced.dde_integrator(past_points())
+	C = DDE.jitced.dde_integrator(past)
 	
 	def get_next_step():
 		r = random.uniform(1e-5,1)

@@ -165,7 +165,13 @@ class jitcdde(jitcxde):
 			self.n_basic = self.n
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
 		self.control_pars = control_pars
-		self.past = Past(n_basic=self.n_basic)
+		
+		self.past = Past(
+				n_basic=self.n_basic, n=self.n,
+				tangent_indices = self.tangent_indices if hasattr(self,"tangent_indices") else [],
+				main_indices = self.main_indices if hasattr(self,"main_indices") else [],
+			)
+		
 		self.integration_parameters_set = False
 		self.DDE = None
 		self.verbose = verbose
@@ -1055,15 +1061,6 @@ class jitcdde_lyap(jitcdde):
 		
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
 	
-	def add_past_points(self,anchors):
-		for time,state,derivative in anchors:
-			new_state = [state]
-			new_derivative = [derivative]
-			for _ in range(self._n_lyap):
-				new_state.append(random_direction(self.n_basic))
-				new_derivative.append(random_direction(self.n_basic))
-			self.past.add((time, np.hstack(new_state), np.hstack(new_derivative)))
-	
 	def integrate(self, target_time):
 		"""
 		Like `jitcdde`’s `integrate`, except for orthonormalising the separation functions and:
@@ -1200,24 +1197,6 @@ class jitcdde_restricted_lyap(jitcdde):
 			)
 		
 		assert self.max_delay>0, "Maximum delay must be positive for calculating Lyapunov exponents."
-	
-	def add_past_points(self, anchors):
-		padding = np.empty(len(self.vectors)*2*self.n_basic)
-		def new_anchors():
-			for time,state,derivative in anchors:
-				new_state = np.hstack([
-						state,
-						random_direction(self.n_basic),
-						padding
-					])
-				new_derivative = np.hstack([
-						derivative,
-						random_direction(self.n_basic),
-						padding
-					])
-				yield time,new_state,new_derivative
-		
-		super(jitcdde_restricted_lyap,self).add_past_points(new_anchors())
 	
 	def remove_projections(self):
 		for state_component in self.state_components:
@@ -1371,23 +1350,6 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 				helpers = helpers,
 				**kwargs
 			)
-	
-	def add_past_points(self, anchors):
-		def new_anchors():
-			for time,state,derivative in anchors:
-				assert len(state)==len(derivative)==len(self.groups), "State and derivative too long or non matching. Provide only one value per synchronisation group"
-				
-				new_state = np.empty(self.n)
-				new_state[self.main_indices] = state
-				new_state[self.tangent_indices] = random_direction(len(self.tangent_indices))
-				
-				new_derivative = np.empty(self.n)
-				new_derivative[self.main_indices] = derivative
-				new_derivative[self.tangent_indices] = random_direction(len(self.tangent_indices))
-				
-				yield time,new_state,new_derivative
-		
-		super(jitcdde_transversal_lyap,self).add_past_points(new_anchors())
 	
 	def norm(self):
 		tangent_vector = self._y[self.tangent_indices]

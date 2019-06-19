@@ -63,8 +63,7 @@ class TestIntegration(unittest.TestCase):
 		self.DDE.compile_C(extra_compile_args=compile_args)
 	
 	def setUp(self):
-		for point in get_past_points():
-			self.DDE.add_past_point(*point)
+		self.DDE.add_past_points(get_past_points())
 		self.y_10 = None
 		if self.DDE.f_sym():
 			self.DDE.check()
@@ -277,8 +276,7 @@ class TestParametersPython(TestParameters):
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
 		self.DDE = jitcdde(f)
-		for point in get_past_points():
-			self.DDE.add_past_point(*point)
+		self.DDE.add_past_points(get_past_points())
 		self.DDE.compile_C(extra_compile_args=compile_args)
 		
 	def test_min_step_error(self):
@@ -300,8 +298,7 @@ class TestJump(unittest.TestCase):
 	def test_jump(self):
 		DDE = jitcdde(f)
 		DDE.set_integration_parameters(**test_parameters)
-		for point in get_past_points():
-			DDE.add_past_point(*point)
+		self.DDE.add_past_points(get_past_points())
 		DDE.compile_C(extra_compile_args=compile_args)
 		old_state = DDE.integrate(T)
 		

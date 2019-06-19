@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from jitcdde._python_core import dde_integrator
+from jitcdde.past import Past
 from jitcdde._jitcdde import t, y, current_y, past_y, anchors
 
 import symengine
@@ -19,17 +20,17 @@ def f():
 
 y0 = 0.8
 dy0 = -0.0794952762375263
-past_generator = lambda: [
+past = Past( [
 		( -1.0, np.array([y0-dy0]), np.array([dy0])),
-		(  0.0, np.array([y0    ]), np.array([dy0]))
-	]
+		(  0.0, np.array([y0    ]), np.array([dy0])),
+	] )
 
 expected_y = 0.724447497727209
 expected_error = -1.34096023725590e-5
 
 class integration_test(unittest.TestCase):
 	def setUp(self):
-		self.DDE = dde_integrator(f, past_generator())
+		self.DDE = dde_integrator(f, past)
 	
 	def test_integration(self):
 		self.assertEqual(self.DDE.y[0], y0)
@@ -55,18 +56,17 @@ def f_alt():
 
 class integration_test_with_helpers(integration_test):
 	def setUp(self):
-		self.DDE = dde_integrator(f_alt, past_generator(), f_alt_helpers)
+		self.DDE = dde_integrator(f_alt, past, f_alt_helpers)
 
 class double_integration_test(unittest.TestCase):
 	def test_integration(self):
-		past = past_generator()
-		double_past = []
+		double_past = Past()
 		for entry in past:
-			double_past += [(
+			double_past.append((
 				entry[0],
 				np.hstack((entry[1],entry[1])),
 				np.hstack((entry[2],entry[2]))
-				)]
+				))
 		
 		self.DDE = dde_integrator(lambda: chain(f(),f()), double_past)
 		
@@ -100,10 +100,10 @@ class jump_test(unittest.TestCase):
 		factor = np.random.random(n)
 		
 		times = sorted(np.random.uniform(0,τ,5))
-		past = [
+		past = Past([
 				(time,np.random.random(n),0.1*np.random.random(n))
 				for time in times
-			]
+			])
 		jump_time = np.random.uniform(past[-2][0],past[-1][0])
 		jump_size = np.random.random(n)
 		

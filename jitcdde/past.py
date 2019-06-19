@@ -223,37 +223,48 @@ class Past(list):
 		# Temporary complications while changing the interface
 		n = kwargs.pop("n",None)
 		n_basic = kwargs.pop("n_basic",None)
-		tangent_indices = kwargs.pop("tangent_indices",())
+		self.tangent_indices = kwargs.pop("tangent_indices",())
 		if isinstance(past,Past):
 			n = n or past.n
 			assert n==past.n
 			n_basic = n_basic or past.n_basic
 			assert n_basic==past.n_basic
-			tangent_indices = tangent_indices or past.tangent_indices
-			assert tangent_indices==past.tangent_indices
+			self.tangent_indices = self.tangent_indices or past.tangent_indices
+			assert self.tangent_indices==past.tangent_indices
+		if self.tangent_indices:
+			try:
+				self.main_indices = kwargs.pop("main_indices")
+			except KeyError:
+				self.main_indices = [i for i in range(n) if i not in self.tangent_indices]
+			else:
+				n = len(self.tangent_indices)+len(self.main_indices)
+		else:
+			assert not kwargs.pop("main_indices",[])
+		
+		assert not kwargs, f"{kwargs}"
 		
 		self.n = n
 		self.n_basic = n_basic or self.n
 		if past:
 			super().__init__( self.prepare_anchor(anchor) for anchor in past )
 		self.sort()
-		self.tangent_indices = tangent_indices
 	
 	def prepare_anchor(self,x):
 		x = x if isinstance(x,Anchor) else Anchor(*x)
 		
-		# if self.tangent_indices and len(x.state)<self.n:
-		# 	assert len(x.state)+len(self.tangent_indices)==self.n
-		# 	new_state = np.empty(self.n)
-		# 	new_state[self.main_indices] = state
-		# 	new_state[self.tangent_indices] = random_direction(len(self.tangent_indices))
-		# 	
-		# 	new_derivative = np.empty(self.n)
-		# 	new_derivative[self.main_indices] = derivative
-		# 	new_derivative[self.tangent_indices] = random_direction(len(self.tangent_indices))
-		# 	
-		#
-		#
+		if self.tangent_indices and len(x.state)<self.n:
+			assert len(x.state)==len(self.main_indices)
+			
+			new_state = np.resize(x.state,self.n)
+			new_state[self.main_indices] = x.state
+			new_state[self.tangent_indices] = random_direction(len(self.tangent_indices))
+			
+			new_diff = np.resize(x.diff,self.n)
+			new_diff[self.main_indices] = x.diff
+			new_diff[self.tangent_indices] = random_direction(len(self.tangent_indices))
+			
+			x = Anchor(x.time,new_state,new_diff)
+		
 		if self.n is None and self.n_basic is None:
 			self.n = len(x.state)
 		self.n_basic = self.n_basic or self.n
@@ -264,15 +275,16 @@ class Past(list):
 		
 		if self.n_basic<self.n and x.state.shape==(self.n_basic,):
 			assert self.n%self.n_basic == 0
-			x.state.resize(self.n)
-			x.diff .resize(self.n)
+			new_state = np.resize(x.state,self.n)
+			new_diff  = np.resize(x.diff ,self.n)
 			for i in range(1,self.n//self.n_basic):
-				indices = slice(i*n_basic,(i+1)*n_basic)
-				x.state[indices] = random_direction(self.n_basic)
-				x.diff [indices] = random_direction(self.n_basic)
+				indices = slice(i*self.n_basic,(i+1)*self.n_basic)
+				new_state[indices] = random_direction(self.n_basic)
+				new_diff [indices] = random_direction(self.n_basic)
+			x = Anchor(x.time,new_state,new_diff)
 		
 		return x
-
+	
 	def append(self,anchor):
 		anchor = self.prepare_anchor(anchor)
 		if self and anchor.time <= self[-1].time:
@@ -301,7 +313,7 @@ class Past(list):
 	
 	def check_for_duplicate_times(self):
 		if len(set(anchor.time for anchor in self)) != len(self):
-			raise ValueError("You cannot have twa anchors with the same time.")
+			raise ValueError("You cannot have two anchors with the same time.")
 	
 	def add(self,anchor):
 		super().append( self.prepare_anchor(anchor) )

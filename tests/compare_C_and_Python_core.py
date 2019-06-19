@@ -8,6 +8,7 @@ The argument is the number of runs.
 """
 
 from jitcdde._python_core import dde_integrator as py_dde_integrator
+from jitcdde.past import Past
 from jitcdde import t, y, jitcdde
 
 import numpy as np
@@ -51,13 +52,6 @@ def f():
 
 n = 8
 
-def past(seed):
-	RNG = np.random.RandomState(seed)
-	return [
-		( time, RNG.rand(n), 0.1*RNG.rand(n) )
-		for time in sorted(RNG.uniform(-10,0,RNG.randint(2,10)))
-	]
-
 errors = 0
 
 for i,realisation in enumerate(range(number_of_runs)):
@@ -68,20 +62,22 @@ for i,realisation in enumerate(range(number_of_runs)):
 	py_RNG = random.Random(RNG.randint(1000000))
 	
 	tangent_indices = py_RNG.sample(range(n),RNG.randint(1,n-1))
-	
 	past_seed = RNG.randint(1000000)
-	P = py_dde_integrator(
-			f,
-			past(past_seed),
-			n_basic = 2,
-			tangent_indices = tangent_indices
-		)
+	
+	def past():
+		RNG = np.random.RandomState(past_seed)
+		result = Past(n=n,n_basic=2,tangent_indices=tangent_indices)
+		for time in RNG.uniform(-10,0,RNG.randint(2,10)):
+			result.add(( time, RNG.rand(n), 0.1*RNG.rand(n) ))
+		return result
+	
+	P = py_dde_integrator(f,past())
 	
 	DDE = jitcdde(f)
 	DDE.n_basic = 2
 	DDE.tangent_indices = tangent_indices
 	DDE.compile_C(chunk_size=RNG.randint(0,7),extra_compile_args=compile_args)
-	C = DDE.jitced.dde_integrator(past(past_seed))
+	C = DDE.jitced.dde_integrator(past())
 	
 	def get_next_step():
 		r = RNG.uniform(1e-5,1e-3)

@@ -18,7 +18,8 @@ class dde_integrator(Past):
 				n_basic = None,
 				tangent_indices = (),
 			):
-		super().__init__(past,n_basic=n_basic,tangent_indices=tangent_indices)
+		assert isinstance(past,Past)
+		super().__init__(past)
 		self.t, self.y, self.diff = self[-1]
 		self.old_new_y = None
 		
