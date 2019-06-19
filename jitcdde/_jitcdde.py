@@ -11,7 +11,6 @@ import jitcdde._python_core as python_core
 from jitcxde_common import jitcxde, checker
 from jitcxde_common.helpers import sort_helpers, sympify_helpers, find_dependent_helpers
 from jitcxde_common.symbolic import collect_arguments, count_calls, replace_function
-from jitcxde_common.numerical import random_direction, rel_dist
 from jitcxde_common.transversal import GroupHandler
 
 _default_min_step = 1e-10
@@ -273,13 +272,7 @@ class jitcdde(jitcxde):
 			The time at which the integration starts.
 		"""
 		
-		if self.past:
-			warn("You already added past points in some manner. This routine will ignore them, but not remove them. Be sure that you really want this.")
-		
-		self.add_past_points([
-				( time-1., state, np.zeros_like(state) ),
-				( time   , state, np.zeros_like(state) ),
-			])
+		self.past.constant(state,time)
 	
 	def past_from_function(self,function,times_of_interest=None,max_anchors=100,tol=5):
 		"""
@@ -289,7 +282,7 @@ class jitcdde(jitcxde):
 		----------
 		function : callable or iterable of symbolic expressions
 			If callable, this takes the time as an argument and returns an iterable of floats that is the initial state of the past at that time.
-			If an iterable of expressions, each expression represents how initial past of the respective component depends on `t`.
+			If an iterable of expressions, each expression represents how initial past of the respective component depends on `t` (requires SymPy).
 			In both cases, the lengths of the iterable must match the dimension of the differential equation (`n`).
 			
 		times_of_interest : iterable of numbers or `None`
@@ -304,63 +297,12 @@ class jitcdde(jitcxde):
 			The higher this value, the more likely it is that the heuristic adds anchors.
 		"""
 		
-		assert tol>=0, "tol must be non-negative."
-		assert max_anchors>0, "Maximum number of anchors must be positive."
-		
-		if self.past:
-			warn("You already added past points in some manner. This routine will ignore them, but not remove them. Be sure that you really want this.")
-		
 		if times_of_interest is None:
 			times_of_interest = np.linspace(-self.max_delay,0,10)
 		else:
 			times_of_interest = sorted(times_of_interest)
 		
-		if callable(function):
-			array_function = lambda time: np.asarray(function(time))
-			def get_anchor(time):
-				value = array_function(time)
-				eps = time*10**-tol or 10**-tol
-				derivative = (array_function(time+eps)-value)/eps
-				return [time,value,derivative,None]
-		else:
-			import sympy
-			def get_anchor(time):
-				evaluate = lambda expr: sympy.sympify(expr).evalf(tol,subs={t:time})
-				value = np.fromiter(
-						(evaluate(comp) for comp in function),
-						dtype = float,
-					)
-				derivative = np.fromiter(
-						(evaluate(comp.diff(t)) for comp in function),
-						dtype = float,
-					)
-				return [time,value,derivative,None]
-		
-		anchors = [get_anchor(time) for time in times_of_interest]
-		anchors[0][3] = anchors[-1][3] = True
-		
-		while not all(anchor[3] for anchor in anchors) and len(anchors)<=max_anchors:
-			for i in range(len(anchors)-2,-1,-1):
-				# Check whether anchors are already sufficiently interpolated by their neighbours or temporally close.
-				if not anchors[i][3]:
-					guess = python_core.interpolate_vec(
-							anchors[i][0],
-							(Anchor(*anchors[i-1][:3]),Anchor(*anchors[i+1][:3]))
-						)
-					anchors[i][3] = any((
-							rel_dist(guess,anchors[i][1]) < 10**-tol,
-							rel_dist(anchors[i+1][0],anchors[i-1][0]) < 10**-tol
-						))
-				
-				# Add new anchors, if needed
-				if not (anchors[i][3] and anchors[i+1][3]):
-					time = np.mean((anchors[i][0],anchors[i+1][0]))
-					anchors.insert(i+1,get_anchor(time))
-				
-				if len(anchors)>max_anchors:
-					break
-		
-		self.add_past_points(anchor[:3] for anchor in anchors)
+		self.past.from_function(function,times_of_interest,max_anchors,tol)
 	
 	def get_state(self):
 		"""

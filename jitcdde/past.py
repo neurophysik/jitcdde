@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from jitcxde_common.numerical import random_direction
+from jitcxde_common.numerical import random_direction, rel_dist
 
 NORM_THRESHOLD = 1e-30
 
@@ -56,7 +56,6 @@ def interpolate_diff_vec(t,anchors):
 
 def extrema(anchors):
 	"""
-		Finds the extrema of the Hermite interpolant for the anchors (within the interval spanned by them).
 		Returns two arrays containing the minima and maxima of the Hermite interpolant for the anchors (within the interval spanned by them) as well as two arrays containing the position of these extrema.
 		
 		Returns
@@ -287,6 +286,15 @@ class Past(list):
 			raise ValueError("Anchor’s time does not fit.")
 		super().__setitem__(key,anchor)
 	
+	def insert(self,key,item):
+		anchor = self.prepare_anchor(item)
+		if (
+					(key!= 0 and key!=-len(self) and self[key-1].time>=anchor.time)
+				or  (            key!= len(self) and self[key  ].time<=anchor.time)
+			):
+			raise ValueError("Anchor’s time does not fit.")
+		super().insert(key,anchor)
+	
 	def sort(self):
 		self.check_for_duplicate_times()
 		super().sort( key = lambda anchor: anchor.time )
@@ -306,12 +314,109 @@ class Past(list):
 	def clear(self):
 		super().__init__()
 	
+	def reverse(self):
+		raise AssertionError("This does not make sense.")
+	
 	@property
 	def t(self):
 		"""
 		The time of the last anchor. This may be overwritten in subclasses.
 		"""
 		return self[-1].time
+	
+	def constant(self,state,time=0):
+		"""
+		makes the past constant.
+		
+		Parameters
+		----------
+		state : iterable of floats
+		time : float
+			The time of the last point.
+		"""
+		
+		if self:
+			warn("The past already contains points. This will remove them. Be sure that you really want this.")
+			self.clear()
+		
+		self.append(( time-1., state, np.zeros_like(state) ))
+		self.append(( time   , state, np.zeros_like(state) ))
+	
+	def from_function(self,function,times_of_interest=None,max_anchors=100,tol=5):
+		"""
+		automatically determines anchors describing the past from a given function, i.e., a piecewise cubic Hermite interpolation of the function at automatically selected time points will be the initial past.
+		
+		Parameters
+		----------
+		function : callable or iterable of symbolic expressions
+			If callable, this takes the time as an argument and returns an iterable of floats that is the initial state of the past at that time.
+			If an iterable of expressions, each expression represents how initial past of the respective component depends on `t` (requires SymPy).
+			
+		times_of_interest : iterable of numbers or `None`
+			Initial set of time points considered for the interpolation.
+		
+		max_anchors : positive integer
+			The maximum number of anchors that this routine will create (including those for the times_of_interest).
+		
+		tol : integer
+			This is a parameter for the heuristics, more precisely the number of digits considered for precision in several places.
+		"""
+		
+		assert tol>=0, "tol must be non-negative."
+		assert max_anchors>0, "Maximum number of anchors must be positive."
+		
+		if self:
+			warn("The past already contains points. This will remove them. Be sure that you really want this.")
+			self.clear()
+		
+		# A happy anchor is sufficiently interpolated by its neighbours, temporally close to them, or at the border of the interval.
+		def unhappy_anchor(*args):
+			result = Anchor(*args)
+			result.happy = False
+			return result
+
+		if callable(function):
+			array_function = lambda time: np.asarray(function(time))
+			def get_anchor(time):
+				value = array_function(time)
+				eps = time*10**-tol or 10**-tol
+				derivative = (array_function(time+eps)-value)/eps
+				return unhappy_anchor(time,value,derivative)
+		else:
+			symbols = set.union(*(comp.free_symbols for comp in function))
+			if len(symbols)>2:
+				raise ValueError("Expressions must contain at most one free symbol")
+			
+			def get_anchor(time):
+				substitutions = {symbol:time for symbol in symbols}
+				evaluate = lambda expr: expr.subs(substitutions).evalf(tol)
+				return unhappy_anchor(
+						time,
+						np.fromiter((evaluate(comp       ) for comp in function),dtype = float),
+						np.fromiter((evaluate(comp.diff()) for comp in function),dtype = float),
+					)
+		
+		for time in times_of_interest:
+			self.append(get_anchor(time))
+		self[0].happy = self[-1].happy = True
+		
+		while not all(anchor.happy for anchor in self) and len(self)<=max_anchors:
+			for i in range(len(self)-2,-1,-1):
+				# Update happiness
+				if not self[i].happy:
+					guess = interpolate_vec( self[i].time, (self[i-1], self[i+1]) )
+					self[i].happy = (
+							rel_dist(guess,self[i].state) < 10**-tol or
+							rel_dist(self[i+1].time,self[i-1].time) < 10**-tol
+						)
+				
+				# Add new anchors, if unhappy
+				if not (self[i].happy and self[i+1].happy):
+					time = np.mean((self[i].time,self[i+1].time))
+					self.insert(i+1,get_anchor(time))
+				
+				if len(self)>max_anchors:
+					break
 	
 	def get_anchors(self, time):
 		"""
@@ -427,7 +532,7 @@ class Past(list):
 		"""
 		Interpolates an anchor at `time` and removes all later anchors.
 		"""
-		assert self[0].time<=time<=self[-1].time, f"Truncation time must be within current range of anchors."
+		assert self[0].time<=time<=self[-1].time, "Truncation time must be within current range of anchors."
 		i = self.last_index_before(time)
 		
 		value =     interpolate_vec(time,(self[i],self[i+1]))
