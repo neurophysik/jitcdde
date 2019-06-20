@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from jitcdde.past import Past, interpolate, interpolate_vec, interpolate_diff, extrema
+from jitcdde.past import Past, interpolate, interpolate_vec, interpolate_diff, extrema_from_anchors
 
 NORM_THRESHOLD = 1e-30
 
@@ -161,8 +161,8 @@ class dde_integrator(Past):
 		self.accept_step()
 	
 	def extrema_in_last_step(self):
-		minima,maxima,*_ =  extrema(self[-2:])
-		return minima,maxima
+		extrema =  extrema_from_anchors(self[-2:])
+		return extrema.minima,extrema.maxima
 	
 	def apply_jump( self, change, time, width=1e-5 ):
 		new_time = time+width

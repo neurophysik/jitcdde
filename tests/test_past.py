@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from jitcdde.past import Past, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate, interpolate_diff, extrema
+from jitcdde.past import Past, scalar_product_interval, scalar_product_partial, norm_sq_interval, norm_sq_partial, interpolate, interpolate_diff, extrema_from_anchors
 
 import symengine
 import numpy as np
@@ -187,21 +187,21 @@ class truncation_test(unittest.TestCase):
 					)
 
 class extrema_test(unittest.TestCase):
-	def test_arg_extreme_given_extrema(self):
-		n = 3
+	def test_given_extrema(self):
+		n = 100
 		positions = sorted(np.random.random(2))
 		state = np.random.random(n)
 		past = Past(n, [
 				( positions[0], state                       , np.zeros(n) ),
 				( positions[1], state+np.random.uniform(0,5), np.zeros(n) ),
 			])
-		minima,maxima,arg_min,arg_max = extrema(past)
-		assert_allclose(arg_min,past[0].time)
-		assert_allclose(arg_max,past[1].time)
-		assert_allclose(minima,past[0][1])
-		assert_allclose(maxima,past[1][1])
+		result = extrema_from_anchors(past)
+		assert_allclose(result.arg_min,past[0].time)
+		assert_allclose(result.arg_max,past[1].time)
+		assert_allclose(result.minima,past[0][1])
+		assert_allclose(result.maxima,past[1][1])
 	
-	def test_arg_extreme_simple_polynomial(self):
+	def test_simple_polynomial(self):
 		T = symengine.Symbol("T")
 		poly = 2*T**3 - 3*T**2 - 36*T + 17
 		arg_extremes = [-2,3]
@@ -210,27 +210,46 @@ class extrema_test(unittest.TestCase):
 				( t, arrify(poly,t), arrify(poly.diff(T),t) )
 				for t in arg_extremes
 			])
-		minimum,maximum,arg_min,arg_max = extrema(past)
-		assert_allclose(minimum,arrify(poly,arg_extremes[1]))
-		assert_allclose(maximum,arrify(poly,arg_extremes[0]))
-		assert_allclose(arg_min,arg_extremes[1])
-		assert_allclose(arg_max,arg_extremes[0])
+		result = extrema_from_anchors(past)
+		assert_allclose(result.minima,arrify(poly,arg_extremes[1]))
+		assert_allclose(result.maxima,arrify(poly,arg_extremes[0]))
+		assert_allclose(result.arg_min,arg_extremes[1])
+		assert_allclose(result.arg_max,arg_extremes[0])
 	
-	def test_extrema_in_last_step(self):
-		n = 10
+	def test_arbitrary_anchors(self):
+		n = 100
 		past = Past(n, [
-				(time,np.random.random(n),0.1*np.random.random(n))
-				for time in sorted(np.random.uniform(-10,10,3))
+				(time,np.random.normal(0,1,n),np.random.normal(0,0.1,n))
+				for time in sorted(np.random.uniform(-10,10,2))
 			])
 		
-		times = np.linspace(past[-2][0],past[-1][0],10000)
+		times = np.linspace(past[0].time,past[1].time,10000)
 		values = np.vstack( past.get_recent_state(time) for time in times )
 		
-		minima,maxima,arg_min,arg_max = extrema(past[-2:])
-		assert_allclose( minima, np.min(values,axis=0), atol=1e-3 )
-		assert_allclose( maxima, np.max(values,axis=0), atol=1e-3 )
-		assert_allclose( arg_min, times[np.argmin(values,axis=0)], atol=1e-3)
-		assert_allclose( arg_max, times[np.argmax(values,axis=0)], atol=1e-3)
+		result = extrema_from_anchors(past[-2:])
+		assert_allclose( result.minima, np.min(values,axis=0), atol=1e-3 )
+		assert_allclose( result.maxima, np.max(values,axis=0), atol=1e-3 )
+		assert_allclose( result.arg_min, times[np.argmin(values,axis=0)], atol=1e-3)
+		assert_allclose( result.arg_max, times[np.argmax(values,axis=0)], atol=1e-3)
+	
+	def test_multiple_anchors(self):
+		for _ in range(10):
+			n = 100
+			past = Past(n, [
+					(time,np.random.normal(0,1,n),np.random.normal(0,0.1,n))
+					for time in sorted(np.random.uniform(-10,10,3))
+				])
+			
+			beginning, end = sorted(np.random.uniform(past[0].time,past[-1].time,2))
+			times = np.linspace(beginning,end,10000)
+			values = np.vstack( past.get_state(time) for time in times )
+			
+			result = past.extrema(beginning,end)
+			assert_allclose( result.minima, np.min(values,axis=0), atol=1e-3 )
+			assert_allclose( result.maxima, np.max(values,axis=0), atol=1e-3 )
+			assert_allclose( result.arg_min, times[np.argmin(values,axis=0)], atol=1e-3 )
+			assert_allclose( result.arg_max, times[np.argmax(values,axis=0)], atol=1e-3 )
+
 
 class remove_projection_test(unittest.TestCase):
 	def setUp(self):

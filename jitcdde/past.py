@@ -27,7 +27,7 @@ def interpolate(t,i,anchors):
 
 def interpolate_vec(t,anchors):
 	"""
-		Returns the value of a cubic Hermite interpolant of the anchors at time t.
+	Returns the value of a cubic Hermite interpolant of the anchors at time t.
 	"""
 	q = (anchors[1].time-anchors[0].time)
 	x = (t-anchors[0].time) / q
@@ -43,7 +43,7 @@ def interpolate_diff(t,i,anchors):
 
 def interpolate_diff_vec(t,anchors):
 	"""
-		Returns the derivative of a cubic Hermite interpolant of the anchors at time t.
+	Returns the derivative of a cubic Hermite interpolant of the anchors at time t.
 	"""
 	q = (anchors[1].time-anchors[0].time)
 	x = (t-anchors[0].time) / q
@@ -54,50 +54,83 @@ def interpolate_diff_vec(t,anchors):
 	
 	return ( (1-x)*(b-x*3*(2*(a-c)+b+d)) + d*x ) /q
 
-def extrema(anchors):
+class Extrema(object):
 	"""
-		Returns two arrays containing the minima and maxima of the Hermite interpolant for the anchors (within the interval spanned by them) as well as two arrays containing the position of these extrema.
-		
-		Returns
-		-------
-		minimal, maxima : NumPy arrays
-			the values of the extrema for each component
-		
-		arg_min, arg_max : NumPy arrays
-			the positions of the extrema for each component
+	Class for containing the extrema and their positions in `n` dimensions.
 	"""
+	def __init__(self,n):
+		self.arg_min = np.full(n,np.nan)
+		self.arg_max = np.full(n,np.nan)
+		self.minima = np.full(n, np.inf)
+		self.maxima = np.full(n,-np.inf)
+	
+	def update(self,times,values,condition=True):
+		"""
+		Updates the extrema if `values` are more extreme.
+		
+		Parameters
+		----------
+		condition : boolean or array of booleans
+			Only the components where this is `True` are updated.
+		"""
+		update_min = np.logical_and(values<self.minima,condition)
+		self.arg_min = np.where(update_min,times ,self.arg_min)
+		self.minima  = np.where(update_min,values,self.minima )
+		
+		update_max = np.logical_and(values>self.maxima,condition)
+		self.arg_max = np.where(update_max,times ,self.arg_max)
+		self.maxima  = np.where(update_max,values,self.maxima )
+
+def extrema_from_anchors(anchors,beginning=None,end=None,target=None):
+	"""
+	Returns two arrays containing the minima and maxima of the Hermite interpolant for the anchors (within the interval spanned by them) as well as two arrays containing the position of these extrema.
+	
+	Parameters
+	----------
+	beginning : float or `None`
+		Beginning of the time interval for which extrema are returned. If `None`, the time of the first anchor is used.
+	end : float or `None`
+		End of the time interval for which extrema are returned. If `None`, the time of the last anchor is used.
+	target : Extrema or `None`
+		If an Extrema instance, this one is updated with the newly found extrema and also returned (which means that newly found extrema will be ignored when the extrema in `target` are more extreme).
+	
+	Returns
+	-------
+	extrema: Extrema object
+		An `Extrema` instance containing the extrema and their positions.
+	"""
+	
 	q = (anchors[1].time-anchors[0].time)
 	retransform = lambda x: q*x+anchors[0].time
 	a = anchors[0].state
 	b = anchors[0].diff * q
 	c = anchors[1].state
 	d = anchors[1].diff * q
+	evaluate = lambda x: (1-x)*((1-x)*(b*x+(a-c)*(2*x+1))-d*x**2)+c
 	
-	condition = anchors[1].state>anchors[0].state
-	arg_min = np.where(condition,anchors[0].time,anchors[1].time)
-	arg_max = np.where(condition,anchors[1].time,anchors[0].time)
-	minima = np.minimum(anchors[0].state,anchors[1].state)
-	maxima = np.maximum(anchors[0].state,anchors[1].state)
+	left_x  = 0 if beginning is None else (beginning-anchors[0].time)/q
+	right_x = 1 if end       is None else (end      -anchors[0].time)/q
+	beginning = anchors[0].time if beginning is None else beginning
+	end       = anchors[1].time if end       is None else end
+	
+	extrema = Extrema(len(anchors[0].state)) if target is None else target
+	
+	extrema.update(beginning,evaluate(left_x ))
+	extrema.update(end      ,evaluate(right_x))
 	
 	radicant = b**2 + b*d + d**2 + 3*(a-c)*(3*(a-c) + 2*(b+d))
 	A = 1/(2*a + b - 2*c + d)
 	B = a + 2*b/3 - c + d/3
+	for sign in (-1,1):
+		with np.errstate(invalid='ignore'):
+			x = (B+sign*np.sqrt(radicant)/3)*A
+			extrema.update(
+					retransform(x),
+					evaluate(x),
+					np.logical_and.reduce(( radicant>=0, left_x<=x, x<=right_x ))
+				)
 	
-	n = len(anchors[0].state)
-	for i in range(n):
-		if radicant[i]>=0:
-			for sign in (-1,1):
-				x = (B[i]+sign*np.sqrt(radicant[i])/3)*A[i]
-				if 0<x<1:
-					value = (1-x) * ( (1-x) * (b[i]*x + (a[i]-c[i])*(2*x+1)) - d[i]*x**2) + c[i]
-					if value<minima[i]:
-						minima[i] = value
-						arg_min[i] = retransform(x)
-					elif value>maxima[i]:
-						maxima[i] = value
-						arg_max[i] = retransform(x)
-	
-	return minima,maxima,arg_min,arg_max
+	return extrema
 
 sumsq = lambda x: np.sum(x**2)
 
@@ -129,7 +162,7 @@ def partial_sp_matrix(z):
 
 def norm_sq_interval(anchors, indices):
 	"""
-		Returns the norm of the interpolant of `anchors` for the `indices`.
+	Returns the norm of the interpolant of `anchors` for the `indices`.
 	"""
 	q = (anchors[1].time-anchors[0].time)
 	vector = np.vstack([
@@ -147,7 +180,7 @@ def norm_sq_interval(anchors, indices):
 
 def norm_sq_partial(anchors, indices, start):
 	"""
-		Returns the norm of the interpolant of `anchors` for the `indices`, but only taking into account the time after `start`.
+	Returns the norm of the interpolant of `anchors` for the `indices`, but only taking into account the time after `start`.
 	"""
 	q = (anchors[1].time-anchors[0].time)
 	z = (start-anchors[1].time) / q
@@ -166,7 +199,7 @@ def norm_sq_partial(anchors, indices, start):
 
 def scalar_product_interval(anchors, indices_1, indices_2):
 	"""
-		Returns the scalar product of the interpolants of `anchors` for `indices_1` (one side of the product) and `indices_2` (other side).
+	Returns the scalar product of the interpolants of `anchors` for `indices_1` (one side of the product) and `indices_2` (other side).
 	"""
 	q = (anchors[1].time-anchors[0].time)
 	
@@ -192,7 +225,7 @@ def scalar_product_interval(anchors, indices_1, indices_2):
 
 def scalar_product_partial(anchors, indices_1, indices_2, start):
 	"""
-		Returns the scalar product of the interpolants of `anchors` for `indices_1` (one side of the product) and `indices_2` (other side), but only taking into account the time after `start`.
+	Returns the scalar product of the interpolants of `anchors` for `indices_1` (one side of the product) and `indices_2` (other side), but only taking into account the time after `start`.
 	"""
 	q = (anchors[1].time-anchors[0].time)
 	z = (start-anchors[1].time) / q
@@ -420,8 +453,8 @@ class Past(list):
 	
 	def get_anchors(self, time):
 		"""
-			Find the two anchors (before `self.t`) neighbouring `t`.
-			If `t` is outside the ranges of times covered by the anchors, return the two nearest anchors.
+		Find the two anchors (before `self.t`) neighbouring `time`.
+		If `time` is outside the ranges of times covered by the anchors, return the two nearest anchors.
 		"""
 		
 		if time > self.t:
@@ -433,6 +466,12 @@ class Past(list):
 			while self[s+1].time<time:
 				s += 1
 			return (self[s], self[s+1])
+	
+	def get_state(self,time):
+		"""
+		Get the interpolated state at `time`.
+		"""
+		return interpolate_vec(time,self.get_anchors(time))
 	
 	def get_recent_state(self, t):
 		"""
@@ -458,9 +497,44 @@ class Past(list):
 		while self[1].time<threshold:
 			self.pop(0)
 	
+	def extrema(self,beginning=None,end=None):
+		"""
+		Returns the positions and values of the minima and maxima of the Hermite interpolant (for each component) within the specified time interval.
+		
+		Parameters
+		----------
+		beginning : float or `None`
+			Beginning of the time interval for which extrema are returned. If `None`, the time of the first anchor is used.
+		end : float or `None`
+			End of the time interval for which extrema are returned. If `None`, the time of the last anchor is used.
+		
+		Returns
+		-------
+		extrema: Extrema object
+			An `Extrema` instance containing the extrema and their positions.
+		"""
+		
+		beginning = self[ 0].time if beginning is None else beginning
+		end       = self[-1].time if end       is None else end
+		
+		extrema = Extrema(self.n)
+		
+		for i in range(self.last_index_before(beginning),len(self)-1):
+			if self[i].time>end:
+				break
+			
+			extrema_from_anchors(
+					( self[i], self[i+1] ),
+					beginning = max( beginning, self[i  ].time ),
+					end       = min( end      , self[i+1].time ),
+					target = extrema,
+				)
+		
+		return extrema
+	
 	def norm(self, delay, indices):
 		"""
-			Computes the norm between the Hermite interpolants of the past for the given indices taking into account the time between `self.t` − `delay` and `self.t`.
+		Computes the norm between the Hermite interpolants of the past for the given indices taking into account the time between `self.t` − `delay` and `self.t`.
 		"""
 		threshold = self.t - delay
 		
@@ -481,7 +555,7 @@ class Past(list):
 	
 	def scalar_product(self, delay, indices_1, indices_2):
 		"""
-			Computes the scalar product of the Hermite interpolants of the past between `indices_1` (one side of the product) and `indices_2` (other side) taking into account the time between `self.t` − `delay` and `self.t`.
+		Computes the scalar product of the Hermite interpolants of the past between `indices_1` (one side of the product) and `indices_2` (other side) taking into account the time between `self.t` − `delay` and `self.t`.
 		"""
 		threshold = self.t - delay
 		
@@ -502,7 +576,7 @@ class Past(list):
 	
 	def scale(self, indices, factor):
 		"""
-			Scales the past and derivative for `indices` by `factor`.
+		Scales the past and derivative for `indices` by `factor`.
 		"""
 		for anchor in self:
 			anchor.state[indices] *= factor
@@ -510,7 +584,7 @@ class Past(list):
 	
 	def subtract(self, indices_1, indices_2, factor):
 		"""
-			Substract the past and derivative for `indices_2` multiplied by `factor` from `indices_1`.
+		Substract the past and derivative for `indices_2` multiplied by `factor` from `indices_1`.
 		"""
 		for anchor in self:
 			anchor.state[indices_1] -= factor*anchor.state[indices_2]
@@ -518,7 +592,7 @@ class Past(list):
 	
 	def last_index_before(self,time):
 		"""
-			Returns the index of the last anchor before `time`.
+		Returns the index of the last anchor before `time`.
 		"""
 		assert len(self)>=2
 		assert self[0].time<=time

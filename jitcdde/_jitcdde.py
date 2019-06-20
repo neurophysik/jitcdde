@@ -306,16 +306,19 @@ class jitcdde(jitcxde):
 	
 	def get_state(self):
 		"""
-		obtains a list of all anchors currently used by the integrator, which compeletely define the current state. The format is such that it can be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents.
-
-		The states and derivatives are just NumPy wrappers around the C arrays used by the integrator. Therefore changing their content affects the integrator and should not be done unless you do not want to continue using this integrator or know exactly what you’re doing.
+		Returns an object that represents all anchors currently used by the integrator, which compeletely define the current state. The format can be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents.
+		
+		If you reinitialise this integrator after calling this, this past will be used.
 		"""
 		self.DDE.forget(self.max_delay)
-		return self.DDE.get_full_state()
+		full_state = self.DDE.get_full_state()
+		self.past.clear()
+		self.past.extend(self.DDE.get_full_state())
+		return self.past
 
 	def purge_past(self):
 		"""
-		Cleans the past and resets the integrator. You need to define a new past (using `add_past_point`) after this.
+		Clears the past and resets the integrator. You need to define a new past (using `add_past_point`) after this.
 		"""
 		
 		self.past.clear()
