@@ -306,7 +306,9 @@ class jitcdde(jitcxde):
 	
 	def get_state(self):
 		"""
-		Returns an object that represents all anchors currently used by the integrator, which compeletely define the current state. The format can be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents.
+		Returns an object that represents all anchors currently used by the integrator, which compeletely define the current state. The object is a `CubicHermiteSpline <https://chspy.readthedocs.io/en/latest/>`_ instance (with a few special extensions for JiTCDDE), which allows you to extract all sorts of information from it if you want.
+		
+		The format can also be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents.
 		
 		If you reinitialise this integrator after calling this, this past will be used.
 		"""

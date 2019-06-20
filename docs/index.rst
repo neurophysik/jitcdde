@@ -50,6 +50,7 @@ In some extreme cases, they may also be extrapolated.
 Note that unlike most other DDE softwares, JiTCDDE stores and accesses the initial past in exactly this way, i.e., as anchor points.
 Thus, if you want to have maximum control, you have to initiate the past in exactly this way, i.e., you have to give at least two such anchor points (via `add_past_point`).
 If you do not want or need this, there are utility function available that automatically determine the anchors from a given function (`past_from_function`) or just set it to a fixed value (`constant_past`).
+You can also use the `get_state` method to obtain a representation of the past that you can dissect and modify using `CubicHermiteSpline <https://chspy.readthedocs.io/en/latest/>`_.
 
 .. _example:
 
