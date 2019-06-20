@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from jitcdde.past import Past, interpolate, interpolate_vec, interpolate_diff, extrema_from_anchors
+from jitcdde.past import Past
+from jitcdde.hermite_spline import interpolate, interpolate_vec, extrema_from_anchors
 
 NORM_THRESHOLD = 1e-30
 
@@ -17,7 +18,7 @@ class dde_integrator(Past):
 				control_pars = (),
 			):
 		assert isinstance(past,Past)
-		super().__init__(past=past)
+		super().__init__(anchors=past)
 		self.t, self.y, self.diff = self[-1]
 		self.old_new_y = None
 		
@@ -162,7 +163,7 @@ class dde_integrator(Past):
 	
 	def extrema_in_last_step(self):
 		extrema =  extrema_from_anchors(self[-2:])
-		return extrema.minima,extrema.maxima
+		return extrema.minima, extrema.maxima
 	
 	def apply_jump( self, change, time, width=1e-5 ):
 		new_time = time+width
