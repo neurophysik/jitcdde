@@ -3,7 +3,7 @@
 
 import numpy as np
 from jitcxde_common.numerical import random_direction
-from jitcdde.hermite_spline import CubicHermiteSpline, Anchor
+from chspy import CubicHermiteSpline, Anchor
 
 NORM_THRESHOLD = 1e-30
 

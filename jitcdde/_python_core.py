@@ -3,7 +3,7 @@
 
 import numpy as np
 from jitcdde.past import Past
-from jitcdde.hermite_spline import interpolate, interpolate_vec, extrema_from_anchors
+from chspy import interpolate, interpolate_vec, extrema_from_anchors
 
 NORM_THRESHOLD = 1e-30
 
