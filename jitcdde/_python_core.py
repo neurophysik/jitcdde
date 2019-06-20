@@ -41,7 +41,7 @@ class dde_integrator(Past):
 				f_wc,
 				[
 					{
-						anchors.name: self.get_anchors,
+						anchors.name: self.get_anchors_with_mem,
 						past_y .name: interpolate
 					},
 					"math"
@@ -50,7 +50,7 @@ class dde_integrator(Past):
 		
 		self.f = lambda *args: np.array(F(*args)).flatten()
 		
-		# storage of search positions (cursors) for lookup of anchors corresponding to a given time (see `get_anchors`)
+		# storage of search positions (cursors) for lookup of anchors corresponding to a given time (see `get_anchors_with_mem`)
 		# Note that this approach is tailored to mimic the C implementation (using linked lists) as good as possible and therefore is rather clunky in Python.
 		self.anchor_mem = (len(past)-1)*np.ones(past_calls, dtype=int)
 	
@@ -68,10 +68,10 @@ class dde_integrator(Past):
 	def get_t(self):
 		return self.t
 	
-	def get_anchors(self, t):
+	def get_anchors_with_mem(self, t):
 		"""
-			Find the two anchors neighbouring `t`.
-			If `t` is outside the ranges of times covered by the anchors, return the two nearest anchors.
+		Find the two anchors neighbouring `t` using the anchor memory.
+		If `t` is outside the ranges of times covered by the anchors, return the two nearest anchors.
 		"""
 		s = self.anchor_mem[self.anchor_mem_index]
 		
@@ -167,8 +167,7 @@ class dde_integrator(Past):
 	
 	def apply_jump( self, change, time, width=1e-5 ):
 		new_time = time+width
-		i = self.last_index_before(new_time)
-		new_value = interpolate_vec(new_time,(self[i],self[i+1])) + change
+		new_value = self.get_state(new_time) + change
 		new_diff = self.eval_f(new_time,new_value)
 		
 		self.truncate(time)

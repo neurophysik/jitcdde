@@ -354,13 +354,11 @@ class CubicHermiteSpline(list):
 	def last_index_before(self,time):
 		"""
 		Returns the index of the last anchor before `time`.
+		Returns the first anchor if `time` is before the first anchor.
 		"""
-		assert len(self)>=2
-		assert self[0].time<=time
-		
-		i = len(self)-2
-		while self[i].time >= time:
-			i -= 1
+		for i in reversed(range(len(self))):
+			if self[i].time < time:
+				break
 		return i
 	
 	def constant(self,state,time=0):
@@ -471,21 +469,17 @@ class CubicHermiteSpline(list):
 		If `time` is outside the ranges of times covered by the anchors, return the two nearest anchors.
 		"""
 		
-		if time > self.t:
-			return (self[-2], self[-1])
-		else:
-			s = 0
-			while self[s+1].time<time:
-				s += 1
-			return (self[s], self[s+1])
+		s = min( self.last_index_before(time), len(self)-2 )
+		return ( self[s], self[s+1] )
 	
 	def get_state(self,time):
 		"""
-		Get the interpolated state at `time`.
+		Get the state of the spline at `time`.
+		If `time` lies outside of the anchors, the state will be extrapolated.
 		"""
 		return interpolate_vec(time,self.get_anchors(time))
 	
-	def get_recent_state(self, t):
+	def get_recent_state(self,t):
 		"""
 		Interpolate the state at time `t` from the last two anchors.
 		This usually only makes sense if `t` lies between the last two anchors.
@@ -546,10 +540,7 @@ class CubicHermiteSpline(list):
 		Computes the norm of the spline for the given indices taking into account the time between `self.t` − `delay` and `self.t`.
 		"""
 		threshold = self.t - delay
-		
-		i = 0
-		while self[i+1].time < threshold:
-			i += 1
+		i = self.last_index_before(threshold)
 		
 		# partial norm of first relevant interval
 		anchors = (self[i],self[i+1])
@@ -567,10 +558,7 @@ class CubicHermiteSpline(list):
 		Computes the scalar product of the spline between `indices_1` (one side of the product) and `indices_2` (other side) taking into account the time between `self.t` − `delay` and `self.t`.
 		"""
 		threshold = self.t - delay
-		
-		i = 0
-		while self[i+1].time < threshold:
-			i += 1
+		i = self.last_index_before(threshold)
 		
 		# partial scalar product of first relevant interval
 		anchors = (self[i],self[i+1])
