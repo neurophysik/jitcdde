@@ -855,6 +855,8 @@ class jitcdde(jitcxde):
 			the computed state of the system after integration
 		"""
 		
+		self._initiate()
+		
 		assert min_distance > 0, "min_distance must be positive."
 		assert isinstance(propagations,int), "Non-integer number of propagations."
 		
@@ -866,16 +868,22 @@ class jitcdde(jitcxde):
 				for delay in self.delays
 			]
 		steps = _propagate_delays(self.delays, propagations, min_distance)
-		steps.remove(0)
 		steps.sort()
+		steps.remove(0)
 		
 		if steps:
+			max_step = max_step or self.max_step
+			steps = np.array(steps)
+			distances = steps[1:]-steps[:-1]
+			max_gap = max(max_step,steps[0],*distances)
+			if max_step>max(self.delays)/10:
+				warn("I will take big steps here. If you face excessively large values or an unsuccesful integration after this, you should try lowering the max_step parameter.")
+			
 			start_time = self.t
 			for step in steps:
 				result = self.integrate_blindly(start_time+step, max_step)
 			return result
 		else:
-			self._initiate()
 			self.adjust_diff()
 			return self.DDE.get_current_state()[:self.n_basic]
 	
