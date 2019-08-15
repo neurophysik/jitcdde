@@ -653,7 +653,7 @@ class jitcdde(jitcxde):
 					"rtol: %e" % self.rtol,
 					"min_step: %e\n" % self.min_step,
 					"The most likely reasons for this are:",
-					"• You did not sufficiently address initial discontinuities. (If your dynamics is fast, did you adjust the maximum step?)",
+					"• You did not sufficiently address initial discontinuities. (If your dynamics is fast, did you adjust the maximum step when integrating blindly or stepping on discontinuities?)",
 					"• The DDE is ill-posed or stiff.",
 				])
 				
@@ -722,34 +722,39 @@ class jitcdde(jitcxde):
 			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step. You may see this just because your sampling step is small, in which case there is no need to worry.")
 		
 		while self.DDE.get_t() < target_time:
-			self.DDE.get_next_step(self.dt)
-			
-			if self.DDE.past_within_step:
-				self.last_pws = self.DDE.past_within_step
-				
-				# If possible, adjust step size to make integration explicit:
-				if self.dt > self.pws_factor*self.DDE.past_within_step:
-					self.dt /= self.pws_factor
-					self._control_for_min_step()
-					continue
-				
-				# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
-				for self.count in range(1,self.pws_max_iterations+1):
-					self.DDE.get_next_step(self.dt)
-					if self.DDE.check_new_y_diff(self.pws_atol, self.pws_rtol):
-						break
-				else:
-					self.dt /= self.pws_factor
-					self._control_for_min_step()
-					continue
-			
-			if self._adjust_step_size():
+			if self.try_single_step(self.dt):
 				self.DDE.accept_step()
 		
 		result = self.DDE.get_recent_state(target_time)
 		self.DDE.forget(self.max_delay)
 		return result
 	
+	def try_single_step(self,length):
+		self.DDE.get_next_step(length)
+		
+		if self.DDE.past_within_step:
+			self.last_pws = self.DDE.past_within_step
+			
+			# If possible, adjust step size to make integration explicit:
+			if self.dt > self.pws_factor*self.DDE.past_within_step:
+				self.dt /= self.pws_factor
+				self._control_for_min_step()
+				return False
+			
+			# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
+			for self.count in range(1,self.pws_max_iterations+1):
+				self.DDE.get_next_step(self.dt)
+				if self.DDE.check_new_y_diff(self.pws_atol, self.pws_rtol):
+					break
+			else:
+				self.dt /= self.pws_factor
+				self._control_for_min_step()
+				return False
+		
+		return self._adjust_step_size()
+
+
+
 	def adjust_diff(self,shift_ratio=1e-4):
 		"""
 		Performs a zero-amplitude (backwards) `jump` whose `width` is `shift_ratio` times the distance to the previous anchor into the past. This may help with addressing initial discontinuities. See the documentation of `jump` for the caveats of this.
@@ -839,7 +844,7 @@ class jitcdde(jitcxde):
 			how often the discontinuity has to propagate to before it’s considered smoothed
 		
 		max_step : float
-			maximum step size. If `None`, `0`, or otherwise falsy, the `max_step` as set with `set_integration_parameters` is used.
+			maximum step size. If `None`, `0`, or otherwise falsy, the `max_step` as set with `set_integration_parameters` is used. Setting this to a reasonably low value may be crucial to avoid unsuccessful integrations later.
 		
 		min_distance : float
 			If two required steps are closer than this, they will be treated as one.
