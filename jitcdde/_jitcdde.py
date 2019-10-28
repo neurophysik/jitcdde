@@ -875,8 +875,8 @@ class jitcdde(jitcxde):
 			max_step = max_step or self.max_step
 			steps = np.array(steps)
 			distances = steps[1:]-steps[:-1]
-			max_gap = max(max_step,steps[0],*distances)
-			if max_step>max(self.delays)/10:
+			max_gap = min(max_step,max([steps[0],*distances]))
+			if max_gap>max(self.delays)/10:
 				warn("I will take big steps here. If you face excessively large values or an unsuccesful integration after this, you should try lowering the max_step parameter.")
 			
 			start_time = self.t
