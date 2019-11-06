@@ -31,11 +31,27 @@ def y(index,time=t):
 	else:
 		return past_y(time, index, anchors(time))
 
+def dy(index,time):
+	"""
+	This feature is highly experimental.
+	
+	the function representing the DDE’s past derivative used for defining the differential equation. The first integer argument denotes the component. The second, argument denotes the time. If you use this, you get a neutral DDE which may make addressing initial discontinuities more difficult. Do not use this to get the current derivative. Instead compute it using your dynamical equations.
+	
+	This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
+	"""
+	if time == t:
+		warn("Do not use `dy` to compute the current derivative. Use your dynamical equations instead.")
+	else:
+		return past_dy(time, index, anchors(time))
+
 #: the symbol for the current state for defining the differential equation. It is a function and the integer argument denotes the component. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
 current_y = symengine.Function("current_y")
 
 #: the symbol for DDE’s past state for defining differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
 past_y = symengine.Function("past_y")
+
+#: the symbol for DDE’s past derivative for defining differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `dy` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
+past_dy = symengine.Function("past_dy")
 
 #: the symbol representing two anchors for defining the differential equation. It is a function and the float argument denotes the time point to which the anchors pertain. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
 anchors = symengine.Function("anchors")
@@ -210,6 +226,7 @@ class jitcdde(jitcxde):
 		for i,entry in enumerate(self.f_sym()):
 			indizes  = [argument[0] for argument in collect_arguments(entry,current_y)]
 			indizes += [argument[1] for argument in collect_arguments(entry,past_y   )]
+			indizes += [argument[1] for argument in collect_arguments(entry,past_dy  )]
 			for index in indizes:
 				self._check_assert(
 						index >= 0,
@@ -306,12 +323,13 @@ class jitcdde(jitcxde):
 	
 	def get_state(self):
 		"""
-		Returns an object that represents all anchors currently used by the integrator, which compeletely define the current state. The object is a `CubicHermiteSpline <https://chspy.readthedocs.io/en/latest/>`_ instance (with a few special extensions for JiTCDDE), which allows you to extract all sorts of information from it if you want.
+		Returns an object that represents all anchors currently used by the integrator, which compeletely define the current state. The object is a `CubicHermiteSpline <https://chspy.readthedocs.io>`_ instance (with a few special extensions for JiTCDDE), which allows you to extract all sorts of information from it if you want.
 		
 		The format can also be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents.
 		
 		If you reinitialise this integrator after calling this, this past will be used.
 		"""
+		self._initiate()
 		self.DDE.forget(self.max_delay)
 		full_state = self.DDE.get_full_state()
 		self.past.clear()
@@ -752,9 +770,7 @@ class jitcdde(jitcxde):
 				return False
 		
 		return self._adjust_step_size()
-
-
-
+	
 	def adjust_diff(self,shift_ratio=1e-4):
 		"""
 		Performs a zero-amplitude (backwards) `jump` whose `width` is `shift_ratio` times the distance to the previous anchor into the past. This may help with addressing initial discontinuities. See the documentation of `jump` for the caveats of this.

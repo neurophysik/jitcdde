@@ -299,6 +299,7 @@ static PyObject * get_full_state(dde_integrator const * const self)
 # define set_dy(i, value) (dY[i] = value)
 # define current_y(i) (y[i])
 # define past_y(t, i, anchor) (get_past_value(t, i, anchor))
+# define past_dy(t, i, anchor) (get_past_diff (t, i, anchor))
 # define anchors(t) (get_past_anchors(self, t))
 
 # define get_f_helper(i) ((f_helper[i]))

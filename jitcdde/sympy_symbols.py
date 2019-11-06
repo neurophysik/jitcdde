@@ -12,11 +12,25 @@ def y(index,time=t):
 	else:
 		return past_y(time, index, anchors(time))
 
+def dy(index,time):
+	"""
+	the function representing the DDE’s past derivative used for defining the differential equation. The first integer argument denotes the component. The second, argument denotes the time. If you use this, you get a neutral DDE which may make addressing initial discontinuities more difficult. This feature is experimental. Do not use this to get the current derivative. Instead compute it using your dynamical equations.
+	
+	This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected. This one is different from the one you can import from jitcode directly by being defined via SymPy and thus being better suited for some symbolic processing techniques that are not available in SymEngine yet.
+	"""
+	if time == t:
+		warn("Do not use `dy` to compute the current derivative. Use your dynamical equations instead.")
+	else:
+		return past_dy(time, index, anchors(time))
+
 #: the symbol for the current state for defining the differential equation. It is a function and the integer argument denotes the component. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. This one is different from the one you can import from jitcode directly by being defined via SymPy and thus being better suited for some symbolic processing techniques that are not available in SymEngine yet.
 current_y = sympy.Function("current_y",real=True)
 
 #: the symbol for DDE’s past state for defining differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. This one is different from the one you can import from jitcode directly by being defined via SymPy and thus being better suited for some symbolic processing techniques that are not available in SymEngine yet.
 past_y = sympy.Function("past_y",real=True)
+
+#: the symbol for DDE’s past derivative for defining differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `dy` instead. This one is different from the one you can import from jitcode directly by being defined via SymPy and thus being better suited for some symbolic processing techniques that are not available in SymEngine yet.
+past_dy = symengine.Function("past_dy")
 
 #: the symbol representing two anchors for defining the differential equation. It is a function and the float argument denotes the time point to which the anchors pertain. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. This one is different from the one you can import from jitcode directly by being defined via SymPy and thus being better suited for some symbolic processing techniques that are not available in SymEngine yet.
 anchors = sympy.Function("anchors",real=True)
