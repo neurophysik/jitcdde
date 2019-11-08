@@ -458,7 +458,10 @@ class jitcdde(jitcxde):
 			set_anchor = symengine.Function("set_f_anchor_helper")
 			
 			for helper in helpers_wc:
-				if helper[1].__class__ == anchors:
+				if (
+						type(helper[1]) == type(anchors(0)) and
+						helper[1].get_name() == anchors.name
+					):
 					converted_helpers.append(set_anchor(anchor_i, finalise(helper[1])))
 					self.substitutions[helper[0]] = get_anchor(anchor_i)
 					anchor_i += 1
