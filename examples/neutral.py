@@ -2,8 +2,8 @@
 	Experimental implementation of a neutral DDE. See https://github.com/neurophysik/jitcdde/issues/24 for details.
 """
 
-from jitcdde import jitcdde, y, dy, t, UnsuccessfulIntegration
-from symengine import tanh, sqrt, exp
+from jitcdde import jitcdde, y, current_y, past_dy, past_y, t, anchors
+from symengine import tanh, sqrt, exp, Symbol
 import numpy as np
 
 sech = lambda x: 2/(exp(x)+exp(-x))
@@ -17,27 +17,37 @@ ybar_0 = 0
 τ = 1.7735
 ζ = [ 0.017940997406325931, 0.015689701773967984, 0.012763648066925721 ]
 
+anchors_past = Symbol("anchors_past")
+difference = Symbol("difference")
+factor_μ = Symbol("factor_μ")
+factor_ζ = Symbol("factor_ζ")
+
 ydot = [ y(i) for i in range(3,6) ]
-y_tot     = lambda time: sum(  y(i,time) for i in range(  3) )
-ydot_tot  = lambda time: sum(  y(i,time) for i in range(3,6) )
-yddot_tot = lambda time: sum( dy(i,time) for i in range(3,6) )
+y_tot      = sum( current_y(i)                for i in range(  3) )
+ydot_tot   = sum( current_y(i)                for i in range(3,6) )
+y_past     = sum( past_y (t-τ,i,anchors_past) for i in range(  3) )
+ydot_past  = sum( past_y (t-τ,i,anchors_past) for i in range(3,6) )
+yddot_past = sum( past_dy(t-τ,i,anchors_past) for i in range(3,6) )
+
+helpers = {
+		( anchors_past, anchors(t-τ) ),
+		( difference, ybar_0-y_past ),
+		( factor_μ, sech(difference)**2 * (yddot_past + 2*ydot_past**2*tanh(difference)) ),
+		( factor_ζ, 2*abs(y_tot)*ydot_tot ),
+	}
 
 f = { y(i):ydot[i] for i in range(3) }
-f.update( { ydot[i]:
-		μ[i] * sech(ybar_0 - y_tot(t-τ))**2 *
-		(yddot_tot(t-τ) + 2*ydot_tot(t-τ)**2*tanh(ybar_0 - y_tot(t-τ)))
-		- 2*ζ[i] * abs(y_tot(t)) * ydot_tot(t)
-		- ε[i] * ν[i] * ydot[i]
-		- ν[i]**2 * y(i)
+f.update( {
+		ydot[i]:
+		μ[i]*factor_μ - ζ[i]*factor_ζ - ε[i]*ν[i]*ydot[i] - ν[i]**2*y(i)
 		for i in range(3)
 	} )
 
-DDE = jitcdde(f,verbose=False)
-DDE.compile_C(simplify=False)
+DDE = jitcdde(f,helpers=helpers,verbose=False)
 
-DDE.constant_past(np.random.normal(0,0.01,6))
+DDE.constant_past(np.random.normal(0,1,6))
 DDE.adjust_diff(0.5)
 
-for time in DDE.t+np.arange(0.1,400,0.1):
+for time in DDE.t+np.arange(1,100,1):
 	print(time,*DDE.integrate(time))
 
