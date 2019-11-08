@@ -40,7 +40,7 @@ def dy(index,time):
 	This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
 	"""
 	if time == t:
-		warn("Do not use `dy` to compute the current derivative. Use your dynamical equations instead.")
+		raise ValueError("Do not use `dy` to compute the current derivative. Use your dynamical equations instead.")
 	else:
 		return past_dy(time, index, anchors(time))
 
