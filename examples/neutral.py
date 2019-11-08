@@ -6,8 +6,8 @@ from jitcdde import jitcdde, y, dy, t, UnsuccessfulIntegration
 from symengine import tanh, sqrt, exp
 import numpy as np
 
-sech = lambda x: (exp(x)+exp(-x))/2
-eps = 0.01
+sech = lambda x: 2/(exp(x)+exp(-x))
+eps = 1e-5
 abs = lambda x: sqrt(x**2+eps**2)
 
 ε = [ 0.03966, 0.03184, 0.02847 ]
@@ -18,15 +18,17 @@ ybar_0 = 0
 ζ = [ 0.017940997406325931, 0.015689701773967984, 0.012763648066925721 ]
 
 ydot = [ y(i) for i in range(3,6) ]
-y_tot = lambda t: sum( y(i,t) for i in range(3) )
-ydot_tot = lambda t: sum( y(i,t) for i in range(3,6) )
-ydotdot_tot = lambda t: sum( dy(i,t) for i in range(3,6) )
+y_tot     = lambda time: sum(  y(i,time) for i in range(  3) )
+ydot_tot  = lambda time: sum(  y(i,time) for i in range(3,6) )
+yddot_tot = lambda time: sum( dy(i,time) for i in range(3,6) )
 
 f = { y(i):ydot[i] for i in range(3) }
 f.update( { ydot[i]:
-		2*μ[i]*sech(y_tot(t-τ)-ybar_0)**2 *
-		(ydotdot_tot(t-τ) - 2*ydot_tot(t-τ)**2*tanh(y_tot(t-τ)-ybar_0))
-		- 2*ζ[i]*abs(y_tot(t))*ydot_tot(t) - ε[i]*ν[i]*ydot[i] - ν[i]**2*y(i)
+		μ[i] * sech(ybar_0 - y_tot(t-τ))**2 *
+		(yddot_tot(t-τ) + 2*ydot_tot(t-τ)**2*tanh(ybar_0 - y_tot(t-τ)))
+		- 2*ζ[i] * abs(y_tot(t)) * ydot_tot(t)
+		- ε[i] * ν[i] * ydot[i]
+		- ν[i]**2 * y(i)
 		for i in range(3)
 	} )
 
@@ -36,14 +38,6 @@ DDE.compile_C(simplify=False)
 DDE.constant_past(np.random.normal(0,0.01,6))
 DDE.adjust_diff(0.5)
 
-for time in DDE.t+np.arange(0.1,100,0.1):
-	try:
-		state = DDE.integrate(time)
-	except UnsuccessfulIntegration:
-		break
-	
-	if np.any(np.abs(state)>100):
-		break
-	
-	print(time,*state)
+for time in DDE.t+np.arange(0.1,400,0.1):
+	print(time,*DDE.integrate(time))
 
