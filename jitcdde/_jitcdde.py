@@ -531,11 +531,19 @@ class jitcdde(jitcxde):
 		Parameters
 		----------
 		parameters : floats
-			Values of the control parameters. The order must be the same as in the `control_pars` argument of the `jitcdde`.
+			Values of the control parameters.
+			You can also use a single iterable containing these.
+			Either way, the order must be the same as in the `control_pars` argument of the `jitcdde`.
 		"""
 		
 		self._initiate()
-		self.DDE.set_parameters(*parameters)
+		try:
+			self.DDE.set_parameters(*parameters[0])
+		except TypeError:
+			self.DDE.set_parameters(*parameters)
+		else:
+			if len(parameters)>1:
+				raise TypeError("Argument must either be a single sequence or multiple numbers.")
 	
 	def _set_integration_parameters(self):
 		if not self.integration_parameters_set:

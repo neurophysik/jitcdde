@@ -273,6 +273,11 @@ class TestParametersPython(TestParameters):
 		self.DDE.generate_lambdas()
 		self.DDE.set_parameters(0.165, 0.2, 10.0, 0.25)
 
+class TestParametersList(TestParameters):
+	def generator(self):
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.set_parameters([0.165, 0.2, 10.0, 0.25])
+
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
 		self.DDE = jitcdde(f)
