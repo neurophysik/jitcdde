@@ -6,6 +6,10 @@
 # include <assert.h>
 # include <stdbool.h>
 
+# ifndef NDEBUG
+	# include <stdio.h>
+# endif
+
 # define TYPE_INDEX NPY_DOUBLE
 
 # define NORM_THRESHOLD (1e-30)
@@ -109,8 +113,42 @@ void replace_last_anchor(dde_integrator * const self, anchor * const new_anchor)
 	new_anchor->next = NULL;
 }
 
-{% if control_pars|length %}
+# ifndef NDEBUG
+// Pretty print of the anchor structure for debugging.
+void print_anchors(dde_integrator * const self)
+{
+	setbuf(stdout, NULL);
+	printf("\n----------------------- Anchors ------------------------\n");
+	if (!self->first_anchor)
+		printf("First anchor points to NULL.");
+	else
+		for (anchor * ca = self->first_anchor; ca; ca = ca->next)
+			printf(
+					"%p,\t next: %p,\tprevious: %p\n",
+					ca,
+					ca->next,
+					ca->previous
+				);
+	printf("last anchor: %p\n",self->last_anchor);
+	{% if anchor_mem_length: %}
+	printf("\n");
+	printf("anchor memory:\t");
+	for (int i=0; i<{{anchor_mem_length}}; i++)
+		printf("%p\t",self->anchor_mem[i]);
+	printf("\n");
+	printf(
+			"anchor memory pointers go from %p to %p.\n",
+			self->anchor_mem,
+			self->anchor_mem + {{anchor_mem_length}}-1
+		);
+	printf( "anchor memory cursor is: %p\n", self->anchor_mem_cursor);
+	{% endif %}
+	printf("--------------------------------------------------------\n\n");
+}
+# endif
 
+{% if control_pars|length %}
+G
 static PyObject * set_parameters(dde_integrator * const self, PyObject * args)
 {
 	if (!PyArg_ParseTuple(
@@ -142,8 +180,8 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 	anchor ** this_cursor;
 	
 	#pragma omp atomic capture
-	this_cursor = self->anchor_mem_cursor++;
 	// Note that the above only ensures that no two threads operate on the same cursor and that there are no race conditions. If two calls of get_past_anchors are executed in the "wrong" order, they will get the "wrong" cursor, i.e., they probably have to search considerably longer to find the right anchors. As this does not affect the correctness of the results but only the runtime, it's okay to do this. It may void the speed boost from parallelising though. Hope is that even with parallelising there there is a stable order in which get_past_anchors is called and thus every call of get_past_anchor gets its unique cursor.
+	this_cursor = self->anchor_mem_cursor++;
 	
 	anchor * ca = *this_cursor;
 	while ( (ca->time > t) && (ca->previous) )
