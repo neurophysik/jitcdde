@@ -69,14 +69,12 @@ class TestIntegration(unittest.TestCase):
 		for i,lyap_control in enumerate(lyap_controls):
 			lyap = np.average(lyaps[lyap_start:,i], weights=weights[lyap_start:])
 			stderr = sem(lyaps[lyap_start:,i])
-			print(lyap,stderr)
 			self.assertAlmostEqual(lyap_control, lyap, delta=3*stderr)
 
 class TestSaveAndLoad(TestIntegration):
 	def setUp(self):
 		DDE_orig = jitcdde_lyap(f, n_lyap=len(lyap_controls))
 		filename = DDE_orig.save_compiled(overwrite=True)
-		print(filename)
 		self.DDE = jitcdde_lyap(
 			n=6,
 			module_location=filename,
