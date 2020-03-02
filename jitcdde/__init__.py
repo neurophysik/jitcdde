@@ -1,11 +1,12 @@
 from ._jitcdde import (
 		jitcdde, jitcdde_lyap, jitcdde_restricted_lyap, jitcdde_transversal_lyap,
 		t, y, dy, current_y, past_y, anchors, past_dy,
+		input, jitcdde_input,
 		UnsuccessfulIntegration,
 		_find_max_delay, _get_delays,
 		quadrature,
 		test,
-		)
+	)
 
 try:
 	from .version import version as __version__

@@ -12,6 +12,7 @@ from jitcxde_common import jitcxde, checker
 from jitcxde_common.helpers import sort_helpers, sympify_helpers, find_dependent_helpers
 from jitcxde_common.symbolic import collect_arguments, count_calls, replace_function
 from jitcxde_common.transversal import GroupHandler
+import chspy
 
 _default_min_step = 1e-10
 
@@ -156,7 +157,7 @@ class jitcdde(jitcxde):
 		Whether JiTCDDE shall give progress reports on the processing steps.
 	
 	module_location : string
-		location of a module file from which functions are to be loaded (see `save_compiled`). If you use this, you need not give `f_sym` as an argument, but in this case you must give `n` and `max_delay`. Also note that the integrator may lack some functionalities, depending on the arguments you provide.
+		location of a module file from which functions are to be loaded (see `save_compiled`). If you use this, you need not give `f_sym` as an argument, but then you must give `n` and `max_delay`. Also note that the integrator may lack some functionalities, depending on the arguments you provide.
 	"""
 	
 	dynvar = current_y
@@ -181,16 +182,15 @@ class jitcdde(jitcxde):
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
 		self.control_pars = control_pars
 		
-		self.past = Past(
-				n=self.n, n_basic=self.n_basic,
-				tangent_indices = self.tangent_indices if hasattr(self,"tangent_indices") else [],
-			)
-		
+		self.initiate_past()
 		self.integration_parameters_set = False
 		self.DDE = None
 		self.verbose = verbose
 		self.delays = delays
 		self.max_delay = max_delay
+	
+	def initiate_past(self):
+		self.past = Past( n=self.n, n_basic=self.n_basic )
 	
 	@property
 	def delays(self):
@@ -331,7 +331,6 @@ class jitcdde(jitcxde):
 		"""
 		self._initiate()
 		self.DDE.forget(self.max_delay)
-		full_state = self.DDE.get_full_state()
 		self.past.clear()
 		self.past.extend(self.DDE.get_full_state())
 		return self.past
@@ -796,7 +795,7 @@ class jitcdde(jitcxde):
 		past = self.get_state()
 		width = shift_ratio*(past[-1][0]-past[-2][0])
 		time = past[-1][0]
-		return self.jump(np.zeros(self.n),time,width,forward=False)
+		return self.jump(0,time,width,forward=False)
 	
 	def _prepare_blind_int(self, target_time, step):
 		self._initiate()
@@ -947,6 +946,8 @@ class jitcdde(jitcxde):
 		"""
 		self._initiate()
 		assert width>=0
+		if np.ndim(amplitude)==0:
+			amplitude = np.full(self.n,amplitude,dtype=float)
 		amplitude = np.atleast_1d(np.array(amplitude,dtype=float))
 		assert amplitude.shape == (self.n,)
 		
@@ -1013,8 +1014,7 @@ class jitcdde_lyap(jitcdde):
 	def __init__( self, f_sym=(), n_lyap=1, simplify=None, **kwargs ):
 		self.n_basic = kwargs.pop("n",None)
 		
-		if "helpers" not in kwargs.keys():
-			kwargs["helpers"] = ()
+		kwargs.setdefault("helpers",())
 		kwargs["helpers"] = sort_helpers(sympify_helpers(kwargs["helpers"] or []))
 
 		f_basic = self._handle_input(f_sym,n_basic=True)
@@ -1089,8 +1089,7 @@ class jitcdde_lyap(jitcdde):
 			else:
 				kwargs["max_step"] = required_max_step
 			
-			if not "min_step" in kwargs.keys():
-				kwargs["min_step"] = _default_min_step
+			kwargs.setdefault("min_step",_default_min_step)
 			
 			if kwargs["min_step"] > required_max_step:
 				warn("Given the number of desired Lyapunov exponents and the maximum delay in the system, the highest possible step size is lower than the default min_step or the min_step set by you. This is almost certainly a very bad thing. Nonetheless I will lower min_step accordingly.")
@@ -1134,8 +1133,7 @@ class jitcdde_restricted_lyap(jitcdde):
 	def __init__(self, f_sym=(), vectors=(), **kwargs):
 		self.n_basic = kwargs.pop("n",None)
 		
-		if "helpers" not in kwargs.keys():
-			kwargs["helpers"] = ()
+		kwargs.setdefault("helpers",())
 		kwargs["helpers"] = sort_helpers(sympify_helpers(kwargs["helpers"] or []))
 		
 		f_basic = self._handle_input(f_sym,n_basic=True)
@@ -1336,6 +1334,13 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 				**kwargs
 			)
 	
+	def initiate_past(self):
+		self.past = Past(
+				n=self.n,
+				n_basic=self.n_basic,
+				tangent_indices = self.tangent_indices
+			)
+	
 	def norm(self):
 		tangent_vector = self._y[self.tangent_indices]
 		norm = np.linalg.norm(tangent_vector)
@@ -1398,6 +1403,136 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		state = self.DDE.get_current_state()[self.main_indices]
 		
 		return state, lyap, total_integration_time
+
+input_shift = symengine.Symbol("external_input",real=True,negative=False)
+input_base_n = symengine.Symbol("input_base_n",integer=True,negative=False)
+def input(index,time=t):
+	"""
+	Function representing an external input (for `jitcdde_input`). The first integer argument denotes the component. The second, optional argument is a symbolic expression denoting the time. This automatically expands to using `current_y`, `past_y`, `anchors`, `input_base_n`, and `input_shift`; so do not be surprised when you look at the output and it is different than what you entered or expected. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
+	"""
+	if time!=t:
+		warn("Do not use delayed inputs unless you also have undelayed inputs (otherwise you can just shift your time frame). If you use delayed and undelayed inputs, you have to rely on automatic delay detection or explicitly add `input[-1].time+delay` to the delays (and consider it as a max_delay) for each delayed input.")
+	return y(index+input_base_n,time-input_shift)
+
+class jitcdde_input(jitcdde):
+	"""
+	Allows to integrate the DDE (or an ODE) with input. Under the hood, this is handled by adding dummy dynamical variables, in whose past state the input is stored.
+	In contrast to other variants of JiTCDDE, the integration must start at :math:`t=0`.
+	
+	Parameters
+	----------
+	input : CHSPy CubicHermiteSpline
+		The input.
+		This has to be a CubicHermiteSpline (specifying the values and derivatives at certain anchor points). Be sure to plot the input to check whether it conforms with your expectations.
+	
+	All further parameters are as for `jitcdde`.
+	"""
+	
+	def __init__( self, f_sym=(), input=None, **kwargs ):
+		if input is None:
+			raise ValueError("You must define an input; otherwise just use plain jitcdde.")
+		if input[0].time > 0:
+			warn(f"Your input past does not begin at t=0 but at t={input[0].time}. Values before the beginning of the past will be extrapolated. You very likely do not want this.")
+		
+		self.n = kwargs.pop("n",None)
+		f_basic = self._handle_input(f_sym)
+		self.input_base_n = self.n
+		self.n += input.n
+		
+		self.input_duration = input[-1].time
+		substitutions = {
+				input_base_n: self.input_base_n,
+				input_shift: self.input_duration,
+			}
+		
+		self.regular_past = chspy.CubicHermiteSpline(n=self.input_base_n)
+		self.input_past = chspy.CubicHermiteSpline(n=input.n)
+		for anchor in input:
+			self.input_past.add((
+					anchor.time-self.input_duration,
+					anchor.state,
+					anchor.diff,
+				))
+		
+		def f_full():
+			for expression in f_basic():
+				yield expression.subs(substitutions)
+			# Dummy dynamical variables having constant diff of the last input point to avoid adjustment and to provide the best extrapolation, if required.
+			yield from input[-1].diff
+		
+		if kwargs.setdefault("delays",None) is not None:
+			kwargs["delays"] = [ *kwargs["delays"], self.input_duration ]
+		
+		if kwargs.setdefault("max_delay",None) is not None:
+			kwargs["max_delay"] = max( kwargs["max_delay"], self.input_duration )
+		
+		super().__init__( f_full, n=self.n, **kwargs )
+	
+	def initiate_past(self):
+		pass
+	
+	@property
+	def past(self):
+		assert len(self.regular_past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
+		if self.regular_past[-1].time != 0:
+			raise ValueError("For jitcdde_input, the initial past must end at t=0.")
+		return chspy.join(self.regular_past,self.input_past)
+	
+	@past.setter
+	def past(self,value):
+		raise AssertionError("For jitcdde_input, the past attribute should not be directly set.")
+	
+	def add_past_point(self, time, state, derivative):
+		self.reset_integrator()
+		self.regular_past.add((time,state,derivative))
+
+	def add_past_points(self, anchors):
+		self.reset_integrator()
+		for anchor in anchors:
+			self.regular_past.add(anchor)
+	
+	def constant_past(self,state,time=0):
+		self.regular_past.constant(state,time)
+	
+	def past_from_function(self,function,times_of_interest=None,max_anchors=100,tol=5):
+		if times_of_interest is None:
+			times_of_interest = np.linspace(-self.max_delay,0,10)
+		else:
+			times_of_interest = sorted(times_of_interest)
+		
+		self.regular_past.from_function(function,times_of_interest,max_anchors,tol)
+	
+	def get_state(self):
+		self._initiate()
+		self.DDE.forget(self.max_delay)
+		self.regular_past.clear()
+		for anchor in self.DDE.get_full_state():
+			self.regular_past.append((
+					anchor[0],
+					anchor[1][:self.input_base_n],
+					anchor[2][:self.input_base_n],
+				))
+		return self.regular_past
+	
+	def purge_past(self):
+		self.regular_past.clear()
+		self.reset_integrator()
+	
+	def integrate(self,target_time):
+		if target_time>self.input_duration:
+			warn("Integrating beyond duration of input. From now on, the input will be extrapolated. You very likely do not want this. Instead define a longer input or stop integrating.")
+		return super().integrate(target_time)[:self.input_base_n]
+	
+	def integrate_blindly(self,*args,**kwargs):
+		return super().integrate_blindly(*args,**kwargs)[:self.input_base_n]
+	
+	def jump(self,amplitude,*args,**kwargs):
+		if np.ndim(amplitude)==0:
+			amplitude = np.full(self.input_base_n,amplitude,dtype=float)
+		assert amplitude.shape == (self.input_base_n,)
+		extended_amplitude = np.hstack((amplitude,np.zeros(self.input_past.n)))
+		minima,maxima = super().jump(extended_amplitude,*args,**kwargs)
+		return minima[:self.input_base_n], maxima[:self.input_base_n]
 
 def test(omp=True,sympy=True):
 	"""

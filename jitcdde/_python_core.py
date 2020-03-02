@@ -3,7 +3,7 @@
 
 import numpy as np
 from jitcdde.past import Past
-from chspy import interpolate, interpolate_vec, extrema_from_anchors
+from chspy import interpolate, interpolate_vec, extrema_from_anchors, CubicHermiteSpline
 
 NORM_THRESHOLD = 1e-30
 
@@ -17,7 +17,7 @@ class dde_integrator(Past):
 				helpers = (),
 				control_pars = (),
 			):
-		assert isinstance(past,Past)
+		assert isinstance(past,CubicHermiteSpline)
 		super().__init__(anchors=past)
 		self.t, self.y, self.diff = self[-1]
 		self.old_new_y = None

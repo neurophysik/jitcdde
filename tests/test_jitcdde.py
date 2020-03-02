@@ -8,12 +8,14 @@ from jitcdde import (
 		_find_max_delay, _get_delays,
 		quadrature,
 		test,
+		input, jitcdde_input,
 	)
 import platform
 import symengine
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
+from itertools import combinations
 
 if platform.system() == "Windows":
 	compile_args = None
@@ -76,7 +78,7 @@ class TestIntegration(unittest.TestCase):
 			self.assertEqual(value, self.y_10)
 	
 	def test_integration(self):
-		for time in np.linspace(0, T, 10, endpoint=True):
+		for time in np.linspace(0,T,10,endpoint=True):
 			value = self.DDE.integrate(time)
 		assert_allclose(value, y_10_ref)
 		self.assert_consistency_with_previous(value)
@@ -370,6 +372,33 @@ class TestQuadrature(unittest.TestCase):
 		t = symengine.Symbol("t")
 		with self.assertRaises(NotImplementedError):
 			quadrature(t**2,t,0,1,method="tai")
+
+class TestInput(unittest.TestCase):
+	def setUp(self):
+		DDE = jitcdde(f)
+		DDE.set_integration_parameters(**test_parameters)
+		DDE.compile_C(extra_compile_args=compile_args)
+		DDE.add_past_points(get_past_points())
+		DDE.integrate(T)
+		self.result = DDE.get_state()
+	
+	def test_input(self):
+		combos = [
+			combo
+			for l in range(1,n)
+			for combo in combinations(range(n),l)
+		]
+		
+		for combo in np.random.choice(combos,3,replace=False):
+			combo = [3,5]
+			substitutions = { y(i):input(i) for i in combo }
+			f_input = [expression.subs(substitutions) for expression in f]
+			DDE = jitcdde_input(f,self.result)
+			DDE.set_integration_parameters(**test_parameters)
+			DDE.compile_C(extra_compile_args=compile_args)
+			DDE.add_past_points(get_past_points())
+			value = DDE.integrate(T)
+			assert_allclose(value, y_10_ref)
 
 class TestTest(unittest.TestCase):
 	def test_test(self):
