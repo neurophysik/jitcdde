@@ -148,7 +148,6 @@ void print_anchors(dde_integrator * const self)
 # endif
 
 {% if control_pars|length %}
-G
 static PyObject * set_parameters(dde_integrator * const self, PyObject * args)
 {
 	if (!PyArg_ParseTuple(
