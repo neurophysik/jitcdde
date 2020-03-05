@@ -54,12 +54,15 @@ f.update( {
 class TestNeutral(unittest.TestCase):
 	def setUp(self):
 		self.DDE = jitcdde(f,helpers=helpers,verbose=False)
+		self.DDE.constant_past(initial)
 	
 	def test_compiled(self):
 		self.DDE.compile_C(extra_compile_args=compile_args)
 	
+	def test_Python_core(self):
+		self.DDE.generate_lambdas()
+	
 	def tearDown(self):
-		self.DDE.constant_past(initial)
 		self.DDE.adjust_diff()
 		np.testing.assert_allclose(self.DDE.integrate(T),control)
 
