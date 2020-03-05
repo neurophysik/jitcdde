@@ -1419,13 +1419,14 @@ class jitcdde_input(jitcdde):
 	Allows to integrate the DDE (or an ODE) with input. Under the hood, this is handled by adding dummy dynamical variables, in whose past state the input is stored.
 	In contrast to other variants of JiTCDDE, the integration must start at :math:`t=0`.
 	
+	All parameters and methods are as for `jitcdde`, except:
+	
 	Parameters
 	----------
 	input : CHSPy CubicHermiteSpline
 		The input.
 		This has to be a CubicHermiteSpline (specifying the values and derivatives at certain anchor points). Be sure to plot the input to check whether it conforms with your expectations.
 	
-	All further parameters are as for `jitcdde`.
 	"""
 	
 	def __init__( self, f_sym=(), input=None, **kwargs ):
