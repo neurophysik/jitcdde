@@ -1,6 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+"""
+This is a very simple example for a state-dependent delay.
+See https://github.com/neurophysik/jitcdde/issues/7 for details.
+"""
+
+
 from jitcdde import jitcdde, y, t
 import numpy
 
@@ -16,7 +22,7 @@ DDE.add_past_point( 0.0    , [-0.5], [0.0])
 DDE.integrate_blindly(0.01)
 
 data = []
-for time in numpy.arange(0,2.0,0.001)+DDE.t:
+for time in [ DDE.t, *numpy.linspace(0.9,2,30) ]:
 	data.append([time, DDE.integrate(time)])
 numpy.savetxt("timeseries.dat", data)
 

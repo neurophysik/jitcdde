@@ -1,5 +1,5 @@
 """
-	Experimental implementation of a neutral DDE. See https://github.com/neurophysik/jitcdde/issues/24 for details.
+	Experimental implementation of a neutral DDE. See https://github.com/neurophysik/jitcdde/issues/24 for details. `simple_neutral.py` contains a clearer, but less efficient implementation.
 """
 
 from jitcdde import jitcdde, y, current_y, past_dy, past_y, t, anchors

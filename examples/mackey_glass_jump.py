@@ -1,6 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+"""
+This is a very simple example implementing the Mackey–Glass system with an additional jump.
+See https://github.com/neurophysik/jitcdde/issues/23 for details.
+"""
+
 from jitcdde import jitcdde, y, t
 import numpy
 
