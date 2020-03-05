@@ -185,6 +185,18 @@ As the Lyapunov vectors (separation functions) are quite difficult to interpret,
 There also two classes (`jitcdde_transversal_lyap` and `jitcdde_restricted_lyap`) that allows to calculate the largest transversal Lyapunov exponents to the synchronisation manifold and arbitrary hyperplanes, respectively.
 See the `JiTCODE documentation`_ for an example on how to use the former and `the accompanying paper`_ for a mathematical background (and another example).
 
+More Features and Examples
+--------------------------
+
+JiTCDDE has several more features for which there are no extensively documented examples, but that are pretty self-explanatory.
+The following is a list of example scripts that may help you with specific problems:
+
+* `Laminar Chaos <https://github.com/neurophysik/jitcdde/blob/master/examples/laminar_chaos.py>`_ and `State Dependent <https://github.com/neurophysik/jitcdde/blob/master/examples/state_dependent.py>`_ are examples employing state-dependent delays.
+
+* `Mackey–Glass with Jumps <https://github.com/neurophysik/jitcdde/blob/master/examples/mackey_glass_jump.py>`_ shows how to use the `jump` method.
+
+* `Simple Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ and `Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ show how to implement neutral DDES. The latter additionally shows how to optimise a DDE with many redundant delay requests, making it considerably faster.
+
 Command reference
 -----------------
 
