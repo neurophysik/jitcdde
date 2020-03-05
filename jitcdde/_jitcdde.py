@@ -1117,9 +1117,8 @@ class jitcdde_lyap(jitcdde):
 		return self.DDE.get_current_state()[:self.n_basic], lyaps, total_integration_time
 
 class jitcdde_restricted_lyap(jitcdde):
-	"""Calculates the largest Lyapunov exponent in orthogonal direction to a predefined plane, i.e. the projection of the separation function onto that plane vanishes.
-	See `this test <https://github.com/neurophysik/jitcdde/blob/master/tests/test_restricted_lyap.py>`_ for an example of usage.
-	Note that coordinate planes (i.e., planes orthogonal to vectors with only one non-zero component) are handled considerably faster. Consider transforming your differential equation to achieve this.
+	"""
+	Calculates the largest Lyapunov exponent in orthogonal direction to a predefined plane, i.e. the projection of the separation function onto that plane vanishes. See `this test <https://github.com/neurophysik/jitcdde/blob/master/tests/test_restricted_lyap.py>`_ for an example of usage. Note that coordinate planes (i.e., planes orthogonal to vectors with only one non-zero component) are handled considerably faster. Consider transforming your differential equation to achieve this.
 
 	The handling is the same as that for `jitcdde_lyap` except for:
 	
