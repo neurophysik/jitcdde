@@ -34,9 +34,9 @@ def y(index,time=t):
 
 def dy(index,time):
 	"""
-	This feature is highly experimental.
-	
-	the function representing the DDE’s past derivative used for defining the differential equation. The first integer argument denotes the component. The second, argument denotes the time. If you use this, you get a neutral DDE which may make addressing initial discontinuities more difficult. Do not use this to get the current derivative. Instead compute it using your dynamical equations.
+	This is the function representing the DDE’s past derivative used for defining the differential equation. The first integer argument denotes the component. The second, argument denotes the time. If you use this, you get a neutral DDE which may make addressing initial discontinuities more difficult. Do not use this to get the current derivative. Instead compute it using your dynamical equations. This will not work with tangential Lyapunov exponents.
+
+	**This feature is experimental.**
 	
 	This automatically expands to using `current_y`, `past_y`, and `anchors`; so do not be surprised when you look at the output and it is different than what you entered or expected. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
 	"""
