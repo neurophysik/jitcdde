@@ -45,9 +45,10 @@ f.update( {
 
 DDE = jitcdde(f,helpers=helpers,verbose=False)
 
+np.random.seed(23)
 DDE.constant_past(np.random.normal(0,1,6))
-DDE.adjust_diff(0.5)
+DDE.adjust_diff()
 
-for time in DDE.t+np.arange(1,100,1):
+for time in DDE.t+np.arange(0.1,100,0.1):
 	print(time,*DDE.integrate(time))
 
