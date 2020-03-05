@@ -5,7 +5,7 @@ requirements = [
 	'jitcxde_common>1.3',
 	'symengine>=0.3.1.dev0',
 	'numpy',
-	'chspy',
+	'chspy>=1.1',
 ]
 
 setup(
@@ -15,7 +15,7 @@ setup(
 	author = 'Gerrit Ansmann',
 	author_email = 'gansmann@uni-bonn.de',
 	url = 'http://github.com/neurophysik/jitcdde',
-	python_requires=">=3.3",
+	python_requires=">=3.6",
 	packages = ['jitcdde'],
 	package_data = {'jitcdde': ['jitced_template.c']},
 	include_package_data = True,
