@@ -25,7 +25,7 @@ class TestIntegration(unittest.TestCase):
 			self.DDE.past_from_function(function)
 			self.DDE.step_on_discontinuities()
 			times = np.arange( self.DDE.t, self.DDE.t+1000, 10 )
-			result = np.vstack( self.DDE.integrate(time) for time in times )
+			result = np.vstack([ self.DDE.integrate(time) for time in times ])
 			results.append(result)
 		
 		assert_allclose(results[0],results[1],atol=0.01,rtol=1e-5)
@@ -46,7 +46,7 @@ class TestIntegration(unittest.TestCase):
 				self.DDE.past_from_function(function)
 			self.DDE.step_on_discontinuities()
 			times = np.arange( self.DDE.t, self.DDE.t+1000, 10 )
-			result = np.vstack( self.DDE.integrate(time) for time in times )
+			result = np.vstack([ self.DDE.integrate(time) for time in times ])
 			results.append(result)
 		
 		assert_allclose(results[0],results[1],atol=0.01,rtol=1e-5)

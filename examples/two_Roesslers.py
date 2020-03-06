@@ -24,6 +24,6 @@ DDE.add_past_point(0.0   , start_state, np.zeros(6))
 DDE.step_on_discontinuities()
 
 times = np.arange(DDE.t,DDE.t+1000,0.1)
-data = np.vstack(DDE.integrate(T) for T in times)
+data = np.vstack([ DDE.integrate(T) for T in times ])
 np.savetxt("two_roesslers.dat", data)
 
