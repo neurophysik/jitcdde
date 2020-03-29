@@ -250,12 +250,13 @@ class TestHelpersChunking(TestHelpers):
 		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
 
 
-a,b,c,k = symengine.symbols("a b c k")
+a,b,c,k,tau = symengine.symbols("a b c k tau")
+parameters = [0.165, 0.2, 10.0, 0.25, 4.5]
 f_params = [
 		omega[0] * (-y(1) - y(2)),
 		omega[0] * (y(0) + a * y(1)),
 		omega[0] * (b + y(2) * (y(0) - c)),
-		omega[1] * (-y(4) - y(5)) + k * (y(0,t-delay) - y(3)),
+		omega[1] * (-y(4) - y(5)) + k * (y(0,t-tau) - y(3)),
 		omega[1] * (y(3) + a * y(4)),
 		omega[1] * (b + y(5) * (y(3) - c))
 	]
@@ -263,22 +264,22 @@ f_params = [
 class TestParameters(TestIntegration):
 	@classmethod
 	def setUpClass(self):
-		self.DDE = jitcdde(f_params, control_pars=[a,b,c,k])
+		self.DDE = jitcdde(f_params, control_pars=[a,b,c,k,tau],max_delay=parameters[-1])
 		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def generator(self):
 		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
-		self.DDE.set_parameters(0.165, 0.2, 10.0, 0.25)
+		self.DDE.set_parameters(*parameters)
 
 class TestParametersPython(TestParameters):
 	def generator(self):
 		self.DDE.generate_lambdas()
-		self.DDE.set_parameters(0.165, 0.2, 10.0, 0.25)
+		self.DDE.set_parameters(*parameters)
 
 class TestParametersList(TestParameters):
 	def generator(self):
 		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
-		self.DDE.set_parameters([0.165, 0.2, 10.0, 0.25])
+		self.DDE.set_parameters(parameters)
 
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
