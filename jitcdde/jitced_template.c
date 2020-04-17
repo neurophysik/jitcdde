@@ -333,6 +333,31 @@ static PyObject * get_full_state(dde_integrator const * const self)
 }
 
 
+{% if callbacks|length %}
+double inline callback(PyObject * Python_function, PyObject * arglist)
+{
+	PyObject * py_result = PyObject_CallObject(Python_function,arglist);
+	Py_DECREF(arglist);
+	double result = PyFloat_AsDouble(py_result);
+	Py_DECREF(py_result);
+	return result;
+}
+{% endif %}
+
+{% for function,nargs in callbacks %}
+static PyObject * callback_{{function}};
+# define {{function}}(...) callback(\
+		callback_{{function}}, \
+		Py_BuildValue( \
+				{% if nargs -%}
+				"(O{{'d'*nargs}})", n_dim_read_only_array_from_data(y) , __VA_ARGS__ \
+				{% else -%}
+				"(O)", n_dim_read_only_array_from_data(y) \
+				{% endif -%}
+			))
+{% endfor %}
+
+
 # define set_dy(i, value) (dY[i] = value)
 # define current_y(i) (y[i])
 # define past_y(t, i, anchor) (get_past_value(t, i, anchor))
@@ -564,11 +589,26 @@ static int initiate_past_from_list(dde_integrator * const self, PyObject * const
 static int dde_integrator_init(dde_integrator * self, PyObject * args)
 {
 	PyObject * past;
-	if (!PyArg_ParseTuple(args, "O!", &PyList_Type, &past))
+	if (!PyArg_ParseTuple(
+				args,
+				"O!{{'O'*callbacks|length}}",
+				&PyList_Type, &past
+				{% for function,nargs in callbacks %}
+				, &callback_{{function}}
+				{% endfor %}
+		))
 	{
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
 		return -1;
 	}
+	
+	{% for function,nargs in callbacks %}
+	if (!PyCallable_Check(callback_{{function}}))
+	{
+		PyErr_SetString(PyExc_TypeError,"Callback must be callable.");
+		return -1;
+	}
+	{% endfor %}
 	
 	self->first_anchor = NULL;
 	self->last_anchor = NULL;

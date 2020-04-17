@@ -153,6 +153,13 @@ class jitcdde(jitcxde):
 	control_pars : list of symbols
 		Each symbol corresponds to a control parameter that can be used when defining the equations and set after compilation with `set_parameters`. Using this makes sense if you need to do a parameter scan with short integrations for each parameter and you are spending a considerable amount of time compiling.
 	
+	callback_functions : iterable
+		Python functions that should be called at integration time (callback) when evaluating the derivative. Each element of the iterable represents one callback function as a tuple containing (in that order):
+		
+		*	A SymEngine function object used in `f_sym` to represent the function call. If you want to use any JiTCDDE features that need the derivative, this must have a properly defined `f_diff` method with the derivative being another callback function (or constant).
+		*	The Python function to be called. This function will receive the state array (`y`) as the first argument. All further arguments are whatever you use as arguments of the SymEngine function in `f_sym`. These must be floats. The return value must also be a float (or something castable to float). It is your responsibility to ensure that this function is deterministic and sufficiently smooth with respect to time and state.
+		*	The number of arguments, **excluding** the state array as mandatory first argument. This means if you have a variadic Python function, you cannot just call it with different numbers of arguments in `f_sym`, but you have to define separate callbacks for each of numer of arguments.
+	
 	verbose : boolean
 		Whether JiTCDDE shall give progress reports on the processing steps.
 	
@@ -164,12 +171,13 @@ class jitcdde(jitcxde):
 	
 	def __init__(
 			self,
-			f_sym = (),
+			f_sym = (), *,
 			helpers = None,
 			n = None,
 			delays = None,
 			max_delay = None,
 			control_pars = (),
+			callback_functions = (),
 			verbose = True,
 			module_location = None
 		):
@@ -181,6 +189,7 @@ class jitcdde(jitcxde):
 			self.n_basic = self.n
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
 		self.control_pars = control_pars
+		self.callback_functions = callback_functions
 		
 		self.initiate_past()
 		self.integration_parameters_set = False
@@ -354,6 +363,9 @@ class jitcdde(jitcxde):
 		Explicitly initiates a purely Python-based integrator.
 		"""
 		
+		if self.callback_functions:
+			raise NotImplementedError("Callbacks do not work with lambdification. You must use the C backend.")
+		
 		assert len(self.past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
 		
 		self.DDE = python_core.dde_integrator(
@@ -505,6 +517,7 @@ class jitcdde(jitcxde):
 				control_pars = [par.name for par in self.control_pars],
 				tangent_indices = self.tangent_indices if hasattr(self,"tangent_indices") else [],
 				chunk_size = chunk_size, # only for OMP
+				callbacks = [(fun.name,n_args) for fun,_,n_args in self.callback_functions],
 			)
 		
 		self._compile_and_load(verbose,extra_compile_args,extra_link_args,omp)
@@ -517,7 +530,10 @@ class jitcdde(jitcxde):
 			assert len(self.past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
 			
 			if self.compile_attempt:
-				self.DDE = self.jitced.dde_integrator(self.past)
+				self.DDE = self.jitced.dde_integrator(
+						self.past,
+						*[callback for _,callback,_ in self.callback_functions],
+					)
 			else:
 				self.generate_lambdas()
 		

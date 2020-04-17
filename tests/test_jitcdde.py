@@ -238,7 +238,7 @@ f_alt = [
 class TestHelpers(TestIntegration):
 	@classmethod
 	def setUpClass(self):
-		self.DDE = jitcdde(f_alt, f_alt_helpers)
+		self.DDE = jitcdde(f_alt, helpers=f_alt_helpers)
 		self.DDE.set_integration_parameters(**test_parameters)
 
 class TestHelpersPython(TestHelpers):
@@ -249,6 +249,35 @@ class TestHelpersChunking(TestHelpers):
 	def generator(self):
 		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
 
+
+first_component = lambda y: omega[0] * (-y[1] - y[2])
+def fourth_component(y,y0_delayed):
+	return omega[1] * (-y[4] - y[5]) + 0.25 * (y0_delayed - y[3])
+minus_ten = lambda y,x: x-10.0
+call_first_component = symengine.Function("call_first")
+call_fourth_component = symengine.Function("call_fourth")
+call_minus_ten = symengine.Function("call_minus_ten")
+
+callbacks = [
+	( call_first_component, first_component, 0),
+	( call_minus_ten, minus_ten, 1 ),
+	( call_fourth_component, fourth_component, 1),
+]
+
+f_callback = [
+		omega[0] * (-y(1) - y(2)),
+		omega[0] * (y(0) + 0.165 * y(1)),
+		omega[0] * (0.2 + y(2) * call_minus_ten(y(0))),
+		call_fourth_component(y(0,t-delay)),
+		omega[1] * (y(3) + 0.165 * y(4)),
+		omega[1] * (0.2 + y(5) * call_minus_ten(y(3))),
+	]
+
+class TestCallback(TestIntegration):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = jitcdde(f_callback,callback_functions=callbacks)
+		self.DDE.set_integration_parameters(**test_parameters)
 
 a,b,c,k,tau = symengine.symbols("a b c k tau")
 parameters = [0.165, 0.2, 10.0, 0.25, 4.5]
@@ -280,6 +309,8 @@ class TestParametersList(TestParameters):
 	def generator(self):
 		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
 		self.DDE.set_parameters(parameters)
+
+
 
 class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
