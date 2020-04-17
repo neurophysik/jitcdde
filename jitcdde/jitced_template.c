@@ -302,31 +302,31 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 	return (PyObject *) result;
 }
 
+npy_intp dim[1] = { {{n}} };
+
+PyObject * n_dim_read_only_array_from_data(void * data) {
+	PyObject * result = PyArray_SimpleNewFromData( 1, dim, TYPE_INDEX, data );
+	PyArray_CLEARFLAGS( (PyArrayObject *) result, NPY_ARRAY_WRITEABLE );
+	return result;
+}
+
 static PyObject * get_current_state(dde_integrator const * const self)
 {
 	assert(self->last_anchor);
-	
-	npy_intp dims[1] = { {{n}} };
-	PyArrayObject * result = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
-	
-	for (int index=0; index<{{n}}; index++)
-		* (double *) PyArray_GETPTR1(result, index) = self->last_anchor->state[index];
-	
-	return (PyObject *) result;
+	return n_dim_read_only_array_from_data(self->last_anchor->state);
 }
 
 static PyObject * get_full_state(dde_integrator const * const self)
 {
 	PyObject * py_past = PyList_New(0);
-    npy_intp dim[1] = { {{n}} };
 	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
 		PyList_Append(
 			py_past,
 			PyTuple_Pack(
-				3,
-				PyFloat_FromDouble(ca->time),
-				PyArray_SimpleNewFromData(1, dim, TYPE_INDEX, ca->state),
-				PyArray_SimpleNewFromData(1, dim, TYPE_INDEX, ca->diff ) 
+					3,
+					PyFloat_FromDouble(ca->time),
+					n_dim_read_only_array_from_data(ca->state),
+					n_dim_read_only_array_from_data(ca->diff )
 				)
 			);
 	return py_past;
