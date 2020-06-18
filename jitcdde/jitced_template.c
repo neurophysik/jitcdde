@@ -334,7 +334,7 @@ static PyObject * get_full_state(dde_integrator const * const self)
 
 
 {% if callbacks|length %}
-double inline callback(PyObject * Python_function, PyObject * arglist)
+static inline double callback(PyObject * Python_function, PyObject * arglist)
 {
 	PyObject * py_result = PyObject_CallObject(Python_function,arglist);
 	Py_DECREF(arglist);
