@@ -1542,6 +1542,9 @@ class jitcdde_input(jitcdde):
 	def integrate_blindly(self,*args,**kwargs):
 		return super().integrate_blindly(*args,**kwargs)[:self.input_base_n]
 	
+	def step_on_discontinuities(self,*args,**kwargs):
+		raise NotImplementedError("Stepping on discontinuities is not implemented for input yet. Use integrate_blindly or adjust_diff instead.")
+	
 	def jump(self,amplitude,*args,**kwargs):
 		if np.ndim(amplitude)==0:
 			amplitude = np.full(self.input_base_n,amplitude,dtype=float)
