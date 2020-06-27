@@ -197,7 +197,7 @@ The following is a list of example scripts that may help you with specific probl
 
 * `Simple Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ and `Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ show how to implement neutral DDES. The latter additionally shows how to optimise a DDE with many redundant delay requests, making it considerably faster.
 * If you want to have input that cannot be expressed in a simple function, you can use `jitcdde_input <https://jitcdde.rtfd.io#input>`_ or use a callback (see the next point). `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/input_data.py>`_ demonstrates how to use this.
-* If you want to call a Python function within the derivative, use the `callback_functions` argument.
+* If you want to call a Python function within the derivative, use the `callback_functions` argument. `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_ demonstrates how to use this.
 
 Command reference
 -----------------
