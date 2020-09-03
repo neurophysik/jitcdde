@@ -74,9 +74,9 @@ To make this happen, you have four options:
 
 * `step_on_discontinuities` – this chooses the integration steps such that they fall on the discontinuities. In most cases, this is the easiest and fastest solution to this problem.
 
-* `integrate_blindly` – this integrates the system for some time with a fixed step size, ignoring the error estimate. You have to take care that all parameters are reasonable. This is a good choice if you have a lot of different delays or time- or state-dependent delays. The time you integrate with this should be larger than your largest delay.
-
 * `adjust_diff` – this smoothens out the derivative on a small time interval, effectively causing a dent in the history. The disadvantage of this is that the derivative may assume extreme values causing problems later on.
+
+* `integrate_blindly` – this integrates the system for some time with a fixed step size, ignoring the error estimate. You have to take care that all parameters are reasonable. This is a good choice if you have a lot of different delays or time- or state-dependent delays. The time you integrate with this should be larger than your largest delay.
 
 * Carefully chosen initial conditions – of course, you can define the past such that the derivative for the last anchor is identical to the value of :math:`f` as determined with the anchors. To find such initial conditions, you usally have to solve a non-linear equation system. If you are not interested in the general dynamics of the system, but the evolution of a very particular initial condition, this may be given by default (otherwise your model is probably worthless).
 
@@ -196,8 +196,12 @@ The following is a list of example scripts that may help you with specific probl
 * `Mackey–Glass with Jumps <https://github.com/neurophysik/jitcdde/blob/master/examples/mackey_glass_jump.py>`_ shows how to use the `jump` method.
 
 * `Simple Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ and `Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ show how to implement neutral DDES. The latter additionally shows how to optimise a DDE with many redundant delay requests, making it considerably faster.
+
 * If you want to have input that cannot be expressed in a simple function, you can use `jitcdde_input <https://jitcdde.rtfd.io#input>`_ or use a callback (see the next point). `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/data_input.py>`_ demonstrates how to use this.
+
 * If you want to call a Python function within the derivative, use the `callback_functions` argument. `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_ demonstrates how to use this.
+
+* If you want to do some sort of event detection, the best way is to use `get_state`, and use the features of `CubicHermiteSplines <https://chspy.readthedocs.io>`_ to determine the time of events as precisely as you need them. As the interpolant has the same error as the integration, you won’t gain a much better event location by integrating again at a finer step size. Note in particulary, that you can truncate the result, allowing you to start a fresh integration at the precise point of the event.
 
 Command reference
 -----------------
