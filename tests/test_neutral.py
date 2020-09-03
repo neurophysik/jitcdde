@@ -54,6 +54,7 @@ f.update( {
 class TestNeutral(unittest.TestCase):
 	def setUp(self):
 		self.DDE = jitcdde(f,helpers=helpers,verbose=False)
+		self.DDE.set_integration_parameters(rtol=1e-5)
 		self.DDE.constant_past(initial)
 	
 	def test_compiled(self):
@@ -64,7 +65,7 @@ class TestNeutral(unittest.TestCase):
 	
 	def tearDown(self):
 		self.DDE.adjust_diff()
-		np.testing.assert_allclose(self.DDE.integrate(T),control)
+		np.testing.assert_allclose(self.DDE.integrate(T),control,rtol=1e-4)
 
 if __name__ == "__main__":
 	unittest.main(buffer=True)

@@ -115,7 +115,23 @@ void replace_last_anchor(dde_integrator * const self, anchor * const new_anchor)
 
 # ifndef NDEBUG
 // Pretty print of the anchor structure for debugging.
-void print_anchors(dde_integrator * const self)
+
+void print_anchor(const anchor * const a)
+{
+	printf("\nAnchor %p\n",a);
+	printf("next: %p,\tprevious: %p\n",a->next,a->previous);
+	printf("time: %f\n",a->time);
+	printf("state:");
+	for (int i=0; i<{{n}}; i++)
+		printf(" %f,",a->state[i]);
+	printf("\n");
+	printf("diff:");
+	for (int i=0; i<{{n}}; i++)
+		printf(" %f,",a->diff[i]);
+	printf("\n");
+}
+
+void print_anchors(const dde_integrator * const self)
 {
 	setbuf(stdout, NULL);
 	printf("\n----------------------- Anchors ------------------------\n");
@@ -123,12 +139,13 @@ void print_anchors(dde_integrator * const self)
 		printf("First anchor points to NULL.");
 	else
 		for (anchor * ca = self->first_anchor; ca; ca = ca->next)
-			printf(
-					"%p,\t next: %p,\tprevious: %p\n",
-					ca,
-					ca->next,
-					ca->previous
-				);
+			print_anchor(ca);
+	/* f( */
+	/* 				"%p,\t next: %p,\tprevious: %p\n", */
+	/* 				ca, */
+	/* 				ca->next, */
+	/* 				ca->previous */
+	/* 			); */
 	printf("last anchor: %p\n",self->last_anchor);
 	{% if anchor_mem_length: %}
 	printf("\n");
@@ -408,7 +425,6 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 		PyErr_SetString(PyExc_ValueError,"Wrong input.");
 		return NULL;
 	}
-	
 	self->last_actual_step_start = self->current->time;
 	
 	anchor * new = safe_malloc(sizeof(anchor));
@@ -440,8 +456,7 @@ static PyObject * get_next_step(dde_integrator * const self, PyObject * args)
 	
 	#pragma omp parallel for schedule(dynamic, {{chunk_size}})
 	for (int i=0; i<{{n}}; i++)
-		self->error[i] = (5*k_1[i]-6*k_2[i]-8*k_3[i]+9*k_4[i]) * (1/72.);
-	
+		self->error[i] = (5*k_1[i]-6*k_2[i]-8*k_3[i]+9*k_4[i]) * (delta_t/72.);
 	if (self->last_anchor == self->current)
 		append_anchor(self,new);
 	else

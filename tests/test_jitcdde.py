@@ -45,15 +45,19 @@ y_10_ref = np.loadtxt("two_Roessler_y10.dat")
 T = 10
 
 test_parameters = {
-		"rtol": 1e-7,
+		"rtol": 1e-4,
 		"atol": 1e-7,
 		"pws_rtol": 1e-3,
 		"pws_atol": 1e-3,
 		"first_step": 30,
 		"max_step": 100,
-		"min_step": 1e-30,
+		"min_step": 1e-16,
 	}
 
+tolerance = {
+		"rtol": 10*test_parameters["rtol"],
+		"atol": 10*test_parameters["atol"],
+	}
 
 class TestIntegration(unittest.TestCase):
 	@classmethod
@@ -80,25 +84,26 @@ class TestIntegration(unittest.TestCase):
 	def test_integration(self):
 		for time in np.linspace(0,T,10,endpoint=True):
 			value = self.DDE.integrate(time)
-		assert_allclose(value, y_10_ref)
+		np.savetxt("two_Roessler_y10_new.dat",value,fmt="%.20f")
+		assert_allclose(value, y_10_ref, **tolerance)
 		self.assert_consistency_with_previous(value)
 		
 	def test_integration_one_big_step(self):
 		value = self.DDE.integrate(T)
-		assert_allclose(value, y_10_ref)
+		assert_allclose(value, y_10_ref, **tolerance)
 		self.assert_consistency_with_previous(value)
 	
 	def test_integration_with_adjust_diff(self):
 		self.DDE.adjust_diff()
 		value = self.DDE.integrate(T)
-		assert_allclose(value, y_10_ref)
+		assert_allclose(value, y_10_ref, **tolerance)
 		self.assert_consistency_with_previous(value)
 	
 	def test_integration_with_zero_jump(self):
 		self.DDE.integrate(T/2)
 		self.DDE.jump(np.zeros(n),T/2)
 		value = self.DDE.integrate(T)
-		assert_allclose(value, y_10_ref)
+		assert_allclose(value, y_10_ref, **tolerance)
 		self.assert_consistency_with_previous(value)
 	
 	def test_integration_with_annihilating_jumps(self):
@@ -107,13 +112,13 @@ class TestIntegration(unittest.TestCase):
 		self.DDE.jump(change,T/2)
 		self.DDE.jump(-change,T/2)
 		value = self.DDE.integrate(T)
-		assert_allclose(value, y_10_ref)
+		assert_allclose(value, y_10_ref, **tolerance)
 		self.assert_consistency_with_previous(value)
 	
 	def test_tiny_steps(self):
 		for time in np.linspace(0.0, T, 10000, endpoint=True):
 			value = self.DDE.integrate(time)
-		assert_allclose(value, y_10_ref)
+		assert_allclose(value, y_10_ref, **tolerance)
 		self.assert_consistency_with_previous(value)
 		
 	def tearDown(self):
@@ -430,7 +435,7 @@ class TestInput(unittest.TestCase):
 			DDE.compile_C(extra_compile_args=compile_args)
 			DDE.add_past_points(get_past_points())
 			value = DDE.integrate(T)
-			assert_allclose(value, y_10_ref)
+			assert_allclose(value, y_10_ref, **tolerance)
 
 class TestTest(unittest.TestCase):
 	def test_test(self):
