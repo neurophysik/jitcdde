@@ -811,7 +811,7 @@ class jitcdde(jitcxde):
 	
 	def adjust_diff(self,shift_ratio=1e-4):
 		"""
-		Performs a zero-amplitude (backwards) `jump` whose `width` is `shift_ratio` times the distance to the previous anchor into the past. This may help with addressing initial discontinuities. See the documentation of `jump` for the caveats of this.
+		Performs a zero-amplitude (backwards) `jump` whose `width` is `shift_ratio` times the distance to the previous anchor into the past. See the documentation of `jump` for the caveats of this and see `discontinuities` for more information on why you almost certainly need to use this or an alternative way to address initial discontinuities.
 			
 		Returns
 		-------
@@ -849,7 +849,7 @@ class jitcdde(jitcxde):
 	
 	def integrate_blindly(self, target_time, step=None):
 		"""
-		Evolves the dynamics with a fixed step size ignoring any accuracy concerns. See `discontinuities` as to why you may want to use this. If a delay is smaller than the time step, the state is extrapolated from the previous step.
+		Evolves the dynamics with a fixed step size ignoring any accuracy concerns. If a delay is smaller than the time step, the state is extrapolated from the previous step. See `discontinuities` for more information on why you almost certainly need to use this or an alternative way to address initial discontinuities.
 		
 		If the target time equals the current time, `adjust_diff` is called automatically.
 		
@@ -880,13 +880,13 @@ class jitcdde(jitcxde):
 		return self.DDE.get_current_state()
 	
 	def step_on_discontinuities(
-			self,
+			self, *,
 			propagations = 1,
-			max_step = None,
 			min_distance = 1e-5,
+			max_step = None,
 		):
 		"""
-		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped. See `discontinuities` as to why you may want to use this.
+		Assumes that the derivative is discontinuous at the start of the integration and chooses steps such that propagations of this point via the delays always fall on integration steps (or very close). Between these, adaptive steps are taken if necessary to keep the error within the bounds set by `set_integration_parameters`. If the discontinuity was propagated sufficiently often, it is considered to be smoothed and the integration is stopped. See `discontinuities` for more information on why you almost certainly need to use this or an alternative way to address initial discontinuities.
 		
 		This only makes sense if you just defined the past (via `add_past_point`) and start integrating, just reset the integrator, or changed control parameters.
 		
@@ -897,11 +897,11 @@ class jitcdde(jitcxde):
 		propagations : integer
 			how often the discontinuity has to propagate to before it’s considered smoothed
 		
-		max_step : float
-			maximum step size. If `None`, `0`, or otherwise falsy, the `max_step` as set with `set_integration_parameters` is used. Setting this to a reasonably low value may be crucial to avoid unsuccessful integrations later.
-		
 		min_distance : float
 			If two required steps are closer than this, they will be treated as one.
+		
+		max_step : float
+			Retired parameter. Steps are now automatically adapted.
 		
 		Returns
 		-------
@@ -913,6 +913,9 @@ class jitcdde(jitcxde):
 		
 		assert min_distance > 0, "min_distance must be positive."
 		assert isinstance(propagations,int), "Non-integer number of propagations."
+		
+		if max_step is not None:
+			warn("The max_step parameter is retired and does not need to be used anymore. Instead, step_on_discontinuities now adapts the step size. This will raise an error in the future.")
 		
 		if not all(symengine.sympify(delay).is_number for delay in self.delays):
 			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
@@ -926,16 +929,17 @@ class jitcdde(jitcxde):
 		steps.remove(0)
 		
 		if steps:
-			max_step = max_step or self.max_step
-			steps = np.array(steps)
-			distances = steps[1:]-steps[:-1]
-			max_gap = min(max_step,max([steps[0],*distances]))
-			if max_gap>max(self.delays)/10:
-				warn("I will take big steps here. If you face excessively large values or an unsuccesful integration after this, you should try lowering the max_step parameter.")
-			
-			start_time = self.t
 			for step in steps:
-				result = self.integrate_blindly(start_time+step, max_step)
+				target_time = self.t + step
+				while True:
+					current_time = self.DDE.get_t()
+					if current_time >= target_time:
+						break
+					if self.try_single_step( min(self.dt,target_time-current_time) ):
+						self.DDE.accept_step()
+			
+			result = self.DDE.get_recent_state(target_time)
+			self.DDE.forget(self.max_delay)
 			return result
 		else:
 			self.adjust_diff()
