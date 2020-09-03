@@ -141,15 +141,15 @@ class TestIntegrationSaveAndLoad(TestIntegration):
 
 class TestIntegrationChunks(TestIntegration):
 	def generator(self):
-		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args, simplify=False)
 
 class TestIntegrationOMP(TestIntegration):
 	def generator(self):
-		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args, omp=True)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args, omp=True, simplify=False)
 
 class TestIntegrationCSE(TestIntegration):
 	def generator(self):
-		self.DDE.compile_C(do_cse=True, extra_compile_args=compile_args)
+		self.DDE.compile_C(do_cse=True, extra_compile_args=compile_args, simplify=False)
 
 tiny_delay = 1e-30
 f_with_tiny_delay = [
@@ -185,11 +185,11 @@ class TestPastWithinStepFuzzy(TestIntegration):
 
 class TestPastWithinStepLambda(TestPastWithinStep):
 	def generator(self):
-		self.DDE.generate_lambdas()
+		self.DDE.generate_lambdas(simplify=False)
 
 class TestPastWithinStepFuzzyLambda(TestPastWithinStepFuzzy):
 	def generator(self):
-		self.DDE.generate_lambdas()
+		self.DDE.generate_lambdas(simplify=False)
 
 
 def f_generator():
@@ -208,11 +208,11 @@ class TestGenerator(TestIntegration):
 
 class TestGeneratorPython(TestGenerator):
 	def generator(self):
-		self.DDE.generate_lambdas()
+		self.DDE.generate_lambdas(simplify=False)
 
 class TestGeneratorChunking(TestGenerator):
 	def generator(self):
-		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args, simplify=False)
 
 
 f_dict = { y(i):entry for i,entry in enumerate(f) }
@@ -248,11 +248,11 @@ class TestHelpers(TestIntegration):
 
 class TestHelpersPython(TestHelpers):
 	def generator(self):
-		self.DDE.generate_lambdas()
+		self.DDE.generate_lambdas(simplify=False)
 
 class TestHelpersChunking(TestHelpers):
 	def generator(self):
-		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args, simplify=False)
 
 
 first_component = lambda y: omega[0] * (-y[1] - y[2])
@@ -302,17 +302,17 @@ class TestParameters(TestIntegration):
 		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def generator(self):
-		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args, simplify=False)
 		self.DDE.set_parameters(*parameters)
 
 class TestParametersPython(TestParameters):
 	def generator(self):
-		self.DDE.generate_lambdas()
+		self.DDE.generate_lambdas(simplify=False)
 		self.DDE.set_parameters(*parameters)
 
 class TestParametersList(TestParameters):
 	def generator(self):
-		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args)
+		self.DDE.compile_C(chunk_size=1, extra_compile_args=compile_args, simplify=False)
 		self.DDE.set_parameters(parameters)
 
 
@@ -321,7 +321,7 @@ class TestIntegrationParameters(unittest.TestCase):
 	def setUp(self):
 		self.DDE = jitcdde(f)
 		self.DDE.add_past_points(get_past_points())
-		self.DDE.compile_C(extra_compile_args=compile_args)
+		self.DDE.compile_C(extra_compile_args=compile_args, simplify=False)
 		
 	def test_min_step_error(self):
 		self.DDE.set_integration_parameters(min_step=1.0)
@@ -343,7 +343,7 @@ class TestJump(unittest.TestCase):
 		DDE = jitcdde(f)
 		DDE.set_integration_parameters(**test_parameters)
 		DDE.add_past_points(get_past_points())
-		DDE.compile_C(extra_compile_args=compile_args)
+		DDE.compile_C(extra_compile_args=compile_args, simplify=False)
 		old_state = DDE.integrate(T)
 		
 		width = 1e-5
@@ -432,7 +432,7 @@ class TestInput(unittest.TestCase):
 			f_input = [expression.subs(substitutions) for expression in f]
 			DDE = jitcdde_input(f,self.result)
 			DDE.set_integration_parameters(**test_parameters)
-			DDE.compile_C(extra_compile_args=compile_args)
+			DDE.compile_C(extra_compile_args=compile_args, simplify=False)
 			DDE.add_past_points(get_past_points())
 			value = DDE.integrate(T)
 			assert_allclose(value, y_10_ref, **tolerance)
