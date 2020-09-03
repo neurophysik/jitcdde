@@ -16,6 +16,7 @@ class dde_integrator(Past):
 				past,
 				helpers = (),
 				control_pars = (),
+				simplify = True,
 			):
 		assert isinstance(past,CubicHermiteSpline)
 		super().__init__(anchors=past)
@@ -32,7 +33,9 @@ class dde_integrator(Past):
 		past_calls = 0
 		f_wc = []
 		for entry in f():
-			new_entry = sympify(entry).subs(substitutions).simplify(ratio=1.0)
+			new_entry = sympify(entry).subs(substitutions)
+			if simplify:
+				new_entry.simplify(ratio=1.0)
 			past_calls += new_entry.count(anchors)
 			f_wc.append(new_entry)
 		

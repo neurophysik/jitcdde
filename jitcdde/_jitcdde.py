@@ -360,10 +360,19 @@ class jitcdde(jitcxde):
 		"""
 		self.DDE = None
 	
-	def generate_lambdas(self):
+	def generate_lambdas(self,simplify=None):
 		"""
 		Explicitly initiates a purely Python-based integrator.
+		
+		Parameter
+		---------
+		simplify : boolean
+			Whether the derivative should be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`). The main reason why you could want to disable this is if your derivative is already optimised and so large that simplifying takes a considerable amount of time. If `None`, this will be automatically disabled for `n>10`.
+			
 		"""
+		
+		if simplify is None:
+			simplify = self.n<=10
 		
 		if self.callback_functions:
 			raise NotImplementedError("Callbacks do not work with lambdification. You must use the C backend.")
@@ -375,6 +384,7 @@ class jitcdde(jitcxde):
 				self.past,
 				self.helpers,
 				self.control_pars,
+				simplify=simplify,
 			)
 		self.compile_attempt = False
 	

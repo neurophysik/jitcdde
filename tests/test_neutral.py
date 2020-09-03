@@ -61,7 +61,7 @@ class TestNeutral(unittest.TestCase):
 		self.DDE.compile_C(extra_compile_args=compile_args)
 	
 	def test_Python_core(self):
-		self.DDE.generate_lambdas()
+		self.DDE.generate_lambdas(simplify=False)
 	
 	def tearDown(self):
 		self.DDE.adjust_diff()
