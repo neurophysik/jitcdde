@@ -49,11 +49,11 @@ class TestIntegration(unittest.TestCase):
 		self.DDE.integrate_blindly(100.0, 0.1)
 	
 	def test_step_on_discontinuities(self):
-		self.DDE.step_on_discontinuities(max_step=0.1)
+		self.DDE.step_on_discontinuities()
 	
 	## Takes forever:
 	# def test_Python_core(self):
-	# 	self.DDE.generate_lambdas()
+	# 	self.DDE.generate_lambdas(simplify=False)
 	# 	self.DDE.step_on_discontinuities(max_step=0.1)
 	
 	def tearDown(self):

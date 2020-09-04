@@ -70,7 +70,7 @@ for t,y,cos in [
 	DDE = jitcdde.jitcdde( [cos(t)*y(0)-y(0,t-1)], verbose=False )
 	DDE.constant_past([1],0.0)
 	
-	DDE.step_on_discontinuities(max_step=0.1)
+	DDE.step_on_discontinuities()
 	result = DDE.integrate(10)[0]
 	results.add(result)
 

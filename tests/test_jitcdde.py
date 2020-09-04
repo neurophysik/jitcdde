@@ -74,6 +74,7 @@ class TestIntegration(unittest.TestCase):
 		if self.DDE.f_sym():
 			self.DDE.check()
 		self.generator()
+		self.DDE.initial_discontinuities_handled = True
 	
 	def assert_consistency_with_previous(self, value):
 		if self.y_10 is None:
