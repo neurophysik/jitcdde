@@ -199,6 +199,8 @@ class jitcdde(jitcxde):
 		self.verbose = verbose
 		self.delays = delays
 		self.max_delay = max_delay
+		
+		self.initial_discontinuities_handled = False
 	
 	def initiate_past(self):
 		self.past = Past( n=self.n, n_basic=self.n_basic )
@@ -272,7 +274,7 @@ class jitcdde(jitcxde):
 		derivative : iterable of floats
 			the derivative at the anchor. The dimension of the array must match the dimension of the differential equation (`n`).
 		"""
-		self.reset_integrator()
+		self.reset_integrator(idc_unhandled=True)
 		self.past.add((time,state,derivative))
 
 	def add_past_points(self, anchors):
@@ -284,7 +286,7 @@ class jitcdde(jitcxde):
 		anchors : iterable of tuples
 			Each tuple must have components corresponding to the arguments of `add_past_point`.
 		"""
-		self.reset_integrator()
+		self.reset_integrator(idc_unhandled=True)
 		for anchor in anchors:
 			self.past.add(anchor)
 	
@@ -300,6 +302,7 @@ class jitcdde(jitcxde):
 			The time at which the integration starts.
 		"""
 		
+		self.reset_integrator(idc_unhandled=True)
 		self.past.constant(state,time)
 	
 	def past_from_function(self,function,times_of_interest=None,max_anchors=100,tol=5):
@@ -325,6 +328,7 @@ class jitcdde(jitcxde):
 			The higher this value, the more likely it is that the heuristic adds anchors.
 		"""
 		
+		self.reset_integrator(idc_unhandled=True)
 		if times_of_interest is None:
 			times_of_interest = np.linspace(-self.max_delay,0,10)
 		else:
@@ -352,12 +356,14 @@ class jitcdde(jitcxde):
 		"""
 		
 		self.past.clear()
-		self.reset_integrator()
+		self.reset_integrator(idc_unhandled=True)
 	
-	def reset_integrator(self):
+	def reset_integrator(self,idc_unhandled=False):
 		"""
 		Resets the integrator, forgetting all integration progress and forcing re-initiation when it is needed next.
 		"""
+		if idc_unhandled:
+			self.initial_discontinuities_handled = False
 		self.DDE = None
 	
 	def generate_lambdas(self,simplify=None):
@@ -564,6 +570,7 @@ class jitcdde(jitcxde):
 		"""
 		
 		self._initiate()
+		self.initial_discontinuities_handled = False
 		try:
 			self.DDE.set_parameters(*parameters[0])
 		except TypeError:
@@ -703,19 +710,25 @@ class jitcdde(jitcxde):
 	
 	def _control_for_min_step(self):
 		if self.dt < self.min_step:
-			message = "\n".join(["",
+			message = (["",
 					"Could not integrate with the given tolerance parameters:\n",
 					"atol: %e" % self.atol,
 					"rtol: %e" % self.rtol,
 					"min_step: %e\n" % self.min_step,
 					"The most likely reasons for this are:",
-					"• You did not sufficiently address initial discontinuities. (If your dynamics is fast, did you adjust the maximum step when integrating blindly or stepping on discontinuities?)",
-					"• The DDE is ill-posed or stiff.",
 				])
-				
+			
+			if not self.initial_discontinuities_handled:
+				message.append("• You did not sufficiently address initial discontinuities. See https://jitcdde.rtfd.io/#discontinuities for details.")
+			
+			message.append("• The DDE is ill-posed or stiff.")
+
+			if self.initial_discontinuities_handled:
+				message.append("• You used `integrate_blindly` and did not adjust the maximum step or you used `adjust_diff` and did not pay attention to the extrema.")
+			
 			if self.atol==0:
-				message += "\n• You did not allow for an absolute error tolerance (atol) though your DDE calls for it. Even a very small absolute tolerance (1e-16) may sometimes help."
-			raise UnsuccessfulIntegration(message)
+				message.append("• You did not allow for an absolute error tolerance (atol) though your DDE calls for it. Even a very small absolute tolerance (1e-16) may sometimes help.")
+			raise UnsuccessfulIntegration("\n".join(message))
 	
 	def _increase_chance(self, new_dt):
 		q = new_dt/self.last_pws
@@ -777,6 +790,9 @@ class jitcdde(jitcxde):
 		if self.DDE.get_t() > target_time:
 			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step. You may see this because you try to integrate backwards in time, in which case you did something wrong. You may see this just because your sampling step is small, in which case there is no need to worry.")
 		
+		if not self.initial_discontinuities_handled:
+			warn("You did not explicitly handle initial discontinuities. Proceed only if you know what you are doing. This is only fine if you somehow chose your initial past such that the derivative of the last anchor complies with the DDE. In this case, you can set the attribute `initial_discontinuities_handled` to `False` to suppress this warning. See https://jitcdde.rtfd.io/#discontinuities for details.")
+		
 		while self.DDE.get_t() < target_time:
 			if self.try_single_step(self.dt):
 				self.DDE.accept_step()
@@ -823,6 +839,7 @@ class jitcdde(jitcxde):
 		past = self.get_state()
 		width = shift_ratio*(past[-1][0]-past[-2][0])
 		time = past[-1][0]
+		self.initial_discontinuities_handled = True
 		return self.jump(0,time,width,forward=False)
 	
 	def _prepare_blind_int(self, target_time, step):
@@ -867,6 +884,7 @@ class jitcdde(jitcxde):
 			the computed state of the system at `target_time`.
 		"""
 		
+		self.initial_discontinuities_handled = True
 		dt,number,_ = self._prepare_blind_int(target_time, step)
 		
 		if number == 0:
@@ -910,6 +928,7 @@ class jitcdde(jitcxde):
 		"""
 		
 		self._initiate()
+		self.initial_discontinuities_handled = True
 		
 		assert min_distance > 0, "min_distance must be positive."
 		assert isinstance(propagations,int), "Non-integer number of propagations."
@@ -977,6 +996,7 @@ class jitcdde(jitcxde):
 			The minima or maxima, respectively, of each component during the jump interval. See above on why you may want these.
 		"""
 		self._initiate()
+		self.initial_discontinuities_handled = True
 		assert width>=0
 		if np.ndim(amplitude)==0:
 			amplitude = np.full(self.n,amplitude,dtype=float)
@@ -1263,6 +1283,9 @@ class jitcdde_restricted_lyap(jitcdde):
 		Like `jitcdde`’s `integrate_blindly`, except for normalising and aligning the separation function after each step and the output being analogous to `jitcdde_restricted_lyap`’s `integrate`.
 		"""
 		
+		self._initiate()
+		self.initial_discontinuities_handled = True
+		
 		dt,number,total_integration_time = self._prepare_blind_int(target_time, step)
 		
 		instantaneous_lyaps = []
@@ -1419,6 +1442,7 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		Like `jitcdde`’s `integrate_blindly`, except for normalising and aligning the separation function after each step and the output being analogous to `jitcdde_transversal_lyap`’s `integrate`.
 		"""
 		
+		self.initial_discontinuities_handled = True
 		dt,number,total_integration_time = self._prepare_blind_int(target_time, step)
 		
 		instantaneous_lyaps = []
@@ -1515,11 +1539,11 @@ class jitcdde_input(jitcdde):
 		raise AssertionError("For jitcdde_input, the past attribute should not be directly set.")
 	
 	def add_past_point(self, time, state, derivative):
-		self.reset_integrator()
+		self.reset_integrator(idc_unhandled=True)
 		self.regular_past.add((time,state,derivative))
 
 	def add_past_points(self, anchors):
-		self.reset_integrator()
+		self.reset_integrator(idc_unhandled=True)
 		for anchor in anchors:
 			self.regular_past.add(anchor)
 	
@@ -1548,7 +1572,7 @@ class jitcdde_input(jitcdde):
 	
 	def purge_past(self):
 		self.regular_past.clear()
-		self.reset_integrator()
+		self.reset_integrator(idc_unhandled=True)
 	
 	def integrate(self,target_time):
 		if target_time>self.input_duration:
