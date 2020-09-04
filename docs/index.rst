@@ -201,7 +201,7 @@ The following is a list of example scripts that may help you with specific probl
 
 * If you want to call a Python function within the derivative, use the `callback_functions` argument. `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_ demonstrates how to use this.
 
-* If you want to do some sort of event detection, the best way is to use `get_state`, and use the features of `CubicHermiteSplines <https://chspy.readthedocs.io>`_ to determine the time of events as precisely as you need them. As the interpolant has the same error as the integration, you won’t gain a much better event location by integrating again at a finer step size. Note in particulary, that you can truncate the result, allowing you to start a fresh integration at the precise point of the event.
+* If you want to do some sort of event detection, the best way is to use `get_state`, and use the features of `CHSPy <https://chspy.readthedocs.io>`_ to determine the time of events as precisely as you need them. As the interpolant has the same error as the integration, you won’t gain a much better event location by integrating again at a finer step size. Particularly note the `solve`, `extrema`, and `truncate` methods of `CubicHermiteSpline`.
 
 Command reference
 -----------------
