@@ -29,7 +29,7 @@ if __name__ == "__main__":
 	
 	DDE.constant_past([1.0])
 	
-	DDE.step_on_discontinuities(max_step=1.0)
+	DDE.step_on_discontinuities()
 	
 	data = []
 	lyaps = []

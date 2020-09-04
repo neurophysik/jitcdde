@@ -21,10 +21,10 @@ DDE.constant_past([1.0])
 
 DDE.step_on_discontinuities()
 
-for time in numpy.arange(DDE.t, DDE.t+1000, 1):
+for time in numpy.arange(DDE.t, DDE.t+1000, 10):
 	print( time, *DDE.integrate(time) )
 
 DDE.jump(1,DDE.t)
 
-for time in numpy.arange(DDE.t, DDE.t+1000, 1):
+for time in numpy.arange(DDE.t, DDE.t+1000, 10):
 	print( time, *DDE.integrate(time) )
