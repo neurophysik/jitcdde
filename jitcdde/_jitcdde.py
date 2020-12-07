@@ -313,7 +313,7 @@ class jitcdde(jitcxde):
 		----------
 		function : callable or iterable of symbolic expressions
 			If callable, this takes the time as an argument and returns an iterable of floats that is the initial state of the past at that time.
-			If an iterable of expressions, each expression represents how initial past of the respective component depends on `t` (requires SymPy).
+			If an iterable of expressions, each expression represents how the initial past of the respective component depends on `t` (requires SymPy).
 			In both cases, the lengths of the iterable must match the dimension of the differential equation (`n`).
 			
 		times_of_interest : iterable of numbers or `None`
@@ -791,7 +791,7 @@ class jitcdde(jitcxde):
 			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step. You may see this because you try to integrate backwards in time, in which case you did something wrong. You may see this just because your sampling step is small, in which case there is no need to worry.")
 		
 		if not self.initial_discontinuities_handled:
-			warn("You did not explicitly handle initial discontinuities. Proceed only if you know what you are doing. This is only fine if you somehow chose your initial past such that the derivative of the last anchor complies with the DDE. In this case, you can set the attribute `initial_discontinuities_handled` to `False` to suppress this warning. See https://jitcdde.rtfd.io/#discontinuities for details.")
+			warn("You did not explicitly handle initial discontinuities. Proceed only if you know what you are doing. This is only fine if you somehow chose your initial past such that the derivative of the last anchor complies with the DDE. In this case, you can set the attribute `initial_discontinuities_handled` to `True` to suppress this warning. See https://jitcdde.rtfd.io/#discontinuities for details.")
 		
 		while self.DDE.get_t() < target_time:
 			if self.try_single_step(self.dt):
