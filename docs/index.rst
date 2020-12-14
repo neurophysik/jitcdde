@@ -72,13 +72,34 @@ If an integration step contains one of these points, this may violate the condit
 Fortunately, the discontinuities are quickly “smoothed out” (i.e., reduced in order) with time evolution and can then be ignored.
 To make this happen, you have four options:
 
-* `step_on_discontinuities` – this chooses the integration steps such that they fall on the discontinuities. In most cases, this is the easiest and fastest solution to this problem.
+* `step_on_discontinuities` chooses the integration steps such that they fall on the discontinuities. In most cases, this is the easiest and fastest solution to this problem.
 
-* `adjust_diff` – this smoothens out the derivative on a small time interval, effectively causing a dent in the history. The disadvantage of this is that the derivative may assume extreme values causing problems later on.
+* `adjust_diff` smoothens out the derivative on a small time interval, effectively causing a dent in the history. A disadvantage of this is that the derivative may assume extreme values causing problems later on. If you care about what happens at early times, this is usually your best choice, but beware of `short_integrations`.
 
-* `integrate_blindly` – this integrates the system for some time with a fixed step size, ignoring the error estimate. You have to take care that all parameters are reasonable. This is a good choice if you have a lot of different delays or time- or state-dependent delays. The time you integrate with this should be larger than your largest delay.
+* `integrate_blindly` integrates the system for some time with a fixed step size, ignoring the error estimate. You have to take care that all parameters are reasonable. This is a good choice if you have a lot of different delays or time- or state-dependent delays. The time you integrate with this should be larger than your largest delay.
 
-* Carefully chosen initial conditions – of course, you can define the past such that the derivative for the last anchor is identical to the value of :math:`f` as determined with the anchors. To find such initial conditions, you usally have to solve a non-linear equation system. If you are not interested in the general dynamics of the system, but the evolution of a very particular initial condition, this may be given by default (otherwise your model is probably worthless).
+* Carefully choose the initial past such that the derivative for the last anchor is identical to the value of :math:`f` as determined with the anchors, i.e., there is no initial discontinuity to begin with. To find such initial conditions, you usally have to solve a non-linear equation system. This is the ideal case for short integrations as elaborated in the next subsection.
+
+
+.. _short_integrations:
+
+Short integrations and textbook examples
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A mismatch between the final slope of the initial past and the first value of `f` means that **your initial past is not described by your DDE**.
+If you only care about the long-term behaviour of your model irrespective of the initial conditions, this is not a problem:
+Your initial past has no special meaning and should not influence your results.
+However, if you care about how your model behaves briefly after the start of the integration, please seriously ask yourself: **Can you justify this mismatch?**
+Otherwise you should modify your model or initial conditions.
+Mind that a small mismatch may be acceptable because you would have to build and solve a nasty non-linear equation system to avoid this – but a big one should get you thinking.
+An exception from this is if something special happens at :math:`t=0` that changes the rules of your system.
+
+In my opinion, the problem of initial discontinuities (and how to best handle them) is overrated in the literature on DDEs:
+Many examples used in textbooks or as showcases for other DDE solvers suffer from severe initial discontinuities, and other solvers go to extra lengths to handle initial discontinuties as accurately and efficiently as possible.
+Yet, in most cases, initial discontinuities only indicate that the problem is not well posed.
+As JiTCDDE was made with long-term behaviour in mind, it may therefore underperform worse at those pathologic examples.
+Of course, JiCDDE provides useful results for short integrations if you use a proper initial past and model (otherwise no solver can provide useful results anyway).
+
 
 Delays within the step (overlap)
 --------------------------------
