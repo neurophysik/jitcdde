@@ -89,7 +89,7 @@ Short integrations and textbook examples
 A mismatch between the final slope of the initial past and the first value of `f` means that **your initial past is not described by your DDE**.
 If you only care about the long-term behaviour of your model irrespective of the initial conditions, this is not a problem:
 Your initial past has no special meaning and should not influence your results.
-However, if you care about how your model behaves briefly after the start of the integration, please seriously ask yourself: **Can you justify this mismatch?**
+However, if you care about how your model behaves briefly after the start of the integration, please seriously ask yourself: **Can you justify this inconsistency?**
 Otherwise you should modify your model or initial conditions.
 Mind that a small mismatch may be acceptable because you would have to build and solve a nasty non-linear equation system to avoid this – but a big one should get you thinking.
 An exception from this is if something special happens at :math:`t=0` that changes the rules of your system.
@@ -98,7 +98,7 @@ In my opinion, the problem of initial discontinuities (and how to best handle th
 Many examples used in textbooks or as showcases for other DDE solvers suffer from severe initial discontinuities, and other solvers go to extra lengths to handle initial discontinuties as accurately and efficiently as possible.
 Yet, in most cases, initial discontinuities only indicate that the problem is not well posed.
 As JiTCDDE was made with long-term behaviour in mind, it may therefore underperform worse at those pathologic examples.
-Of course, JiCDDE provides useful results for short integrations if you use a proper initial past and model (otherwise no solver can provide useful results anyway).
+Of course, JiCDDE provides useful results also for short integrations if you use a proper initial past and model (otherwise no solver can provide useful results anyway).
 
 
 Delays within the step (overlap)
