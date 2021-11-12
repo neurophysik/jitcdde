@@ -1523,34 +1523,42 @@ class jitcdde_input(jitcdde):
 			kwargs["max_delay"] = max( kwargs["max_delay"], self.input_duration )
 		
 		super().__init__( f_full, n=self.n, **kwargs )
+		
+		self._past = None
 	
 	def initiate_past(self):
 		pass
 	
 	@property
 	def past(self):
-		assert len(self.regular_past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
-		if self.regular_past[-1].time != 0:
-			raise ValueError("For jitcdde_input, the initial past must end at t=0.")
-		return chspy.join(self.regular_past,self.input_past)
+		if self._past is None:
+			assert len(self.regular_past)>1, "You need to add at least two past points first. Usually this means that you did not set an initial past at all."
+			if self.regular_past[-1].time != 0:
+				raise ValueError("For jitcdde_input, the initial past must end at t=0.")
+			self._past = chspy.join(self.regular_past,self.input_past)
+		return self._past
 	
 	@past.setter
 	def past(self,value):
 		raise AssertionError("For jitcdde_input, the past attribute should not be directly set.")
 	
 	def add_past_point(self, time, state, derivative):
+		self._past = None
 		self.reset_integrator(idc_unhandled=True)
 		self.regular_past.add((time,state,derivative))
 
 	def add_past_points(self, anchors):
+		self._past = None
 		self.reset_integrator(idc_unhandled=True)
 		for anchor in anchors:
 			self.regular_past.add(anchor)
 	
 	def constant_past(self,state,time=0):
+		self._past = None
 		self.regular_past.constant(state,time)
 	
 	def past_from_function(self,function,times_of_interest=None,max_anchors=100,tol=5):
+		self._past = None
 		if times_of_interest is None:
 			times_of_interest = np.linspace(-self.max_delay,0,10)
 		else:
@@ -1561,6 +1569,7 @@ class jitcdde_input(jitcdde):
 	def get_state(self):
 		self._initiate()
 		self.DDE.forget(self.max_delay)
+		self._past = None
 		self.regular_past.clear()
 		for anchor in self.DDE.get_full_state():
 			self.regular_past.append((
@@ -1571,6 +1580,7 @@ class jitcdde_input(jitcdde):
 		return self.regular_past
 	
 	def purge_past(self):
+		self._past = None
 		self.regular_past.clear()
 		self.reset_integrator(idc_unhandled=True)
 	
