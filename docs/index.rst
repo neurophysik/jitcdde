@@ -105,13 +105,13 @@ Delays within the step (overlap)
 --------------------------------
 
 If the delay becomes shorter than the step size, we need a delayed state to evaluate `f` before we have a final result for the required interpolation anchors.
-With other words, the intergration step depends on its own result and thus become implicit.
+With other words, the integration step depends on its own result and thus become implicit.
 
 JiTCDDE addresses this problem mainly in the same manner as Shampine and Thompson [ST01]_:
 
 * If reducing the step size by a small factor (`pws_factor`) makes it smaller than the delay, this is done.
 
-* Otherwise, the result of an intergration step is calculated iteratively as follows:
+* Otherwise, the result of an integration step is calculated iteratively as follows:
 	
 	1. Attempt an integration step and **extrapolate** the required delayed states from the existing results.
 	
@@ -128,7 +128,7 @@ To address this issue, JiTCDDE employs the following criteria for increasing the
 
 * If the shortest delay is larger than the recommended step size, the step size is increased.
 
-* If the calculating the next step took less than `pws_factor` iterations and the recommended step size is bigger than `pws_factor` times the shortest delay, the step size is increased.
+* If calculating the next step took less than `pws_factor` iterations and the recommended step size is bigger than `pws_factor` times the shortest delay, the step size is increased.
 
 * In all other cases, the step size is increased with a chance of `pws_base_increase_chance`.
 
