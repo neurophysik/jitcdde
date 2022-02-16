@@ -16,15 +16,17 @@ Without further ado, here is the example code; highlighted lines will be comment
 	:linenos:
 	:start-after: example-st\u0061rt
 	:dedent: 1
-	:emphasize-lines: 9, 10, 15, 21, 24
+	:emphasize-lines: 9, 10, 15, 20, 21, 24
 
 Explanation of selected features and choices:
 
-* Line 9 is just a quick way to generate the network described above. For moore complex network, you will either have to write more complex function or use dedicated modules. (In fact this example was chosen such that the network creation is very simple.)
+* Line 9 is just a quick way to generate the network described above. For more complex networks, you will either have to write more complex function or use dedicated modules. (In fact this example was chosen such that the network creation is very simple.)
 
-* The values of :math:`τ` are initialised globally (line 10). We shoould not just define a function here, because if we were trying to calculate Lyapunov exponents or the Jacobian, the generator function would be called multiple times, and thus the value of the parameter would not be consistent (which would be desastrous).
+* The values of :math:`τ` are initialised globally (line 10). We should not just define a function here, because if we were trying to calculate Lyapunov exponents or the Jacobian, the generator function would be called multiple times, and thus the value of the parameter would not be consistent (which would be disastrous).
 
 * In line 15, we use `symengine.sin` – in contrast to `math.sin` or `numpy.sin`.
+
+* In line 20, we explicitly specify the delays to speed things up a little.
 
 * In line 21, we explicitly use absolute instead of relative errors, as the latter make no sense for Kuramoto oscillators.
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
 						if A[j,i]
 					)
 	
-	I = jitcdde(kuramotos,n=n,verbose=False)
+	I = jitcdde(kuramotos,n=n,verbose=False,delays=τ.flatten())
 	I.set_integration_parameters(rtol=0,atol=1e-5)
 	
 	I.constant_past( random.uniform(0,2*pi,n), time=0.0 )
