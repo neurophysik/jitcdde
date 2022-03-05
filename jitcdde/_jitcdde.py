@@ -216,6 +216,7 @@ class jitcdde(jitcxde):
 		self._delays = new_delays
 		if (self._delays is not None) and (0 not in self._delays):
 			self._delays = np.append(self._delays,0)
+		self._max_delay = None
 	
 	@property
 	def max_delay(self):
