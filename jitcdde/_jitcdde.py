@@ -70,7 +70,7 @@ def _find_max_delay(delays):
 	if all(symengine.sympify(delay).is_Number for delay in delays):
 		return float(symengine.sympify(max(delays)).n(real=True))
 	else:
-		raise ValueError("Delay depends on time or dynamics; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
+		raise ValueError("Delay depends on time, dynamics, or control parameters; cannot determine max_delay automatically. You have to pass it as an argument to jitcdde.")
 
 def _propagate_delays(delays, p, threshold=1e-5):
 	result = [0]
@@ -938,7 +938,7 @@ class jitcdde(jitcxde):
 			warn("The max_step parameter is retired and does not need to be used anymore. Instead, step_on_discontinuities now adapts the step size. This will raise an error in the future.")
 		
 		if not all(symengine.sympify(delay).is_number for delay in self.delays):
-			raise ValueError("At least one delay depends on time or dynamics; cannot automatically determine steps.")
+			raise ValueError("At least one delay depends on time, dynamics, or control parameters; cannot automatically determine steps.")
 		self.delays = [
 				# This conversion is due to SymEngine.py issue #227
 				float(symengine.sympify(delay).n(real=True))
