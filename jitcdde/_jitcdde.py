@@ -125,6 +125,13 @@ def quadrature(integrand,variable,lower,upper,nsteps=20,method="gauss"):
 	else:
 		raise NotImplementedError("I know no integration method named %s."%method)
 
+def is_anchor_helper(helper):
+	return (
+			type(helper[1]) == type(anchors(0))
+			and
+			helper[1].get_name() == anchors.name
+		)
+
 class UnsuccessfulIntegration(Exception):
 	"""
 		This exception is raised when the integrator cannot meet the accuracy and step-size requirements. If you want to know the exact state of your system before the integration fails or similar, catch this exception.
@@ -149,6 +156,9 @@ class jitcdde(jitcxde):
 	
 	max_delay : number
 		Maximum delay. In case of constant delays and if not given, JiTCDDE will determine this itself. However, this may take some time if `f_sym` is large and `delays` is not given. Take care that this value is not too small – if it is, you will not get a helpful error message. If this value is too large, you may run into memory issues for long integration times and calculating Lyapunov exponents (with `jitcdde_lyap`) may take forever.
+	
+	automatic_anchor_helpers : boolean
+		Whether to substitute every delay `anchors` with respective helpers. This may increase the compile time but reduces the run time as soon as most delays occur multiple times. You cannot use this if you used `anchors` as helpers manually. Defaults to `True` for Lyapunov exponents.
 	
 	control_pars : list of symbols
 		Each symbol corresponds to a control parameter that can be used when defining the equations and set after compilation with `set_parameters`. Using this makes sense if you need to do a parameter scan with short integrations for each parameter and you are spending a considerable amount of time compiling.
@@ -178,6 +188,7 @@ class jitcdde(jitcxde):
 			n = None,
 			delays = None,
 			max_delay = None,
+			automatic_anchor_helpers = False,
 			control_pars = (),
 			callback_functions = (),
 			verbose = True,
@@ -189,6 +200,7 @@ class jitcdde(jitcxde):
 		self.f_sym = self._handle_input(f_sym)
 		if not hasattr(self,"n_basic"):
 			self.n_basic = self.n
+		
 		self.helpers = sort_helpers(sympify_helpers(helpers or []))
 		self.control_pars = control_pars
 		self.callback_functions = callback_functions
@@ -199,6 +211,7 @@ class jitcdde(jitcxde):
 		self.verbose = verbose
 		self.delays = delays
 		self.max_delay = max_delay
+		self.automatic_anchor_helpers = automatic_anchor_helpers
 		
 		self.initial_discontinuities_handled = False
 	
@@ -445,6 +458,22 @@ class jitcdde(jitcxde):
 		f_sym_wc = self.f_sym()
 		helpers_wc = list(self.helpers) # list is here for copying
 		
+		if self.automatic_anchor_helpers:
+			if any( is_anchor_helper(helper) for helper in helpers_wc ):
+				raise NotImplementedError("Cannot have anchor helpers and automatic anchor helpers at the same time.")
+			
+			anchor_subs = {}
+			new_helpers = []
+			for delay in self.delays:
+				if delay==0: continue
+				
+				anchor_helper = symengine.Symbol("anchor_helper_"+str(delay))
+				new_helpers.append((anchor_helper,anchors(t-delay)))
+				anchor_subs[anchors(t-delay)] = anchor_helper
+			
+			f_sym_wc = (entry.subs(anchor_subs) for entry in f_sym_wc)
+			helpers_wc = new_helpers + [ (helper[0],helper[1].subs(anchor_subs)) for helper in helpers_wc ]
+		
 		if simplify is None:
 			simplify = self.n<=10
 		if simplify:
@@ -488,10 +517,7 @@ class jitcdde(jitcxde):
 			set_anchor = symengine.Function("set_f_anchor_helper")
 			
 			for helper in helpers_wc:
-				if (
-						type(helper[1]) == type(anchors(0)) and
-						helper[1].get_name() == anchors.name
-					):
+				if is_anchor_helper(helper):
 					converted_helpers.append(set_anchor(anchor_i, finalise(helper[1])))
 					self.substitutions[helper[0]] = get_anchor(anchor_i)
 					anchor_i += 1
@@ -789,7 +815,7 @@ class jitcdde(jitcxde):
 		self._initiate()
 		
 		if self.DDE.get_t() > target_time:
-			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step. You may see this because you try to integrate backwards in time, in which case you did something wrong. You may see this just because your sampling step is small, in which case there is no need to worry.")
+			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step. You may see this because you try to integrate backwards in time, in which case you did something wrong. You may see this just because your sampling step is small, in which case there is no need to worry (though you should think about increasing your sampling time).")
 		
 		if not self.initial_discontinuities_handled:
 			warn("You did not explicitly handle initial discontinuities. Proceed only if you know what you are doing. This is only fine if you somehow chose your initial past such that the derivative of the last anchor complies with the DDE. In this case, you can set the attribute `initial_discontinuities_handled` to `True` to suppress this warning. See https://jitcdde.rtfd.io/#discontinuities for details.")
@@ -1016,6 +1042,7 @@ def _jac(f, helpers, delay, n):
 		]
 	
 	def line(f_entry):
+		f_entry = f_entry.simplify()
 		for j in range(n):
 			entry = f_entry.diff(y(j,t-delay))
 			for helper in dependent_helpers[j]:
@@ -1069,7 +1096,10 @@ class jitcdde_lyap(jitcdde):
 		
 		kwargs.setdefault("helpers",())
 		kwargs["helpers"] = sort_helpers(sympify_helpers(kwargs["helpers"] or []))
-
+		if any(is_anchor_helper(helper) for helper in kwargs["helpers"]):
+			raise NotImplementedError("Cannot use anchor helpers with Lyapunov exponents.")
+		kwargs.setdefault("automatic_anchor_helpers",True)
+		
 		f_basic = self._handle_input(f_sym,n_basic=True)
 		
 		if simplify is None:
@@ -1187,6 +1217,9 @@ class jitcdde_restricted_lyap(jitcdde):
 		
 		kwargs.setdefault("helpers",())
 		kwargs["helpers"] = sort_helpers(sympify_helpers(kwargs["helpers"] or []))
+		if any(is_anchor_helper(helper) for helper in kwargs["helpers"]):
+			raise NotImplementedError("Cannot use anchor helpers with Lyapunov exponents.")
+		kwargs.setdefault("automatic_anchor_helpers",True)
 		
 		f_basic = self._handle_input(f_sym,n_basic=True)
 		
@@ -1329,6 +1362,10 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		if simplify is None:
 			simplify = self.n<=10
 		helpers = sort_helpers(sympify_helpers( kwargs.pop("helpers",[]) ))
+		if any(is_anchor_helper(helper) for helper in helpers):
+			raise NotImplementedError("Cannot use anchor helpers with Lyapunov exponents.")
+		kwargs.setdefault("automatic_anchor_helpers",True)
+		
 		delays = kwargs.pop("delays",()) or _get_delays(f_basic,helpers)
 		
 		past_z = symengine.Function("past_z")
