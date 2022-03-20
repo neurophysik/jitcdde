@@ -45,6 +45,9 @@ class TestIntegration(unittest.TestCase):
 		self.DDE.add_past_point(0.0, np.random.random(6), np.random.random(6))
 		self.DDE.set_integration_parameters(**test_parameters)
 	
+	def test_adjust_diff(self):
+		self.DDE.adjust_diff()
+	
 	def test_integrate_blindly(self):
 		self.DDE.integrate_blindly(100.0, 0.1)
 	
