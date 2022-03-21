@@ -192,6 +192,11 @@ class TestPastWithinStepFuzzyLambda(TestPastWithinStepFuzzy):
 	def generator(self):
 		self.DDE.generate_lambdas(simplify=False)
 
+class TestAutomaticAnchorHelpers(TestIntegration):
+	@classmethod
+	def setUpClass(self):
+		self.DDE = jitcdde(f,automatic_anchor_helpers=True)
+		self.DDE.set_integration_parameters(**test_parameters)
 
 def f_generator():
 	yield omega[0] * (-y(1) - y(2))
