@@ -212,17 +212,23 @@ More Features and Examples
 JiTCDDE has several more features for which there are no extensively documented examples, but that are pretty self-explanatory.
 The following is a list of example scripts that may help you with specific problems:
 
-* `Laminar Chaos <https://github.com/neurophysik/jitcdde/blob/master/examples/laminar_chaos.py>`_ and `State Dependent <https://github.com/neurophysik/jitcdde/blob/master/examples/state_dependent.py>`_ are examples employing state-dependent delays.
+* `Laminar Chaos <https://github.com/neurophysik/jitcdde/blob/master/examples/laminar_chaos.py>`_ and `State Dependent <https://github.com/neurophysik/jitcdde/blob/master/examples/state_dependent.py>`_ are examples employing **state-dependent delays**.
 
 * `Mackey–Glass with Jumps <https://github.com/neurophysik/jitcdde/blob/master/examples/mackey_glass_jump.py>`_ shows how to use the `jump` method.
 
-* `Simple Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ and `Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ show how to implement neutral DDES. The latter additionally shows how to optimise a DDE with many redundant delay requests, making it considerably faster.
+* `Simple Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ and `Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ show how to implement **neutral DDES**. The latter additionally shows how to optimise a DDE with **repeating delays**, making it considerably faster.
 
-* If you want to have input that cannot be expressed in a simple function, you can use `jitcdde_input <https://jitcdde.rtfd.io#input>`_ or use a callback (see the next point). `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/data_input.py>`_ demonstrates how to use this.
+* If you want to have **input or time-dependent parameters**, there are several options depending on the details of your problem:
 
-* If you want to call a Python function within the derivative, use the `callback_functions` argument. `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_ demonstrates how to use this.
+  * If you want a parameter to be a straightforward function of time, you can just implement this symbolically directly in the derivative.. For an example, see the “regular implementation” `here <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_.
+  * If you want a parameter to change its value at a small number of time points (jumps), you can use the techniques outlined `here <https://jitcde-common.readthedocs.io/en/latest/#conditionals>`_, i.e., either use `jitcxde_common.conditional` to approximate a step function in time or change a control parameter at the desired time point (and then `adjust_diff`).
+  * For complex time dependencies, you can use `jitcdde_input <https://jitcdde.rtfd.io#input>`_ 
+    `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/data_input.py>`_ demonstrates how to use this.
+  * Finally, you can use a callback (see the next point).
 
-* If you want to do some sort of event detection, the best way is to use `get_state`, and use the features of `CHSPy <https://chspy.readthedocs.io>`_ to determine the time of events as precisely as you need them. As the interpolant has the same error as the integration, you won’t gain a much better event location by integrating again at a finer step size. Particularly note the `solve`, `extrema`, and `truncate` methods of `CubicHermiteSpline`.
+* If you want to **call a Python function** within the derivative, use the `callback_functions` argument. `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_ demonstrates how to use this.
+
+* If you want to do some sort of **event detection**, the best way is to use `get_state`, and use the features of `CHSPy <https://chspy.readthedocs.io>`_ to determine the time of events as precisely as you need them. As the interpolant has the same error as the integration, you won’t gain a much better event location by integrating again at a finer step size. Particularly note the `solve`, `extrema`, and `truncate` methods of `CubicHermiteSpline`.
 
 Command reference
 -----------------
