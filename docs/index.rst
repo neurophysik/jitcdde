@@ -216,11 +216,11 @@ The following is a list of example scripts that may help you with specific probl
 
 * `Mackey–Glass with Jumps <https://github.com/neurophysik/jitcdde/blob/master/examples/mackey_glass_jump.py>`_ shows how to use the `jump` method.
 
-* `Simple Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ and `Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ show how to implement **neutral DDES**. The latter additionally shows how to optimise a DDE with **repeating delays**, making it considerably faster.
+* `Simple Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ and `Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/neutral.py>`_ show how to implement **neutral DDES**. The latter additionally shows how to optimise a DDE with **repeating delays**, making it considerably faster.
 
-* If you want to have **input or time-dependent parameters**, there are several options depending on the details of your problem:
+* If you want to have **input or time-dependent parameters**, there are several options depending on the details of your problem, exemplified in `this toy problem <https://github.com/neurophysik/jitcdde/blob/master/examples/mackey_glass_parameter_jump.py>`_:
 
-  * If you want a parameter to be a straightforward function of time, you can just implement this symbolically directly in the derivative.. For an example, see the “regular implementation” `here <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_.
+  * If you want a parameter to be a straightforward function of time, you can just implement this symbolically directly in the derivative. For an example, see the “regular implementation” `here <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_.
   * If you want a parameter to change its value at a small number of time points (jumps), you can use the techniques outlined `here <https://jitcde-common.readthedocs.io/en/latest/#conditionals>`_, i.e., either use `jitcxde_common.conditional` to approximate a step function in time or change a control parameter at the desired time point (and then `adjust_diff`).
   * For complex time dependencies, you can use `jitcdde_input <https://jitcdde.rtfd.io#input>`_ 
     `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/data_input.py>`_ demonstrates how to use this.
