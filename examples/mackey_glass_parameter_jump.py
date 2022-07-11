@@ -4,12 +4,12 @@ The following are a set of examples that implement the Mackey-Glass system with 
 The methods range from the most straightforward to more involved ones.
 
     1. Integrate two separate models with diferent β values.
-    2. Use β as a control parameter for a system amd modify its value midway through the integration.
+    2. Use β as a control parameter for a system and modify its value midway through the integration.
     3. Use jitcdde.input.
     4. Use jitcxde_common.conditional.
     5. Use callbacks to define your own conditional.
 
-The result of all the methods is basically identical for this example, but not all may be feasible for your specific application – there is a reason that so many variants exist.
+The result of all the methods is basically identical for this example, but not all may be feasible for your specific application – there is a reason that so many variants exist. The pros and cons of each method are outlined in their respective sections.
 
 Note that if the parameter that needs to jump is the delay, you’ll need to manually set max_delay when defining the integrator in cases 2–5.
 """
@@ -34,7 +34,8 @@ dt = 1
 tf = 800
 
 # 1. Running separate models with the initial and final parameter value
-# --------------
+# -------------
+# This method spends the least time on actual integration, but requires two compilations. It becomes infeasible once your parameter changes frequently or even continuously.
 
 # Create a function to easily make a model with different values for β:
 def make_model(β):
@@ -63,6 +64,7 @@ ax.set_title('two separate models')
 
 # 2. Using a control parameter we modify mid-run
 # --------------
+# This method requires only one compilation and spends a bit more on each integration. It also becomes infeasible once your parameter changes frequently or even continuously.
 
 from symengine import Symbol
 
@@ -93,6 +95,7 @@ ax.set_title('control parameter')
 
 # 3. Using input to modify the parameter mid-run
 # --------------
+# This method requires more preparation and integration time, but can handle frequent and continuous changes of the input.
 
 from jitcdde import jitcdde_input, input
 from chspy import CubicHermiteSpline
@@ -122,6 +125,7 @@ ax.set_title('input')
 
 # 4. Using jitcxde_common.conditional to approximate a jump
 # --------------
+# This method is very similar to Method 2 in its pros and cons. Its main advantage is that it’s more straightforward to implement and that the conditional can trigger on inputs other than time.
 
 from jitcxde_common import conditional
 
@@ -143,6 +147,7 @@ ax.set_title('conditional')
 
 # 5. Writing the jump ourselves using a callback
 # --------------
+# This method can not only handle frequent and continuous changes of the input, but also allows to change the input based on the current state of the system. Its efficiency primarily depends on the efficiency of the callback function.
 
 from symengine import Function
 
