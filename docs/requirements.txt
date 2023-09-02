@@ -1,2 +1,3 @@
 numpydoc
+jitcdde
 setuptools_scm
