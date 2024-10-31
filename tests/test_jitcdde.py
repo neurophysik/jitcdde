@@ -13,6 +13,7 @@ from jitcdde import (
 import platform
 import symengine
 import numpy as np
+from random import choices
 from numpy.testing import assert_allclose
 import unittest
 from itertools import combinations
@@ -432,8 +433,7 @@ class TestInput(unittest.TestCase):
 			for combo in combinations(range(n),l)
 		]
 		
-		for combo in np.random.choice(combos,3,replace=False):
-			combo = [3,5]
+		for combo in choices(combos,k=3):
 			substitutions = { y(i):input(i) for i in combo }
 			f_input = [expression.subs(substitutions) for expression in f]
 			DDE = jitcdde_input(f,self.result)
