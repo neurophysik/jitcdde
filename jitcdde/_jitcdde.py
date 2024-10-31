@@ -48,10 +48,10 @@ def dy(index,time):
 #: the symbol for the current state for defining the differential equation. It is a function and the integer argument denotes the component. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
 current_y = symengine.Function("current_y")
 
-#: the symbol for DDE’s past state for defining differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
+#: the symbol for DDE’s past state for defining the differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
 past_y = symengine.Function("past_y")
 
-#: the symbol for DDE’s past derivative for defining differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `dy` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
+#: the symbol for DDE’s past derivative for defining the differential equation. It is a function with the first integer argument denoting the component and the second argument being a pair of past points (as being returned by `anchors`) from which the past state is interpolated (or, in rare cases, extrapolated). This is only needed for specific optimisations of large DDEs; in all other cases use `dy` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
 past_dy = symengine.Function("past_dy")
 
 #: the symbol representing two anchors for defining the differential equation. It is a function and the float argument denotes the time point to which the anchors pertain. This is only needed for specific optimisations of large DDEs; in all other cases use `y` instead. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
@@ -290,7 +290,7 @@ class jitcdde(jitcxde):
 		"""
 		self.reset_integrator(idc_unhandled=True)
 		self.past.add((time,state,derivative))
-
+	
 	def add_past_points(self, anchors):
 		"""
 		adds multiple anchors from which the past of the DDE is interpolated.
