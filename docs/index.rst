@@ -98,7 +98,7 @@ In my opinion, the problem of initial discontinuities (and how to best handle th
 Many examples used in textbooks or as showcases for other DDE solvers suffer from severe initial discontinuities, and other solvers go to extra lengths to handle initial discontinuties as accurately and efficiently as possible.
 Yet, in most cases, initial discontinuities only indicate that the problem is not well posed.
 As JiTCDDE was made with long-term behaviour in mind, it may therefore underperform worse at those pathologic examples.
-Of course, JiCDDE provides useful results also for short integrations if you use a proper initial past and model (otherwise no solver can provide useful results anyway).
+Of course, JiTCDDE provides useful results also for short integrations if you use a proper initial past and model (otherwise no solver can provide useful results anyway).
 
 
 Delays within the step (overlap)
