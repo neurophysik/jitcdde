@@ -1557,12 +1557,20 @@ class jitcdde_input(jitcdde):
 		if kwargs.setdefault("delays",None) is not None:
 			kwargs["delays"] = [ *kwargs["delays"], self.input_duration ]
 		
-		if kwargs.setdefault("max_delay",None) is not None:
-			kwargs["max_delay"] = max( kwargs["max_delay"], self.input_duration )
-		
 		super().__init__( f_full, n=self.n, **kwargs )
 		
 		self._past = None
+	
+	@property
+	def max_delay(self):
+		return super().max_delay
+	
+	@max_delay.setter
+	def max_delay(self, new_max_delay):
+		if new_max_delay is not None:
+			assert new_max_delay >= 0.0, "Negative maximum delay."
+			new_max_delay = max(new_max_delay,self.input_duration)
+		self._max_delay = new_max_delay
 	
 	def initiate_past(self):
 		pass
