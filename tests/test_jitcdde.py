@@ -10,6 +10,7 @@ from jitcdde import (
 		test,
 		input, jitcdde_input,
 	)
+import os
 import platform
 import symengine
 import numpy as np
@@ -17,6 +18,7 @@ from numpy.testing import assert_allclose
 import unittest
 from itertools import combinations
 
+dirname = os.path.dirname(__file__)
 if platform.system() == "Windows":
 	compile_args = None
 else:
@@ -37,11 +39,11 @@ f = [
 n = len(f)
 
 def get_past_points():
-	data = np.loadtxt("two_Roessler_past.dat")
+	data = np.loadtxt(os.path.join(dirname, "two_Roessler_past.dat"))
 	for point in data:
 		yield (point[0], np.array(point[1:7]), np.array(point[7:13]))
 
-y_10_ref = np.loadtxt("two_Roessler_y10.dat")
+y_10_ref = np.loadtxt(os.path.join(dirname, "two_Roessler_y10.dat"))
 T = 10
 
 test_parameters = {
@@ -85,7 +87,7 @@ class TestIntegration(unittest.TestCase):
 	def test_integration(self):
 		for time in np.linspace(0,T,10,endpoint=True):
 			value = self.DDE.integrate(time)
-		np.savetxt("two_Roessler_y10_new.dat",value,fmt="%.20f")
+		np.savetxt(os.path.join(dirname, "two_Roessler_y10_new.dat"),value,fmt="%.20f")
 		assert_allclose(value, y_10_ref, **tolerance)
 		self.assert_consistency_with_previous(value)
 		

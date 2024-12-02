@@ -139,3 +139,4 @@ for realisation in range(number_of_runs):
 			break
 
 print("Runs with errors: %i / %i" % (errors, number_of_runs))
+raise SystemExit(errors)
