@@ -32,7 +32,7 @@ This automatically results in the integration starting at :math:`t=0`.
 	:dedent: 1
 	:lines: 71
 
-If we calculate the derivative from our initial conditions, we obtain :math:`f(t=0) = 0.025`, which does not agree with the :math:`\dot{y}(t=0) = 0` as explicitly defined in the initial conditions. Practically, this would result in an error if we started integrating without further precautions.
+If we calculate the derivative from our initial conditions, we obtain :math:`f(t=0) = 0.025`, which does not agree with the :math:`\\dot{y}(t=0) = 0` as explicitly defined in the initial conditions. Practically, this would result in an error if we started integrating without further precautions.
 `step_on_discontinuities` makes some tailored integration steps to avoid this problem and to allow for the discontinuity to be smoothed out by temporal evolution.
 (See `discontinuities` for alternatives and more details on this).
 
