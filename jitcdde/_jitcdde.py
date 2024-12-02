@@ -357,6 +357,8 @@ class jitcdde(jitcxde):
 		The format can also be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents. You can also use this to implement time-dependent equations, however, you need to be careful to truncate the result properly. Moreover, if your delay changes, you may need to set the `max_delay` accordingly to avoid too much past being discarded before you call this method.
 		
 		If you reinitialise this integrator after calling this, this past will be used.
+		
+		Finally, beware that for efficiency reasons, the returned state directly points to the inner memories of this instance of `jitcdde`. Thus if you propagate or delete this instance, the return structure may contain nonsense or using it may lead to a segmentation fault.
 		"""
 		self._initiate()
 		self.DDE.forget(self.max_delay)
@@ -922,7 +924,7 @@ class jitcdde(jitcxde):
 				self.DDE.accept_step()
 				self.DDE.forget(self.max_delay)
 		
-		return self.DDE.get_current_state()
+		return self.DDE.get_current_state().copy()
 	
 	def step_on_discontinuities(
 			self, *,
@@ -989,7 +991,7 @@ class jitcdde(jitcxde):
 			return result
 		else:
 			self.adjust_diff()
-			return self.DDE.get_current_state()[:self.n_basic]
+			return self.DDE.get_current_state()[:self.n_basic].copy()
 	
 	def jump( self, amplitude, time, width=1e-5, forward=True ):
 		"""
@@ -1197,7 +1199,7 @@ class jitcdde_lyap(jitcdde):
 		
 		lyaps = np.average(instantaneous_lyaps, axis=0)
 		
-		return self.DDE.get_current_state()[:self.n_basic], lyaps, total_integration_time
+		return self.DDE.get_current_state()[:self.n_basic].copy(), lyaps, total_integration_time
 
 class jitcdde_restricted_lyap(jitcdde):
 	"""
@@ -1332,7 +1334,7 @@ class jitcdde_restricted_lyap(jitcdde):
 			instantaneous_lyaps.append(np.log(norm)/dt)
 		
 		lyap = np.average(instantaneous_lyaps)
-		state = self.DDE.get_current_state()[:self.n_basic]
+		state = self.DDE.get_current_state()[:self.n_basic].copy()
 		
 		return state, lyap, total_integration_time
 
@@ -1493,7 +1495,7 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 			instantaneous_lyaps.append(np.log(norm)/dt)
 		
 		lyap = np.average(instantaneous_lyaps)
-		state = self.DDE.get_current_state()[self.main_indices]
+		state = self.DDE.get_current_state()[self.main_indices].copy()
 		
 		return state, lyap, total_integration_time
 
