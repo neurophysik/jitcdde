@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+"""
+Integration test of jitcdde_restricted_lyap and jitcdde_transversal_lyap by comparing their results to each other for a synchronised scenario.
+"""
+
 from itertools import combinations
 import platform
 from jitcdde import (
@@ -25,6 +29,8 @@ k = Symbol("k")
 
 scenarios = [
 	{
+	"name":
+		"grouped by variables",
 	"f":
 		[
 			y(0)*(a-y(0))*(y(0)-1.0) - y(3) + k*(y(1)-y(0)),
@@ -42,9 +48,11 @@ scenarios = [
 			( [0.,0.,0.,0.,0.,0.], [0.,0.,0.,1.,1.,1.] ) ,
 		],
 	"groups":
-		( [0,1,2], [3,4,5] )
+		( [0,1,2], [3,4,5] ),
 	},
 	{
+	"name":
+		"grouped by oscillators",
 	"f":
 		[
 			y(0)*(a-y(0))*(y(0)-1.0) - y(1) + k*(y(2)-y(0)),
@@ -62,7 +70,7 @@ scenarios = [
 			( [0.,0.,0.,0.,0.,0.], [0.,1.,0.,1.,0.,1.] ) ,
 		],
 	"groups":
-		( [0,2,4], [1,3,5] )
+		( [0,2,4], [1,3,5] ),
 	},
 ]
 
@@ -94,8 +102,8 @@ for scenario in scenarios:
 		)
 	DDE2.compile_C(extra_compile_args=compile_args)
 	
-	def check_manifold():
-		message = "The dynamics left the synchronisation manifold. If this fails, this is a problem with the test and not with what is tested."
+	def check_manifold(k):
+		message = f"The dynamics left the synchronisation manifold when {scenario['name']} with coupling {k}. If this fails, this is a problem with the test and not with what is tested or any software involved.\n\nSpecifically, this test only works when the backend (Symengine plus compiler) implents certain computations completely symmetrically. This needs not and cannot be reasonably controlled (and no, turning off compiler optimisation doesn’t necessarily help as it often restores symmetries broken by Symengine). It’s only something exploited by this test to make it work in the first place."
 		for anchor in DDE1.get_state():
 			for group in scenario["groups"]:
 				for i,j in combinations(group,2):
@@ -128,7 +136,7 @@ for scenario in scenarios:
 		assert DDE1.t==DDE2.t
 		times = DDE1.t + np.arange(100,10000,100)
 		for time in times:
-			check_manifold()
+			check_manifold(coupling["k"])
 			_,lyap1,weight1 = DDE1.integrate(time)
 			_,lyap2,weight2 = DDE2.integrate(time)
 			lyaps1.append(lyap1)
