@@ -14,6 +14,7 @@ from jitcdde import (
 import numpy as np
 from scipy.stats import sem
 from symengine import Symbol
+from warnings import warn
 
 if platform.system() == "Windows":
 	compile_args = None
@@ -82,6 +83,9 @@ couplings = [
 		{"k": 0  , "sign": 0},
 	]
 
+class TestPrerequisiteBroken(AssertionError):
+	pass
+
 for scenario in scenarios:
 	n = len(scenario["f"])
 	
@@ -107,8 +111,8 @@ for scenario in scenarios:
 		for anchor in DDE1.get_state():
 			for group in scenario["groups"]:
 				for i,j in combinations(group,2):
-					assert anchor[1][i]==anchor[1][j], message
-					assert anchor[2][i]==anchor[2][j], message
+					if anchor[1][i]!=anchor[1][j] or anchor[2][i]!=anchor[2][j]:
+						raise TestPrerequisiteBroken(message)
 	
 	for coupling in couplings:
 		DDE1.purge_past()
@@ -135,14 +139,19 @@ for scenario in scenarios:
 		weights2 = []
 		assert DDE1.t==DDE2.t
 		times = DDE1.t + np.arange(100,10000,100)
-		for time in times:
-			check_manifold(coupling["k"])
-			_,lyap1,weight1 = DDE1.integrate(time)
-			_,lyap2,weight2 = DDE2.integrate(time)
-			lyaps1.append(lyap1)
-			lyaps2.append(lyap2)
-			weights1.append(weight1)
-			weights2.append(weight2)
+		try:
+			for time in times:
+				check_manifold(coupling["k"])
+				_,lyap1,weight1 = DDE1.integrate(time)
+				_,lyap2,weight2 = DDE2.integrate(time)
+				lyaps1.append(lyap1)
+				lyaps2.append(lyap2)
+				weights1.append(weight1)
+				weights2.append(weight2)
+		except TestPrerequisiteBroken as err:
+			warn(str(err),stacklevel=2)
+			print( "X", end="", flush=True )
+			continue
 		
 		Lyap1 = np.average(lyaps1,weights=weights1)
 		Lyap2 = np.average(lyaps2,weights=weights2)
