@@ -168,7 +168,7 @@ class jitcdde(jitcxde):
 		
 		*	A SymEngine function object used in `f_sym` to represent the function call. If you want to use any JiTCDDE features that need the derivative, this must have a properly defined `f_diff` method with the derivative being another callback function (or constant).
 		*	The Python function to be called. This function will receive the state array (`y`) as the first argument. All further arguments are whatever you use as arguments of the SymEngine function in `f_sym`. These can be any expression that you might use in the definition of the derivative and contain, e.g., dynamical variables (current or delayed), time, control parameters, and helpers. The only restriction is that the arguments are floats (and not vectors, anchors or similar). The return value must also be a float (or something castable to float). It is your responsibility to ensure that this function adheres to these criteria, is deterministic and sufficiently smooth with respect its arguments; expect nasty errors otherwise.
-		*	The number of arguments, **excluding** the state array as mandatory first argument. This means if you have a variadic Python function, you cannot just call it with different numbers of arguments in `f_sym`, but you have to define separate callbacks for each of numer of arguments.
+		*	The number of arguments, **excluding** the state array as mandatory first argument. This means if you have a variadic Python function, you cannot just call it with different numbers of arguments in `f_sym`, but you have to define separate callbacks for each of number of arguments.
 		
 		See `this example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_ for how to use this.
 	
@@ -356,7 +356,7 @@ class jitcdde(jitcxde):
 	
 	def get_state(self):
 		"""
-		Returns an object that represents all anchors currently used by the integrator, which compeletely define the current state. The object is a `CubicHermiteSpline <https://chspy.readthedocs.io>`_ instance (with a few special extensions for JiTCDDE), which allows you to extract all sorts of information from it if you want.
+		Returns an object that represents all anchors currently used by the integrator, which completely define the current state. The object is a `CubicHermiteSpline <https://chspy.readthedocs.io>`_ instance (with a few special extensions for JiTCDDE), which allows you to extract all sorts of information from it if you want.
 		
 		The format can also be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents. You can also use this to implement time-dependent equations, however, you need to be careful to truncate the result properly. Moreover, if your delay changes, you may need to set the `max_delay` accordingly to avoid too much past being discarded before you call this method.
 		
@@ -439,7 +439,7 @@ class jitcdde(jitcxde):
 		
 		do_cse : boolean
 			Whether SymPy’s `common-subexpression detection <http://docs.sympy.org/dev/modules/rewriting.html#module-sympy.simplify.cse_main>`_ should be applied before translating to C code.
-			This is worthwile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input. Also, this feature uses SymPy and not SymEngine.
+			This is worthwhile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input. Also, this feature uses SymPy and not SymEngine.
 		
 		chunk_size : integer
 			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. See `Handling very large differential equations <http://jitcde-common.readthedocs.io/#handling-very-large-differential-equations>`_ on why this is useful and how to best choose this value.
@@ -1216,7 +1216,7 @@ class jitcdde_restricted_lyap(jitcdde):
 	Parameters
 	----------
 	vectors : iterable of pairs of NumPy arrays
-		A basis of the plane, whose projection shall be removed. The first vector in each pair is the component coresponding to the the state, the second vector corresponds to the derivative.
+		A basis of the plane, whose projection shall be removed. The first vector in each pair is the component corresponding to the the state, the second vector corresponds to the derivative.
 		
 	"""
 	

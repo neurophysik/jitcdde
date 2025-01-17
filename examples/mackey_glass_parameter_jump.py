@@ -3,7 +3,7 @@ The following are a set of examples that implement the Mackey-Glass system with 
 
 The methods range from the most straightforward to more involved ones.
 
-    1. Integrate two separate models with diferent β values.
+    1. Integrate two separate models with different β values.
     2. Use β as a control parameter for a system and modify its value midway through the integration.
     3. Use jitcdde.input.
     4. Use jitcxde_common.conditional.

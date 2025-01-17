@@ -106,7 +106,7 @@ for scenario in scenarios:
 	DDE2.compile_C(extra_compile_args=compile_args)
 	
 	def check_manifold(k, DDE1=DDE1, scenario=scenario):
-		message = f"The dynamics left the synchronisation manifold when {scenario['name']} with coupling {k}. If this fails, this is a problem with the test and not with what is tested or any software involved.\n\nSpecifically, this test only works when the backend (Symengine plus compiler) implents certain computations completely symmetrically. This needs not and cannot be reasonably controlled (and no, turning off compiler optimisation doesn’t necessarily help as it often restores symmetries broken by Symengine). It’s only something exploited by this test to make it work in the first place."
+		message = f"The dynamics left the synchronisation manifold when {scenario['name']} with coupling {k}. If this fails, this is a problem with the test and not with what is tested or any software involved.\n\nSpecifically, this test only works when the backend (Symengine plus compiler) implements certain computations completely symmetrically. This needs not and cannot be reasonably controlled (and no, turning off compiler optimisation doesn’t necessarily help as it often restores symmetries broken by Symengine). It’s only something exploited by this test to make it work in the first place."
 		for anchor in DDE1.get_state():
 			for group in scenario["groups"]:
 				for i,j in combinations(group,2):
