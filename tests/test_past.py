@@ -67,14 +67,14 @@ class remove_projection_test(unittest.TestCase):
 		
 		self.past.remove_projections(delay, vectors)
 		past_copy = [(anchor[0], np.copy(anchor[1]), np.copy(anchor[2])) for anchor in self.past]
-		for anchor_A, anchor_B in zip(past_copy, self.past):
+		for anchor_A, anchor_B in zip(past_copy, self.past, strict=True):
 			assert_allclose(anchor_A[1], anchor_B[1])
 			assert_allclose(anchor_A[2], anchor_B[2])
 		
 		norm = self.past.remove_projections(delay, vectors)
 		self.assertAlmostEqual(norm, 1.0)
 		
-		for anchor_A, anchor_B in zip(past_copy, self.past):
+		for anchor_A, anchor_B in zip(past_copy, self.past, strict=True):
 			assert_allclose(anchor_A[1], anchor_B[1])
 			assert_allclose(anchor_A[2], anchor_B[2])
 
