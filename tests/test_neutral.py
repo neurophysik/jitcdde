@@ -1,8 +1,11 @@
 import platform
-from jitcdde import jitcdde, y, current_y, past_dy, past_y, t, anchors
-from symengine import tanh, sqrt, exp, Symbol
-import numpy as np
 import unittest
+
+import numpy as np
+from symengine import Symbol, exp, sqrt, tanh
+
+from jitcdde import anchors, current_y, jitcdde, past_dy, past_y, t, y
+
 
 if platform.system() == "Windows":
 	compile_args = None

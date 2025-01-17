@@ -1,5 +1,7 @@
-from jitcdde import t, y, jitcdde
 import numpy as np
+
+from jitcdde import jitcdde, t, y
+
 
 ω = np.random.normal(0.89, 0.0089, 2)
 k = 0.25

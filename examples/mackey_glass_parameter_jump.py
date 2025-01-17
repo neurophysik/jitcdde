@@ -17,8 +17,10 @@ Note that if the parameter that needs to jump is the delay, you’ll need to man
 ### Makey–Glass with time-dependent parameter
 
 import numpy as np
-from jitcdde import y, t, jitcdde
 from matplotlib.pyplot import subplots
+
+from jitcdde import jitcdde, t, y
+
 
 # Defining parameters
 # --------------
@@ -68,6 +70,7 @@ ax.set_title('two separate models')
 
 from symengine import Symbol
 
+
 # Create the model with β being a symbol instead of having a value, and integrate it up to t0:
 β = Symbol('beta')
 f = [ β * y(0,t-τ) / (1 + y(0,t-τ)**n) - γ*y(0) ]
@@ -97,8 +100,10 @@ ax.set_title('control parameter')
 # --------------
 # This method requires more preparation and integration time, but can handle frequent and continuous changes of the input.
 
-from jitcdde import jitcdde_input, input
 from chspy import CubicHermiteSpline
+
+from jitcdde import input, jitcdde_input
+
 
 # Define how the parameter changes over time and put that information into a spline:
 input_times = np.arange(0, tf)
@@ -129,6 +134,7 @@ ax.set_title('input')
 
 from jitcxde_common import conditional
 
+
 # Define how the parameter changes over time and define the system dynamics:
 β = conditional(t, t0, β0, β1)
 f = [ β * y(0,t-τ) / (1 + y(0,t-τ)**n) - γ*y(0) ]
@@ -150,6 +156,7 @@ ax.set_title('conditional')
 # This method can not only handle frequent and continuous changes of the input, but also allows to change the input based on the current state of the system. Its efficiency primarily depends on the efficiency of the callback function.
 
 from symengine import Function
+
 
 # Define the the ~ython function that will handle the jump and the Symengine symbol corresponding to the parameter, which this time is a Function
 β = Function('param_jump')

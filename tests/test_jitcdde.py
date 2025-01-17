@@ -1,22 +1,28 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from jitcdde import (
-		jitcdde,
-		t, y,
-		UnsuccessfulIntegration,
-		_find_max_delay, _get_delays,
-		quadrature,
-		test,
-		input, jitcdde_input,
-	)
 import os
 import platform
-import symengine
-import numpy as np
-from numpy.testing import assert_allclose
 import unittest
 from itertools import combinations
+
+import numpy as np
+import symengine
+from numpy.testing import assert_allclose
+
+from jitcdde import (
+	UnsuccessfulIntegration,
+	_find_max_delay,
+	_get_delays,
+	input,
+	jitcdde,
+	jitcdde_input,
+	quadrature,
+	t,
+	test,
+	y,
+)
+
 
 dirname = os.path.dirname(__file__)
 if platform.system() == "Windows":

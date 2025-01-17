@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+
+from chspy import CubicHermiteSpline, extrema_from_anchors, interpolate, interpolate_diff
+
 from jitcdde.past import Past
-from chspy import interpolate, interpolate_diff, extrema_from_anchors, CubicHermiteSpline
+
 
 NORM_THRESHOLD = 1e-30
 
@@ -25,8 +28,9 @@ class dde_integrator(Past):
 		
 		self.parameters = []
 		
-		from jitcdde._jitcdde import t, y, past_y, past_dy, anchors
-		from sympy import DeferredVector, sympify, lambdify
+		from sympy import DeferredVector, lambdify, sympify
+
+		from jitcdde._jitcdde import anchors, past_dy, past_y, t, y
 		Y = DeferredVector("Y")
 		substitutions = list(reversed(helpers)) + [(y(i),Y[i]) for i in range(self.n)]
 		

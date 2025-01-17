@@ -4,9 +4,12 @@
 
 import platform
 import unittest
+
 import numpy as np
 from scipy.stats import sem
-from jitcdde import t, y, jitcdde_lyap
+
+from jitcdde import jitcdde_lyap, t, y
+
 
 if platform.system() == "Windows":
 	compile_args = None

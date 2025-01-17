@@ -1,18 +1,21 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from warnings import warn
 from itertools import count
-import symengine
-import numpy as np
+from warnings import warn
 
-from jitcdde.past import Past, Anchor
-import jitcdde._python_core as python_core
-from jitcxde_common import jitcxde, checker
-from jitcxde_common.helpers import sort_helpers, sympify_helpers, find_dependent_helpers
+import numpy as np
+import symengine
+
+import chspy
+from jitcxde_common import checker, jitcxde
+from jitcxde_common.helpers import find_dependent_helpers, sort_helpers, sympify_helpers
 from jitcxde_common.symbolic import collect_arguments, count_calls, replace_function
 from jitcxde_common.transversal import GroupHandler
-import chspy
+
+import jitcdde._python_core as python_core
+from jitcdde.past import Anchor, Past
+
 
 _default_min_step = 1e-10
 

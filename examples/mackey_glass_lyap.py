@@ -14,9 +14,10 @@ Note that `integrate` does not only return local Lyapunov exponents but also the
 """
 
 if __name__ == "__main__":
-	from jitcdde import jitcdde_lyap, y, t
 	import numpy
 	from scipy.stats import sem
+
+	from jitcdde import jitcdde_lyap, t, y
 	
 	τ = 15
 	n = 10

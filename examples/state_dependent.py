@@ -7,8 +7,10 @@ See https://github.com/neurophysik/jitcdde/issues/7 for details.
 """
 
 
-from jitcdde import jitcdde, y, t
 import numpy
+
+from jitcdde import jitcdde, t, y
+
 
 f = [ -y(0,t-2-y(0)**2) + 5 ]
 DDE = jitcdde(f,max_delay=1e10)

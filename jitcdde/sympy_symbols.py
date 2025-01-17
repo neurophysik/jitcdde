@@ -1,5 +1,6 @@
 import sympy
 
+
 #: the symbol for time for defining the differential equation. This one is different from the one you can import from jitcode directly by being defined via SymPy and thus being better suited for some symbolic processing techniques that are not available in SymEngine yet.
 t = sympy.Symbol("t", real=True)
 

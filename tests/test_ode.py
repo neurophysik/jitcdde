@@ -3,9 +3,12 @@
 
 import platform
 import unittest
-from jitcdde import t, y, jitcdde
+
 import numpy as np
 from numpy.testing import assert_allclose
+
+from jitcdde import jitcdde, t, y
+
 
 if platform.system() == "Windows":
 	compile_args = None

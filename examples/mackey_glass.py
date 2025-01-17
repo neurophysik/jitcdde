@@ -57,8 +57,9 @@ Taking everything together, our code is:
 
 
 if __name__ == "__main__":
-	from jitcdde import jitcdde, y, t
 	import numpy
+
+	from jitcdde import jitcdde, t, y
 	
 	τ = 15
 	n = 10

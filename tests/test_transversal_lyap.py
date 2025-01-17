@@ -5,16 +5,16 @@
 Integration test of jitcdde_restricted_lyap and jitcdde_transversal_lyap by comparing their results to each other for a synchronised scenario.
 """
 
-from itertools import combinations
 import platform
-from jitcdde import (
-		t,y,
-		jitcdde_restricted_lyap, jitcdde_transversal_lyap
-	)
+from itertools import combinations
+from warnings import warn
+
 import numpy as np
 from scipy.stats import sem
 from symengine import Symbol
-from warnings import warn
+
+from jitcdde import jitcdde_restricted_lyap, jitcdde_transversal_lyap, t, y
+
 
 if platform.system() == "Windows":
 	compile_args = None

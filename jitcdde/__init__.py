@@ -1,12 +1,5 @@
-from ._jitcdde import (
-		jitcdde, jitcdde_lyap, jitcdde_restricted_lyap, jitcdde_transversal_lyap,
-		t, y, dy, current_y, past_y, anchors, past_dy,
-		input, jitcdde_input,
-		UnsuccessfulIntegration,
-		_find_max_delay, _get_delays,
-		quadrature,
-		test,
-	)
+from ._jitcdde import UnsuccessfulIntegration, anchors, current_y, dy, input, jitcdde, jitcdde_input, jitcdde_lyap, jitcdde_restricted_lyap, jitcdde_transversal_lyap, past_dy, past_y, quadrature, t, test, y
+
 
 try:
 	from .version import version as __version__

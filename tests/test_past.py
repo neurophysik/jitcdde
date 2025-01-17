@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from jitcdde.past import Past
-
-import symengine
-import numpy as np
-from numpy.testing import assert_allclose
 import unittest
+
+import numpy as np
+import symengine
+from numpy.testing import assert_allclose
+
+from jitcdde.past import Past
 
 
 class normalisation_test(unittest.TestCase):

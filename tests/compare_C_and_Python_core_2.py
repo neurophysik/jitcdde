@@ -7,15 +7,17 @@ Creates instances of the Python and C core for the same DDE and subjects them to
 The argument is the number of runs.
 """
 
-from jitcdde._python_core import dde_integrator as py_dde_integrator
-from jitcdde.past import Past
-from jitcdde import jitcdde, t, y
-
-import numpy as np
-from numpy.testing import assert_allclose
 import platform
 import random
 from sys import argv, stdout
+
+import numpy as np
+from numpy.testing import assert_allclose
+
+from jitcdde import jitcdde, t, y
+from jitcdde._python_core import dde_integrator as py_dde_integrator
+from jitcdde.past import Past
+
 
 if platform.system() == "Windows":
 	compile_args = None

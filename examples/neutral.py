@@ -2,9 +2,11 @@
 	Experimental implementation of a neutral DDE. See https://github.com/neurophysik/jitcdde/issues/24 for details. `simple_neutral.py` contains a clearer, but less efficient implementation.
 """
 
-from jitcdde import jitcdde, y, current_y, past_dy, past_y, t, anchors
-from symengine import tanh, sqrt, exp, Symbol
 import numpy as np
+from symengine import Symbol, exp, sqrt, tanh
+
+from jitcdde import anchors, current_y, jitcdde, past_dy, past_y, t, y
+
 
 sech = lambda x: 2/(exp(x)+exp(-x))
 eps = 1e-5

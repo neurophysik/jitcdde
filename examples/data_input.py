@@ -1,7 +1,10 @@
 import numpy as np
-from jitcdde import y, t, jitcdde_input, input
-from chspy import CubicHermiteSpline
 from matplotlib import pyplot as plt
+
+from chspy import CubicHermiteSpline
+
+from jitcdde import input, jitcdde_input, t, y
+
 
 # Defining Input
 # --------------

@@ -2,10 +2,12 @@
 Tests whether things works independent of where symbols are imported from.
 """
 
+import symengine
+import sympy
+
 import jitcdde
 import jitcdde.sympy_symbols
-import sympy
-import symengine
+
 
 sympy_t = sympy.Symbol("t",real=True)
 def sympy_y(index,time=sympy_t):

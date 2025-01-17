@@ -1,15 +1,16 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import unittest
+from itertools import chain
+
+import numpy as np
+import symengine
+from numpy.testing import assert_allclose
+
+from jitcdde._jitcdde import anchors, current_y, past_y, t, y
 from jitcdde._python_core import dde_integrator
 from jitcdde.past import Past
-from jitcdde._jitcdde import t, y, current_y, past_y, anchors
-
-import symengine
-import numpy as np
-from numpy.testing import assert_allclose
-from itertools import chain
-import unittest
 
 
 tau = 15

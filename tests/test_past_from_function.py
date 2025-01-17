@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-import symengine
+
 import numpy as np
+import symengine
 from numpy.testing import assert_allclose
+
 from jitcdde import jitcdde, t, y
+
 
 class TestIntegration(unittest.TestCase):
 	def setUp(self):

@@ -35,9 +35,10 @@ Explanation of selected features and choices:
 
 if __name__ == "__main__":
 	# example-start
-	from jitcdde import jitcdde, y, t
-	from numpy import pi, arange, random, max
+	from numpy import arange, max, pi, random
 	from symengine import sin
+
+	from jitcdde import jitcdde, t, y
 	
 	n = 100
 	ω = 1
