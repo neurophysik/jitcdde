@@ -1,5 +1,5 @@
 """
-The following are a set of examples that implement the Mackey-Glass system with a jump in the value of a parameter. Here we will change the value of β from β₀ to β₁ at time t₀. 
+The following are a set of examples that implement the Mackey-Glass system with a jump in the value of a parameter. Here we will change the value of β from β₀ to β₁ at time t₀.
 
 The methods range from the most straightforward to more involved ones.
 
@@ -61,7 +61,7 @@ data = np.vstack( data + [DDE1.integrate(t) for t in times1] )
 # Plot
 fig, ax = subplots()
 ax.plot(np.hstack((times0, times1)), data)
-ax.set_title('two separate models')
+ax.set_title("two separate models")
 
 
 # 2. Using a control parameter we modify mid-run
@@ -72,7 +72,7 @@ from symengine import Symbol
 
 
 # Create the model with β being a symbol instead of having a value, and integrate it up to t0:
-β = Symbol('beta')
+β = Symbol("beta")
 f = [ β * y(0,t-τ) / (1 + y(0,t-τ)**n) - γ*y(0) ]
 
 # Run the model with β as its control parameter:
@@ -93,7 +93,7 @@ data = np.vstack( data + [DDE.integrate(t) for t in times1] )
 # Plot
 fig, ax = subplots()
 ax.plot(np.hstack((times0, times1)), data)
-ax.set_title('control parameter')
+ax.set_title("control parameter")
 
 
 # 3. Using input to modify the parameter mid-run
@@ -111,7 +111,7 @@ parameter_over_time = lambda t: β0 if t<t0 else β1
 parameter_spline = CubicHermiteSpline(n=1)
 parameter_spline.from_function(parameter_over_time, times_of_interest = input_times)
 
-# Defining Dynamics 
+# Defining Dynamics
 β = input(0)
 f = [ β * y(0,t-τ) / (1 + y(0,t-τ)**n) - γ*y(0) ]
 
@@ -125,7 +125,7 @@ data = np.vstack([DDE.integrate(time) for time in times])
 # Plot
 fig, ax = subplots()
 ax.plot(times, data)
-ax.set_title('input')
+ax.set_title("input")
 
 
 # 4. Using jitcxde_common.conditional to approximate a jump
@@ -149,7 +149,7 @@ data = np.vstack([DDE.integrate(time) for time in times])
 # Plot
 fig, ax = subplots()
 ax.plot(times, data)
-ax.set_title('conditional')
+ax.set_title("conditional")
 
 # 5. Writing the jump ourselves using a callback
 # --------------
@@ -159,7 +159,7 @@ from symengine import Function
 
 
 # Define the the ~ython function that will handle the jump and the Symengine symbol corresponding to the parameter, which this time is a Function
-β = Function('param_jump')
+β = Function("param_jump")
 def param_jump_callback(y, t):
     return β0 if t<t0 else β1
 
@@ -176,4 +176,4 @@ data = np.vstack([DDE.integrate(time) for time in times])
 # Plot
 fig, ax = subplots()
 ax.plot(times, data)
-ax.set_title('callback')
+ax.set_title("callback")

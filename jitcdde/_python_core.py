@@ -133,7 +133,7 @@ class dde_integrator(Past):
 		"""
 			computes the coefficient that summarises the integration error.
 		"""
-		with np.errstate(divide='ignore', invalid='ignore'):
+		with np.errstate(divide="ignore", invalid="ignore"):
 			return np.nanmax(
 					np.abs(self.error)
 					/(atol + rtol*np.abs(self[-1].state))
