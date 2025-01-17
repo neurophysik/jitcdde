@@ -1,3 +1,5 @@
+from warnings import warn
+
 import sympy
 
 

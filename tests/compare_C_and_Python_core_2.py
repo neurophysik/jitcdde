@@ -68,7 +68,7 @@ for realisation in range(number_of_runs):
 	def get_full_state():
 		A = P.get_full_state()
 		B = C.get_full_state()
-		for a,b in zip(A,B):
+		for a,b in zip(A,B,strict=True):
 			compare(a[0], b[0])
 			compare(a[1], b[1])
 			compare(a[2], b[2])
@@ -105,15 +105,15 @@ for realisation in range(number_of_runs):
 	
 	def truncate_past():
 		accept_step()
-		time = np.random.uniform(*reduced_interval())
+		time = random.uniform(*reduced_interval())
 		P.truncate(time)
 		C.truncate(time)
 
 	def apply_jump():
 		accept_step()
-		time = np.random.uniform(*reduced_interval())
+		time = random.uniform(*reduced_interval())
 		width = 0.1
-		change = np.random.normal(0,0.1,1)
+		change = np.array([random.normal(0,0.1)])
 		compare(
 				P.apply_jump(change,time,width),
 				C.apply_jump(change,time,width),
@@ -128,7 +128,7 @@ for realisation in range(number_of_runs):
 		action = random.sample(actions,1)[0]
 		try:
 			action()
-		except AssertionError as error:
+		except AssertionError:
 			print("--------------------")
 			print(f"Results did not match in realisation {realisation} in action {i}:")
 			print(action.__name__)

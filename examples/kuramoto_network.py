@@ -54,11 +54,11 @@ if __name__ == "__main__":
 						if A[j,i]
 					)
 	
-	I = jitcdde(kuramotos,n=n,verbose=False,delays=τ.flatten())
-	I.set_integration_parameters(rtol=0,atol=1e-5)
+	solver = jitcdde(kuramotos,n=n,verbose=False,delays=τ.flatten())
+	solver.set_integration_parameters(rtol=0,atol=1e-5)
 	
-	I.constant_past( random.uniform(0,2*pi,n), time=0.0 )
-	I.integrate_blindly( max(τ) , 0.1 )
+	solver.constant_past( random.uniform(0,2*pi,n), time=0.0 )
+	solver.integrate_blindly( max(τ) , 0.1 )
 	
-	for time in I.t + arange(0,400,0.2):
-		print(*I.integrate(time) % (2*pi))
+	for time in solver.t + arange(0,400,0.2):
+		print(*solver.integrate(time) % (2*pi))

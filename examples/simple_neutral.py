@@ -5,7 +5,7 @@
 import numpy as np
 from symengine import exp, sqrt, tanh
 
-from jitcdde import UnsuccessfulIntegration, dy, jitcdde, t, y
+from jitcdde import dy, jitcdde, t, y
 
 
 sech = lambda x: 2/(exp(x)+exp(-x))

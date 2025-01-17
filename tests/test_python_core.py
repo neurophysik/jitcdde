@@ -5,7 +5,7 @@ import numpy as np
 import symengine
 from numpy.testing import assert_allclose
 
-from jitcdde._jitcdde import anchors, current_y, past_y, t, y
+from jitcdde._jitcdde import t, y
 from jitcdde._python_core import dde_integrator
 from jitcdde.past import Past
 

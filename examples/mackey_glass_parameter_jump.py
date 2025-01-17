@@ -102,7 +102,7 @@ ax.set_title("control parameter")
 
 from chspy import CubicHermiteSpline
 
-from jitcdde import input, jitcdde_input
+from jitcdde import input, jitcdde_input  # noqa: A004
 
 
 # Define how the parameter changes over time and put that information into a spline:

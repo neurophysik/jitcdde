@@ -11,7 +11,7 @@ from jitcxde_common.symbolic import collect_arguments, count_calls, replace_func
 from jitcxde_common.transversal import GroupHandler
 
 import jitcdde._python_core as python_core
-from jitcdde.past import Anchor, Past
+from jitcdde.past import Past
 
 
 _default_min_step = 1e-10
@@ -127,7 +127,7 @@ def quadrature(integrand,variable,lower,upper,nsteps=20,method="gauss"):
 
 def is_anchor_helper(helper):
 	return (
-			type(helper[1]) == type(anchors(0))
+			type(helper[1]) is type(anchors(0))
 			and
 			helper[1].get_name() == anchors.name
 		)
@@ -467,7 +467,8 @@ class jitcdde(jitcxde):
 			anchor_subs = {}
 			new_helpers = []
 			for delay in self.delays:
-				if delay==0: continue
+				if delay==0:
+					continue
 				
 				anchor_helper = symengine.Symbol("anchor_helper_"+str(delay))
 				new_helpers.append((anchor_helper,anchors(t-delay)))
@@ -843,7 +844,8 @@ class jitcdde(jitcxde):
 				return False
 			
 			# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
-			for self.count in range(1,self.pws_max_iterations+1):
+			for count in range(1,self.pws_max_iterations+1):
+				self.count = count
 				self.DDE.get_next_step(self.dt)
 				if self.DDE.check_new_y_diff(self.pws_atol, self.pws_rtol):
 					break
@@ -1065,7 +1067,7 @@ def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0, simplify=Tru
 				
 				for _ in range(n):
 					expression = 0
-					for delay,jac in zip(delays,jacs):
+					for delay,jac in zip(delays,jacs,strict=True):
 						for k,entry in enumerate(next(jac)):
 							expression += entry * y(k+(i+1)*n,t-delay)
 					
@@ -1413,7 +1415,7 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		
 		def f_lyap():
 			for entry in self.iterate(tangent_vector_f()):
-				if type(entry)==int:
+				if type(entry) is int:
 					yield finalise(extracted[self.main_indices[entry]])
 				else:
 					yield finalise(entry[0]-entry[1])

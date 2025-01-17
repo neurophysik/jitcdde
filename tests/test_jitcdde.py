@@ -11,7 +11,7 @@ from jitcdde import (
 	UnsuccessfulIntegration,
 	_find_max_delay,
 	_get_delays,
-	input,
+    input,  # noqa: A004
 	jitcdde,
 	jitcdde_input,
 	quadrature,
@@ -433,13 +433,13 @@ class TestInput(unittest.TestCase):
 	def test_input(self):
 		combos = np.array([
 			combo
-			for l in range(1,n)
-			for combo in combinations(range(n),l)
+			for k in range(1,n)
+			for combo in combinations(range(n),k)
 		],dtype=object)
 		
 		for combo in np.random.choice(combos,3,replace=False):
 			substitutions = { y(i):input(i) for i in combo }
-			f_input = [expression.subs(substitutions) for expression in f]
+			_f_input = [expression.subs(substitutions) for expression in f]
 			DDE = jitcdde_input(f,self.result)
 			DDE.set_integration_parameters(**test_parameters)
 			DDE.compile_C(extra_compile_args=compile_args, simplify=False)

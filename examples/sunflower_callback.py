@@ -59,4 +59,3 @@ assert DDE_regular.t == DDE_callback.t
 times = DDE_regular.t + np.arange(10,100,10)
 for time in times:
 	assert DDE_regular.integrate(time)[0] == DDE_callback.integrate(time)[0]
-

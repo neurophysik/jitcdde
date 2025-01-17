@@ -1,7 +1,6 @@
 import unittest
 
 import numpy as np
-import symengine
 from numpy.testing import assert_allclose
 
 from jitcdde.past import Past
