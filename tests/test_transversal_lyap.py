@@ -17,7 +17,9 @@ if platform.system() == "Windows":
 	compile_args = None
 else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
-	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+	compile_args = [*DEFAULT_COMPILE_ARGS,"-g","-UNDEBUG"]
+
+rng = np.random.default_rng()
 
 a = -0.025794
 b =  0.01
@@ -115,7 +117,7 @@ for scenario in scenarios:
 		DDE1.purge_past()
 		DDE2.purge_past()
 		
-		single = np.random.random(2)
+		single = rng.random(2)
 		initial_state = np.empty(n)
 		for j,group in enumerate(scenario["groups"]):
 			for i in group:

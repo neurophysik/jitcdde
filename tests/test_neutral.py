@@ -11,7 +11,7 @@ if platform.system() == "Windows":
 	compile_args = None
 else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
-	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+	compile_args = [*DEFAULT_COMPILE_ARGS,"-g","-UNDEBUG"]
 
 initial = [ 0.66698806, 0.02581308, -0.77761941, 0.94863382, 0.70167179, -1.05108156 ]
 control = [-0.72689205, 0.09982525, 0.41167269, 0.86527044, -0.50028942, 0.7227548 ]

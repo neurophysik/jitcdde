@@ -8,6 +8,8 @@ from symengine import Symbol, exp, sqrt, tanh
 from jitcdde import anchors, current_y, jitcdde, past_dy, past_y, t, y
 
 
+rng = np.random.default_rng(seed=23)
+
 sech = lambda x: 2/(exp(x)+exp(-x))
 eps = 1e-5
 abs = lambda x: sqrt(x**2+eps**2)
@@ -47,8 +49,7 @@ f.update( {
 
 DDE = jitcdde(f,helpers=helpers,verbose=False)
 
-np.random.seed(23)
-DDE.constant_past(np.random.normal(0,1,6))
+DDE.constant_past(rng.normal(0,1,6))
 DDE.adjust_diff()
 
 for time in DDE.t+np.arange(0.1,100,0.1):

@@ -92,18 +92,20 @@ class double_integration_test(unittest.TestCase):
 
 class jump_test(unittest.TestCase):
 	def test_jump(self):
+		rng = np.random.default_rng()
+
 		n = 10
 		τ = 10
-		width = 10**np.random.uniform(-7,0)*τ
-		factor = np.random.random(n)
+		width = 10**rng.uniform(-7,0)*τ
+		factor = rng.random(n)
 		
-		times = sorted(np.random.uniform(0,τ,5))
+		times = sorted(rng.uniform(0,τ,5))
 		past = Past(n, [
-				(time,np.random.random(n),0.1*np.random.random(n))
+				(time,rng.random(n),0.1*rng.random(n))
 				for time in times
 			])
-		jump_time = np.random.uniform(past[-2][0],past[-1][0])
-		jump_size = np.random.random(n)
+		jump_time = rng.uniform(past[-2][0],past[-1][0])
+		jump_size = rng.random(n)
 		
 		# Use a derivative for which it is clear how a jump affects it:
 		f = lambda: [ factor[i]*y(i) + y(i,t-τ) for i in range(n) ]

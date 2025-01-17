@@ -20,7 +20,7 @@ if platform.system() == "Windows":
 	compile_args = None
 else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
-	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG","-O1"]
+	compile_args = [*DEFAULT_COMPILE_ARGS,"-g","-UNDEBUG","-O1"]
 
 class FailedComparison(Exception):
 	pass
@@ -53,7 +53,7 @@ n = 8
 
 errors = 0
 rng = np.random.default_rng()
-pyrng = random.Random(rng.integers(1_000_000))
+pyrng = random.Random(int(rng.integers(1_000_000)))
 
 for i,realisation in enumerate(range(number_of_runs)):
 	print(".", end="")
@@ -66,7 +66,7 @@ for i,realisation in enumerate(range(number_of_runs)):
 		lrng = np.random.default_rng(past_seed)
 		result = Past(n=n,n_basic=2,tangent_indices=tangent_indices)
 		for time in lrng.uniform(-10,0,lrng.integers(2,10)):
-			result.add(( time, lrng.rand(n), 0.1*lrng.rand(n) ))
+			result.add(( time, lrng.random(n), 0.1*lrng.random(n) ))
 		return result
 	
 	P = py_dde_integrator(f,past())
@@ -126,7 +126,7 @@ for i,realisation in enumerate(range(number_of_runs)):
 		compare(P.orthonormalise(3, d), C.orthonormalise(3, d))
 	
 	def remove_projections(P=P, C=C):
-		if rng.rand()>0.1:
+		if rng.random()>0.1:
 			
 			d = rng.uniform(0.1*delay, delay)
 			if rng.integers(0,2):

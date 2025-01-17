@@ -192,8 +192,11 @@ class jitcdde(jitcxde):
 			control_pars = (),
 			callback_functions = (),
 			verbose = True,
-			module_location = None
+			module_location = None,
+			rng = None,
 		):
+		if rng is None:
+			rng = np.random.default_rng()
 		
 		super().__init__(n,verbose,module_location)
 		
@@ -213,6 +216,7 @@ class jitcdde(jitcxde):
 		self.max_delay = max_delay
 		self.automatic_anchor_helpers = automatic_anchor_helpers
 		
+		self.rng = rng
 		self.initial_discontinuities_handled = False
 	
 	def initiate_past(self):
@@ -724,7 +728,7 @@ class jitcdde(jitcxde):
 		self.count = 0
 		
 		if pws_fuzzy_increase:
-			self.do_increase = lambda p: np.random.random() < p
+			self.do_increase = lambda p: self.rng.random() < p
 		else:
 			self.increase_credit = 0.0
 			def do_increase(p):

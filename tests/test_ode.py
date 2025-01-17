@@ -11,7 +11,7 @@ if platform.system() == "Windows":
 	compile_args = None
 else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
-	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+	compile_args = [*DEFAULT_COMPILE_ARGS,"-g","-UNDEBUG"]
 
 # control values:
 
@@ -74,9 +74,10 @@ class blind_integration(basic_test):
 
 class no_derivative(basic_test):
 	def setUp(self):
+		rng = np.random.default_rng()
 		self.ODE.purge_past()
-		self.ODE.add_past_point(-1.0, y0, np.random.random(4))
-		self.ODE.add_past_point( 0.0, y0, np.random.random(4))
+		self.ODE.add_past_point(-1.0, y0, rng.random(4))
+		self.ODE.add_past_point( 0.0, y0, rng.random(4))
 	
 	def integrate(self):
 		self.ODE.step_on_discontinuities()

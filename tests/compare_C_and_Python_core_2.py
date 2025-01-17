@@ -20,7 +20,7 @@ if platform.system() == "Windows":
 	compile_args = None
 else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
-	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG","-O0"]
+	compile_args = [*DEFAULT_COMPILE_ARGS,"-g","-UNDEBUG","-O0"]
 
 compare = lambda x,y: assert_allclose(x,y,rtol=1e-7,atol=1e-7)
 
@@ -113,7 +113,7 @@ for realisation in range(number_of_runs):
 		accept_step(P=P, C=C)
 		time = random.uniform(*reduced_interval())
 		width = 0.1
-		change = np.array([random.normal(0,0.1)])
+		change = np.array([random.gauss(0,0.1)])
 		compare(
 				P.apply_jump(change,time,width),
 				C.apply_jump(change,time,width),

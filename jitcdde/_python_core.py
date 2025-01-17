@@ -41,7 +41,7 @@ class dde_integrator(Past):
 			f_wc.append(new_entry)
 		
 		F = lambdify(
-				[t, Y] + list(control_pars),
+				[t, Y, *control_pars],
 				f_wc,
 				[
 					{
