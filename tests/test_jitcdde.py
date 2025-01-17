@@ -9,8 +9,6 @@ from numpy.testing import assert_allclose
 
 from jitcdde import (
 	UnsuccessfulIntegration,
-	_find_max_delay,
-	_get_delays,
     input,  # noqa: A004
 	jitcdde,
 	jitcdde_input,
@@ -19,6 +17,7 @@ from jitcdde import (
 	test,
 	y,
 )
+from jitcdde._jitcdde import _find_max_delay, _get_delays
 
 
 dirname = os.path.dirname(__file__)

@@ -6,7 +6,7 @@ See https://github.com/neurophysik/jitcdde/issues/7 for details.
 """
 
 
-import numpy
+import numpy as np
 
 from jitcdde import jitcdde, t, y
 
@@ -22,8 +22,9 @@ DDE.add_past_point( 0.0    , [-0.5], [0.0])
 
 DDE.integrate_blindly(0.01)
 
-data = []
-for time in [ DDE.t, *numpy.linspace(0.9,2,30) ]:
-	data.append([time, DDE.integrate(time)])
-numpy.savetxt("timeseries.dat", data)
+steps = np.linspace(0.9,2,30)
+data = np.empty((steps.size + 1, 2))
+for n, time in enumerate([ DDE.t, *steps ]):
+	data[n] = [time, DDE.integrate(time)[0]]
+np.savetxt("timeseries.dat", data)
 
