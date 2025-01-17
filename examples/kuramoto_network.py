@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 
 """
 Suppose, we want to implement a network of :math:`n=100` delay-coupled Kuramoto oscillators, governed by the following differential equations:

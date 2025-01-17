@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 from itertools import count
 from warnings import warn
 
@@ -126,7 +123,7 @@ def quadrature(integrand,variable,lower,upper,nsteps=20,method="gauss"):
 				for pos,weight in zip(*gauss_legendre(nsteps,20))
 			)
 	else:
-		raise NotImplementedError("I know no integration method named %s."%method)
+		raise NotImplementedError(f"I know no integration method named {method}.")
 
 def is_anchor_helper(helper):
 	return (
@@ -198,7 +195,7 @@ class jitcdde(jitcxde):
 			module_location = None
 		):
 		
-		super(jitcdde,self).__init__(n,verbose,module_location)
+		super().__init__(n,verbose,module_location)
 		
 		self.f_sym = self._handle_input(f_sym)
 		if not hasattr(self,"n_basic"):
@@ -260,11 +257,11 @@ class jitcdde(jitcxde):
 			for index in indizes:
 				self._check_assert(
 						index >= 0,
-						"y is called with a negative argument (%i) in equation %i." % (index,i),
+						f"y is called with a negative argument ({index}) in equation {i}.",
 					)
 				self._check_assert(
 						index < self.n,
-						"y is called with an argument (%i) higher than the system’s dimension (%i) in equation %i." % (index,self.n,i),
+						f"y is called with an argument ({index}) higher than the system’s dimension ({self.n}) in equation {i}.",
 					)
 	
 	@checker
@@ -275,7 +272,7 @@ class jitcdde(jitcxde):
 			for symbol in entry.atoms(symengine.Symbol):
 				self._check_assert(
 						symbol in valid_symbols,
-						"Invalid symbol (%s) in equation %i."  % (symbol.name,i),
+						f"Invalid symbol ({symbol.name}) in equation {i}.",
 					)
 	
 	def add_past_point(self, time, state, derivative):
@@ -744,9 +741,9 @@ class jitcdde(jitcxde):
 		if self.dt < self.min_step:
 			message = (["",
 					"Could not integrate with the given tolerance parameters:\n",
-					"atol: %e" % self.atol,
-					"rtol: %e" % self.rtol,
-					"min_step: %e\n" % self.min_step,
+					f"atol: {self.atol:e}",
+					f"rtol: {self.rtol:e}",
+					f"min_step: {self.min_step:e}\n",
 					"The most likely reasons for this are:",
 				])
 			
@@ -1126,7 +1123,7 @@ class jitcdde_lyap(jitcdde):
 				simplify = simplify
 			)
 		
-		super(jitcdde_lyap, self).__init__(
+		super().__init__(
 				f_lyap,
 				n = self.n_basic*(self._n_lyap+1),
 				**kwargs
@@ -1156,7 +1153,7 @@ class jitcdde_lyap(jitcdde):
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
-		result = super(jitcdde_lyap, self).integrate(target_time)[:self.n_basic]
+		result = super().integrate(target_time)[:self.n_basic]
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t!=0:
@@ -1173,7 +1170,7 @@ class jitcdde_lyap(jitcdde):
 			if "max_step" in kwargs.keys():
 				if kwargs["max_step"] > required_max_step:
 					kwargs["max_step"] = required_max_step
-					warn("Decreased max_step to %f to ensure sufficient dimensionality for Lyapunov exponents." % required_max_step)
+					warn(f"Decreased max_step to {required_max_step} to ensure sufficient dimensionality for Lyapunov exponents.")
 			else:
 				kwargs["max_step"] = required_max_step
 			
@@ -1182,7 +1179,7 @@ class jitcdde_lyap(jitcdde):
 			if kwargs["min_step"] > required_max_step:
 				warn("Given the number of desired Lyapunov exponents and the maximum delay in the system, the highest possible step size is lower than the default min_step or the min_step set by you. This is almost certainly a very bad thing. Nonetheless I will lower min_step accordingly.")
 			
-		super(jitcdde_lyap, self).set_integration_parameters(**kwargs)
+		super().set_integration_parameters(**kwargs)
 	
 	def integrate_blindly(self, target_time, step=None):
 		"""
@@ -1263,7 +1260,7 @@ class jitcdde_restricted_lyap(jitcdde):
 				simplify = simplify
 			)
 		
-		super(jitcdde_restricted_lyap, self).__init__(
+		super().__init__(
 				f_lyap,
 				n = self.n_basic*(2+2*len(self.vectors)),
 				**kwargs
@@ -1280,7 +1277,7 @@ class jitcdde_restricted_lyap(jitcdde):
 		return norm
 	
 	def set_integration_parameters(self, *args, **kwargs):
-		super(jitcdde_restricted_lyap, self).set_integration_parameters(*args, **kwargs)
+		super().set_integration_parameters(*args, **kwargs)
 		if (self.state_components or self.diff_components) and not self.atol:
 			warn("At least one of your vectors has only one component while your absolute error (atol) is 0. This may cause problems due to spuriously high relative errors. Consider setting atol to some small, non-zero value (e.g., 1e-10) to avoid this.")
 	
@@ -1306,7 +1303,7 @@ class jitcdde_restricted_lyap(jitcdde):
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
-		result = super(jitcdde_restricted_lyap, self).integrate(target_time)[:self.n_basic]
+		result = super().integrate(target_time)[:self.n_basic]
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t==0:
@@ -1423,7 +1420,7 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		
 		helpers = ((helper[0],finalise(helper[1])) for helper in helpers)
 		
-		super(jitcdde_transversal_lyap, self).__init__(
+		super().__init__(
 				f_lyap,
 				n = self.n,
 				delays = delays,
@@ -1469,7 +1466,7 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
-		result = super(jitcdde_transversal_lyap, self).integrate(target_time)[self.main_indices]
+		result = super().integrate(target_time)[self.main_indices]
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t==0:

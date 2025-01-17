@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 import numpy as np
 
 from chspy import CubicHermiteSpline, extrema_from_anchors, interpolate, interpolate_diff

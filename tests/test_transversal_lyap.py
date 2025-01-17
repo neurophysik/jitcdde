@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 """
 Integration test of jitcdde_restricted_lyap and jitcdde_transversal_lyap by comparing their results to each other for a synchronised scenario.
 """
@@ -164,7 +161,7 @@ for scenario in scenarios:
 		assert margin2/Lyap2 < 0.1 or not sign2
 		assert sign1==coupling["sign"]
 		assert sign2==coupling["sign"]
-		assert abs(Lyap1-Lyap2)<max(margin1,margin2), "%f±%f \t %f±%f"%(Lyap1,margin1,Lyap2,margin2)
+		assert abs(Lyap1-Lyap2)<max(margin1,margin2), f"{Lyap1}±{margin1} \t {Lyap2}±{margin2}"
 		print( ".", end="", flush=True )
 
 print("")

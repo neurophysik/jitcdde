@@ -13,7 +13,9 @@ MOCK_MODULES = [
 	]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-class GroupHandler_mock(object): pass
+class GroupHandler_mock:
+	pass
+
 sys.modules['jitcxde_common.transversal'] = Mock(GroupHandler=GroupHandler_mock)
 
 sys.path.insert(0,os.path.abspath("../examples"))
@@ -32,8 +34,8 @@ source_suffix = '.rst'
 
 master_doc = 'index'
 
-project = u'JiTCDDE'
-copyright = u'2016, Gerrit Ansmann'
+project = 'JiTCDDE'
+copyright = '2016, Gerrit Ansmann'
 
 release = version = get_version(root='..', relative_to=__file__)
 

@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 """
 Creates instances of the Python and C core for the same DDE and subjects them to a series of random commands (within a reasonable margin). As both cores should behave identically, the results should not differ – except for details of the numerical implementation, which may cause the occasional deviation.
 
@@ -133,12 +130,12 @@ for realisation in range(number_of_runs):
 			action()
 		except AssertionError as error:
 			print("--------------------")
-			print("Results did not match in realisation %i in action %i:" % (realisation, i))
+			print(f"Results did not match in realisation {realisation} in action {i}:")
 			print(action.__name__)
 			print("--------------------")
 			
 			errors += 1
 			break
 
-print("Runs with errors: %i / %i" % (errors, number_of_runs))
+print(f"Runs with errors: {errors} / {number_of_runs}")
 raise SystemExit(errors)

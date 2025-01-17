@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 
 """
 This is a very simple example implementing the Mackey–Glass system with an additional jump.
