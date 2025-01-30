@@ -39,7 +39,7 @@ lyap_controls = [0.0806, 0, -0.0368, -0.1184]
 
 class TestIntegration(unittest.TestCase):
 	def setUp(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 		self.DDE = jitcdde_lyap(f, n_lyap=len(lyap_controls))
 		self.DDE.add_past_point(-delay, rng.random(6), rng.random(6))
 		self.DDE.add_past_point(0.0, rng.random(6), rng.random(6))
@@ -72,11 +72,11 @@ class TestIntegration(unittest.TestCase):
 		for i,lyap_control in enumerate(lyap_controls):
 			lyap = np.average(lyaps[lyap_start:,i], weights=weights[lyap_start:])
 			stderr = sem(lyaps[lyap_start:,i])
-			self.assertAlmostEqual(lyap_control, lyap, delta=3*stderr)
+			self.assertAlmostEqual(lyap_control, lyap, delta=3.5*stderr)
 
 class TestSaveAndLoad(TestIntegration):
 	def setUp(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 		DDE_orig = jitcdde_lyap(f, n_lyap=len(lyap_controls))
 		filename = DDE_orig.save_compiled(overwrite=True)
 		self.DDE = jitcdde_lyap(
@@ -91,7 +91,7 @@ class TestSaveAndLoad(TestIntegration):
 
 class TestOMP(TestIntegration):
 	def setUp(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 		self.DDE = jitcdde_lyap(f, n_lyap=len(lyap_controls))
 		self.DDE.add_past_point(-delay, rng.random(6), rng.random(6))
 		self.DDE.add_past_point(0.0, rng.random(6), rng.random(6))

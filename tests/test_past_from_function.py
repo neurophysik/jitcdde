@@ -31,7 +31,7 @@ class TestIntegration(unittest.TestCase):
 		assert_allclose(results[0],results[1],atol=0.01,rtol=1e-5)
 	
 	def test_polynomial(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 
 		C = rng.uniform(-1,1,6)
 		f_1 = lambda time: [C[0]*time**2+C[1]*time+C[2],C[3]*time**2+C[4]*time+C[5]]

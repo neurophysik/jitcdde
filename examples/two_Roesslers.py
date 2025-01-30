@@ -3,7 +3,7 @@ import numpy as np
 from jitcdde import jitcdde, t, y
 
 
-rng = np.random.default_rng()
+rng = np.random.default_rng(seed=42)
 
 ω = rng.normal(0.89, 0.0089, 2)
 k = 0.25

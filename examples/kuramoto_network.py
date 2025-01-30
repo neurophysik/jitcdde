@@ -40,7 +40,7 @@ if __name__ == "__main__":
 	from jitcdde import jitcdde, t, y
 	
 
-	rng = np.random.default_rng()
+	rng = np.random.default_rng(seed=42)
 	n = 100
 	ω = 1
 	c = 42
