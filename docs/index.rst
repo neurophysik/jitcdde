@@ -47,7 +47,7 @@ After every successful integration step, the state and derivative of the integra
 Whenever the derivative :math:`(f)` is evaluated, the required past states :math:`\left ( y(t-τ_1), y(t-τ_2), … \right )` are obtained through piece-wise cubic `Hermite interpolation <http://en.wikipedia.org/wiki/Hermite_interpolation>`_, using previously stored pairs of state and derivative (“anchor”).
 In some extreme cases, they may also be extrapolated.
 
-Note that unlike most other DDE softwares, JiTCDDE stores and accesses the initial past in exactly this way, i.e., as anchor points.
+Note that unlike most other DDE software, JiTCDDE stores and accesses the initial past in exactly this way, i.e., as anchor points.
 Thus, if you want to have maximum control, you have to initiate the past in exactly this way, i.e., you have to give at least two such anchor points (via `add_past_point`).
 If you do not want or need this, there are utility function available that automatically determine the anchors from a given function (`past_from_function`) or just set it to a fixed value (`constant_past`).
 You can also use the `get_state` method to obtain a representation of the past that you can dissect and modify using `CubicHermiteSpline <https://chspy.readthedocs.io/en/latest/>`_.
@@ -78,7 +78,7 @@ To make this happen, you have four options:
 
 * `integrate_blindly` integrates the system for some time with a fixed step size, ignoring the error estimate. You have to take care that all parameters are reasonable. This is a good choice if you have a lot of different delays or time- or state-dependent delays. The time you integrate with this should be larger than your largest delay.
 
-* Carefully choose the initial past such that the derivative for the last anchor is identical to the value of :math:`f` as determined with the anchors, i.e., there is no initial discontinuity to begin with. To find such initial conditions, you usally have to solve a non-linear equation system. This is the ideal case for short integrations as elaborated in the next subsection.
+* Carefully choose the initial past such that the derivative for the last anchor is identical to the value of :math:`f` as determined with the anchors, i.e., there is no initial discontinuity to begin with. To find such initial conditions, you usually have to solve a non-linear equation system. This is the ideal case for short integrations as elaborated in the next subsection.
 
 
 .. _short_integrations:
@@ -173,7 +173,7 @@ Calculating Lyapunov exponents with `jitcdde_lyap`
 It works just like `jitcdde`, except that it generates and integrates additional differential equations for the separation functions.
 After every call of `integrate`, the separation functions are orthonormalised, and the “local” Lyapunov exponents for this integration step are returned alongside with the system’s state.
 These can then be further processed to obtain the Lyapunov exponents.
-The separation functions are intialised with random data, and you have to take care of the preiterations that the separation functions require to align themselves.
+The separation functions are initialised with random data, and you have to take care of the preiterations that the separation functions require to align themselves.
 
 The method employed here is similar to Farmer’s [F82]_, which in turn is an adaption of the method described by Benettin et al. [BGGS80]_ to delayed systems.
 As the state of delayed systems is also defined by their recent past, one has to consider the past of tangent vectors (as used in Benettin et. al.) as well, which are called separation functions.

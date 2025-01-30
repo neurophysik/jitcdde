@@ -1,7 +1,11 @@
-from jitcdde import t, y, jitcdde
 import numpy as np
 
-ω = np.random.normal(0.89, 0.0089, 2)
+from jitcdde import jitcdde, t, y
+
+
+rng = np.random.default_rng()
+
+ω = rng.normal(0.89, 0.0089, 2)
 k = 0.25
 delay = 4.5
 
@@ -16,7 +20,7 @@ f = [
 
 DDE = jitcdde(f)
 
-start_state = np.random.uniform(-0.5,0.5,6)
+start_state = rng.uniform(-0.5,0.5,6)
 
 DDE.add_past_point(-delay, start_state, np.zeros(6))
 DDE.add_past_point(0.0   , start_state, np.zeros(6))

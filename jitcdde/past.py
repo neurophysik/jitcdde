@@ -1,9 +1,8 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 import numpy as np
+
+from chspy import Anchor, CubicHermiteSpline
 from jitcxde_common.numerical import random_direction
-from chspy import CubicHermiteSpline, Anchor
+
 
 NORM_THRESHOLD = 1e-30
 

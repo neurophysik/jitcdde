@@ -1,29 +1,31 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
-from jitcdde import (
-		jitcdde,
-		t, y,
-		UnsuccessfulIntegration,
-		_find_max_delay, _get_delays,
-		quadrature,
-		test,
-		input, jitcdde_input,
-	)
 import os
 import platform
-import symengine
-import numpy as np
-from numpy.testing import assert_allclose
 import unittest
 from itertools import combinations
+
+import numpy as np
+import symengine
+from numpy.testing import assert_allclose
+
+from jitcdde import (
+	UnsuccessfulIntegration,
+    input,  # noqa: A004
+	jitcdde,
+	jitcdde_input,
+	quadrature,
+	t,
+	test,
+	y,
+)
+from jitcdde._jitcdde import _find_max_delay, _get_delays
+
 
 dirname = os.path.dirname(__file__)
 if platform.system() == "Windows":
 	compile_args = None
 else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
-	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+	compile_args = [*DEFAULT_COMPILE_ARGS,"-g","-UNDEBUG"]
 
 omega = np.array([0.88167179, 0.87768425])
 delay = 4.5
@@ -110,8 +112,10 @@ class TestIntegration(unittest.TestCase):
 		self.assert_consistency_with_previous(value)
 	
 	def test_integration_with_annihilating_jumps(self):
+		rng = np.random.default_rng()
+
 		self.DDE.integrate(T/2)
-		change = np.random.normal(0,10,n)
+		change = rng.normal(0,10,n)
 		self.DDE.jump(change,T/2)
 		self.DDE.jump(-change,T/2)
 		value = self.DDE.integrate(T)
@@ -348,6 +352,8 @@ class TestIntegrationParameters(unittest.TestCase):
 
 class TestJump(unittest.TestCase):
 	def test_jump(self):
+		rng = np.random.default_rng()
+
 		DDE = jitcdde(f)
 		DDE.set_integration_parameters(**test_parameters)
 		DDE.add_past_points(get_past_points())
@@ -355,7 +361,7 @@ class TestJump(unittest.TestCase):
 		old_state = DDE.integrate(T)
 		
 		width = 1e-5
-		change = np.random.normal(0,5,n)
+		change = rng.normal(0,5,n)
 		DDE.jump(change,T,width)
 		past = DDE.get_state()
 		
@@ -428,15 +434,16 @@ class TestInput(unittest.TestCase):
 		self.result = DDE.get_state()
 	
 	def test_input(self):
+		rng = np.random.default_rng()
 		combos = np.array([
 			combo
-			for l in range(1,n)
-			for combo in combinations(range(n),l)
+			for k in range(1,n)
+			for combo in combinations(range(n),k)
 		],dtype=object)
 		
-		for combo in np.random.choice(combos,3,replace=False):
+		for combo in rng.choice(combos,3,replace=False):
 			substitutions = { y(i):input(i) for i in combo }
-			f_input = [expression.subs(substitutions) for expression in f]
+			_f_input = [expression.subs(substitutions) for expression in f]
 			DDE = jitcdde_input(f,self.result)
 			DDE.set_integration_parameters(**test_parameters)
 			DDE.compile_C(extra_compile_args=compile_args, simplify=False)

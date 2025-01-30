@@ -1,8 +1,7 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 
 """
-Suppose we want to integrate the Mackey–Glass delay differential equation: :math:`\\dot{y} = f(y)` with :math:`y∈ℝ`, 
+Suppose we want to integrate the Mackey–Glass delay differential equation: :math:`\\dot{y} = f(y)` with :math:`y∈ℝ`,
 
 .. math::
 
@@ -17,7 +16,7 @@ First we do some importing and define the constants:
 
 Amongst our imports were the symbols for the state (`y`) and time (`t`), which have to be used to write down the differential equation such that JiTCDDE can process it.
 Using them, we can write down the right-hand side of the differential equation as a list of expressions.
-As it is one-dimensional, the list contains only one element. 
+As it is one-dimensional, the list contains only one element.
 We can then initiate JiTCDDE:
 
 .. literalinclude:: ../examples/mackey_glass.py
@@ -57,8 +56,9 @@ Taking everything together, our code is:
 
 
 if __name__ == "__main__":
-	from jitcdde import jitcdde, y, t
 	import numpy
+
+	from jitcdde import jitcdde, t, y
 	
 	τ = 15
 	n = 10

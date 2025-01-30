@@ -1,18 +1,17 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
-
 import platform
 import unittest
+
 import numpy as np
 from scipy.stats import sem
-from jitcdde import t, y, jitcdde_lyap
+
+from jitcdde import jitcdde_lyap, t, y
+
 
 if platform.system() == "Windows":
 	compile_args = None
 else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
-	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+	compile_args = [*DEFAULT_COMPILE_ARGS,"-g","-UNDEBUG"]
 
 omega = np.array([0.88167179, 0.87768425])
 delay = 4.5
@@ -40,9 +39,10 @@ lyap_controls = [0.0806, 0, -0.0368, -0.1184]
 
 class TestIntegration(unittest.TestCase):
 	def setUp(self):
+		rng = np.random.default_rng()
 		self.DDE = jitcdde_lyap(f, n_lyap=len(lyap_controls))
-		self.DDE.add_past_point(-delay, np.random.random(6), np.random.random(6))
-		self.DDE.add_past_point(0.0, np.random.random(6), np.random.random(6))
+		self.DDE.add_past_point(-delay, rng.random(6), rng.random(6))
+		self.DDE.add_past_point(0.0, rng.random(6), rng.random(6))
 		self.DDE.set_integration_parameters(**test_parameters)
 	
 	def test_adjust_diff(self):
@@ -76,6 +76,7 @@ class TestIntegration(unittest.TestCase):
 
 class TestSaveAndLoad(TestIntegration):
 	def setUp(self):
+		rng = np.random.default_rng()
 		DDE_orig = jitcdde_lyap(f, n_lyap=len(lyap_controls))
 		filename = DDE_orig.save_compiled(overwrite=True)
 		self.DDE = jitcdde_lyap(
@@ -84,15 +85,16 @@ class TestSaveAndLoad(TestIntegration):
 			delays=[delay],
 			n_lyap=len(lyap_controls)
 			)
-		self.DDE.add_past_point(-delay, np.random.random(6), np.random.random(6))
-		self.DDE.add_past_point(0.0,    np.random.random(6), np.random.random(6))
+		self.DDE.add_past_point(-delay, rng.random(6), rng.random(6))
+		self.DDE.add_past_point(0.0,    rng.random(6), rng.random(6))
 		self.DDE.set_integration_parameters(**test_parameters)
 
 class TestOMP(TestIntegration):
 	def setUp(self):
+		rng = np.random.default_rng()
 		self.DDE = jitcdde_lyap(f, n_lyap=len(lyap_controls))
-		self.DDE.add_past_point(-delay, np.random.random(6), np.random.random(6))
-		self.DDE.add_past_point(0.0, np.random.random(6), np.random.random(6))
+		self.DDE.add_past_point(-delay, rng.random(6), rng.random(6))
+		self.DDE.add_past_point(0.0, rng.random(6), rng.random(6))
 		self.DDE.set_integration_parameters(**test_parameters)
 		self.DDE.compile_C(omp=True,chunk_size=15)
 	

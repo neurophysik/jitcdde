@@ -2,9 +2,13 @@
 	Experimental implementation of a neutral DDE. See https://github.com/neurophysik/jitcdde/issues/24 for details. `neutral.py` contains a considerably more efficient implementation.
 """
 
-from jitcdde import jitcdde, y, dy, t, UnsuccessfulIntegration
-from symengine import tanh, sqrt, exp
 import numpy as np
+from symengine import exp, sqrt, tanh
+
+from jitcdde import dy, jitcdde, t, y
+
+
+rng = np.random.default_rng(seed=23)
 
 sech = lambda x: 2/(exp(x)+exp(-x))
 eps = 1e-5
@@ -34,8 +38,7 @@ f.update( { ydot[i]:
 
 DDE = jitcdde(f,verbose=False)
 
-np.random.seed(23)
-DDE.constant_past(np.random.normal(0,1,6))
+DDE.constant_past(rng.normal(0,1,6))
 DDE.adjust_diff()
 
 for time in DDE.t+np.arange(0.1,100,0.1):

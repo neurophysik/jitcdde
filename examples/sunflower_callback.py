@@ -1,7 +1,9 @@
 # In this example, we implement the sunflower equation. First, we do it regularly, then we repeat the process using callbacks.
 
-from jitcdde import jitcdde, y, t
 import numpy as np
+
+from jitcdde import jitcdde, t, y
+
 
 a = 4.8
 b = 0.186
@@ -12,6 +14,8 @@ tau = 40
 # To implement the sine function, we use SymEngine’s sine. This is a symbolic function that gets translated to a C implementation of the sine function under the hood.
 
 import symengine
+
+
 f = [
 		y(1),
 		-a/tau*y(1) - b/tau*symengine.sin(y(0,t-tau))
@@ -31,6 +35,8 @@ f_with_callback = [
 # We need to introduce a wrapper to match the required signature for callbacks. We also add a `print` statement to see when the callback was called. Except for the latter, we do not use the first argument, which is a vector containing the entire present state of the system:
 
 import math
+
+
 def my_sine_callback(y,arg):
 	print(f"my_sine called with arguments {y} and {arg}")
 	return math.sin(arg)
@@ -53,4 +59,3 @@ assert DDE_regular.t == DDE_callback.t
 times = DDE_regular.t + np.arange(10,100,10)
 for time in times:
 	assert DDE_regular.integrate(time)[0] == DDE_callback.integrate(time)[0]
-

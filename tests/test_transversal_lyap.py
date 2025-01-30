@@ -1,26 +1,25 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 """
 Integration test of jitcdde_restricted_lyap and jitcdde_transversal_lyap by comparing their results to each other for a synchronised scenario.
 """
 
-from itertools import combinations
 import platform
-from jitcdde import (
-		t,y,
-		jitcdde_restricted_lyap, jitcdde_transversal_lyap
-	)
+from itertools import combinations
+from warnings import warn
+
 import numpy as np
 from scipy.stats import sem
 from symengine import Symbol
-from warnings import warn
+
+from jitcdde import jitcdde_restricted_lyap, jitcdde_transversal_lyap, t, y
+
 
 if platform.system() == "Windows":
 	compile_args = None
 else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
-	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+	compile_args = [*DEFAULT_COMPILE_ARGS,"-g","-UNDEBUG"]
+
+rng = np.random.default_rng()
 
 a = -0.025794
 b =  0.01
@@ -106,8 +105,8 @@ for scenario in scenarios:
 		)
 	DDE2.compile_C(extra_compile_args=compile_args)
 	
-	def check_manifold(k):
-		message = f"The dynamics left the synchronisation manifold when {scenario['name']} with coupling {k}. If this fails, this is a problem with the test and not with what is tested or any software involved.\n\nSpecifically, this test only works when the backend (Symengine plus compiler) implents certain computations completely symmetrically. This needs not and cannot be reasonably controlled (and no, turning off compiler optimisation doesn’t necessarily help as it often restores symmetries broken by Symengine). It’s only something exploited by this test to make it work in the first place."
+	def check_manifold(k, DDE1=DDE1, scenario=scenario):
+		message = f"The dynamics left the synchronisation manifold when {scenario['name']} with coupling {k}. If this fails, this is a problem with the test and not with what is tested or any software involved.\n\nSpecifically, this test only works when the backend (Symengine plus compiler) implements certain computations completely symmetrically. This needs not and cannot be reasonably controlled (and no, turning off compiler optimisation doesn’t necessarily help as it often restores symmetries broken by Symengine). It’s only something exploited by this test to make it work in the first place."
 		for anchor in DDE1.get_state():
 			for group in scenario["groups"]:
 				for i,j in combinations(group,2):
@@ -118,7 +117,7 @@ for scenario in scenarios:
 		DDE1.purge_past()
 		DDE2.purge_past()
 		
-		single = np.random.random(2)
+		single = rng.random(2)
 		initial_state = np.empty(n)
 		for j,group in enumerate(scenario["groups"]):
 			for i in group:
@@ -164,7 +163,7 @@ for scenario in scenarios:
 		assert margin2/Lyap2 < 0.1 or not sign2
 		assert sign1==coupling["sign"]
 		assert sign2==coupling["sign"]
-		assert abs(Lyap1-Lyap2)<max(margin1,margin2), "%f±%f \t %f±%f"%(Lyap1,margin1,Lyap2,margin2)
+		assert abs(Lyap1-Lyap2)<max(margin1,margin2), f"{Lyap1}±{margin1} \t {Lyap2}±{margin2}"
 		print( ".", end="", flush=True )
 
 print("")

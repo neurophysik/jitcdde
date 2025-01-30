@@ -1,18 +1,18 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
-from warnings import warn
 from itertools import count
-import symengine
-import numpy as np
+from warnings import warn
 
-from jitcdde.past import Past, Anchor
-import jitcdde._python_core as python_core
-from jitcxde_common import jitcxde, checker
-from jitcxde_common.helpers import sort_helpers, sympify_helpers, find_dependent_helpers
+import numpy as np
+import symengine
+
+import chspy
+from jitcxde_common import checker, jitcxde
+from jitcxde_common.helpers import find_dependent_helpers, sort_helpers, sympify_helpers
 from jitcxde_common.symbolic import collect_arguments, count_calls, replace_function
 from jitcxde_common.transversal import GroupHandler
-import chspy
+
+import jitcdde._python_core as python_core
+from jitcdde.past import Past
+
 
 _default_min_step = 1e-10
 
@@ -64,7 +64,7 @@ def _get_delays(f, helpers=()):
 			(t-delay_term[0]).simplify()
 			for delay_term in delay_terms
 		]
-	return [0]+delays
+	return [0,*delays]
 
 def _find_max_delay(delays):
 	if all(symengine.sympify(delay).is_Number for delay in delays):
@@ -120,14 +120,14 @@ def quadrature(integrand,variable,lower,upper,nsteps=20,method="gauss"):
 		factor = (symengine.sympify(upper-lower)/2).simplify()
 		return factor*sum(
 				weight*sample(lower+(1+pos)*factor)
-				for pos,weight in zip(*gauss_legendre(nsteps,20))
+				for pos,weight in zip(*gauss_legendre(nsteps,20), strict=True)
 			)
 	else:
-		raise NotImplementedError("I know no integration method named %s."%method)
+		raise NotImplementedError(f"I know no integration method named {method}.")
 
 def is_anchor_helper(helper):
 	return (
-			type(helper[1]) == type(anchors(0))
+			type(helper[1]) is type(anchors(0))
 			and
 			helper[1].get_name() == anchors.name
 		)
@@ -168,7 +168,7 @@ class jitcdde(jitcxde):
 		
 		*	A SymEngine function object used in `f_sym` to represent the function call. If you want to use any JiTCDDE features that need the derivative, this must have a properly defined `f_diff` method with the derivative being another callback function (or constant).
 		*	The Python function to be called. This function will receive the state array (`y`) as the first argument. All further arguments are whatever you use as arguments of the SymEngine function in `f_sym`. These can be any expression that you might use in the definition of the derivative and contain, e.g., dynamical variables (current or delayed), time, control parameters, and helpers. The only restriction is that the arguments are floats (and not vectors, anchors or similar). The return value must also be a float (or something castable to float). It is your responsibility to ensure that this function adheres to these criteria, is deterministic and sufficiently smooth with respect its arguments; expect nasty errors otherwise.
-		*	The number of arguments, **excluding** the state array as mandatory first argument. This means if you have a variadic Python function, you cannot just call it with different numbers of arguments in `f_sym`, but you have to define separate callbacks for each of numer of arguments.
+		*	The number of arguments, **excluding** the state array as mandatory first argument. This means if you have a variadic Python function, you cannot just call it with different numbers of arguments in `f_sym`, but you have to define separate callbacks for each of number of arguments.
 		
 		See `this example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_ for how to use this.
 	
@@ -192,10 +192,13 @@ class jitcdde(jitcxde):
 			control_pars = (),
 			callback_functions = (),
 			verbose = True,
-			module_location = None
+			module_location = None,
+			rng = None,
 		):
+		if rng is None:
+			rng = np.random.default_rng()
 		
-		super(jitcdde,self).__init__(n,verbose,module_location)
+		super().__init__(n,verbose,module_location)
 		
 		self.f_sym = self._handle_input(f_sym)
 		if not hasattr(self,"n_basic"):
@@ -213,6 +216,7 @@ class jitcdde(jitcxde):
 		self.max_delay = max_delay
 		self.automatic_anchor_helpers = automatic_anchor_helpers
 		
+		self.rng = rng
 		self.initial_discontinuities_handled = False
 	
 	def initiate_past(self):
@@ -257,11 +261,11 @@ class jitcdde(jitcxde):
 			for index in indizes:
 				self._check_assert(
 						index >= 0,
-						"y is called with a negative argument (%i) in equation %i." % (index,i),
+						f"y is called with a negative argument ({index}) in equation {i}.",
 					)
 				self._check_assert(
 						index < self.n,
-						"y is called with an argument (%i) higher than the system’s dimension (%i) in equation %i." % (index,self.n,i),
+						f"y is called with an argument ({index}) higher than the system’s dimension ({self.n}) in equation {i}.",
 					)
 	
 	@checker
@@ -272,7 +276,7 @@ class jitcdde(jitcxde):
 			for symbol in entry.atoms(symengine.Symbol):
 				self._check_assert(
 						symbol in valid_symbols,
-						"Invalid symbol (%s) in equation %i."  % (symbol.name,i),
+						f"Invalid symbol ({symbol.name}) in equation {i}.",
 					)
 	
 	def add_past_point(self, time, state, derivative):
@@ -352,7 +356,7 @@ class jitcdde(jitcxde):
 	
 	def get_state(self):
 		"""
-		Returns an object that represents all anchors currently used by the integrator, which compeletely define the current state. The object is a `CubicHermiteSpline <https://chspy.readthedocs.io>`_ instance (with a few special extensions for JiTCDDE), which allows you to extract all sorts of information from it if you want.
+		Returns an object that represents all anchors currently used by the integrator, which completely define the current state. The object is a `CubicHermiteSpline <https://chspy.readthedocs.io>`_ instance (with a few special extensions for JiTCDDE), which allows you to extract all sorts of information from it if you want.
 		
 		The format can also be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents. You can also use this to implement time-dependent equations, however, you need to be careful to truncate the result properly. Moreover, if your delay changes, you may need to set the `max_delay` accordingly to avoid too much past being discarded before you call this method.
 		
@@ -435,7 +439,7 @@ class jitcdde(jitcxde):
 		
 		do_cse : boolean
 			Whether SymPy’s `common-subexpression detection <http://docs.sympy.org/dev/modules/rewriting.html#module-sympy.simplify.cse_main>`_ should be applied before translating to C code.
-			This is worthwile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input. Also, this feature uses SymPy and not SymEngine.
+			This is worthwhile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input. Also, this feature uses SymPy and not SymEngine.
 		
 		chunk_size : integer
 			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. See `Handling very large differential equations <http://jitcde-common.readthedocs.io/#handling-very-large-differential-equations>`_ on why this is useful and how to best choose this value.
@@ -467,7 +471,8 @@ class jitcdde(jitcxde):
 			anchor_subs = {}
 			new_helpers = []
 			for delay in self.delays:
-				if delay==0: continue
+				if delay==0:
+					continue
 				
 				anchor_helper = symengine.Symbol("anchor_helper_"+str(delay))
 				new_helpers.append((anchor_helper,anchors(t-delay)))
@@ -546,11 +551,11 @@ class jitcdde(jitcxde):
 			(set_dy(i,finalise(entry)) for i,entry in enumerate(f_sym_wc)),
 			name = "f",
 			chunk_size = chunk_size,
-			arguments = arguments + [("dY", "double", self.n)]
+			arguments = [*arguments, ("dY", "double", self.n)]
 			)
 		
 		if not self.past_calls:
-			warn("Differential equation does not include a delay term.")
+			warn("Differential equation does not include a delay term.", stacklevel=2)
 		
 		self._process_modulename(modulename)
 		
@@ -682,10 +687,10 @@ class jitcdde(jitcxde):
 		
 		if first_step > max_step:
 			first_step = max_step
-			warn("Decreasing first_step to match max_step")
+			warn("Decreasing first_step to match max_step", stacklevel=2)
 		if min_step > first_step:
 			min_step = first_step
-			warn("Decreasing min_step to match first_step")
+			warn("Decreasing min_step to match first_step", stacklevel=2)
 		
 		assert decrease_threshold>=1.0, "decrease_threshold smaller than 1"
 		assert increase_threshold<=1.0, "increase_threshold larger than 1"
@@ -695,7 +700,7 @@ class jitcdde(jitcxde):
 		assert atol>=0.0, "negative atol"
 		assert rtol>=0.0, "negative rtol"
 		if atol==0 and rtol==0:
-			warn("atol and rtol are both 0. You probably do not want this.")
+			warn("atol and rtol are both 0. You probably do not want this.", stacklevel=2)
 		assert pws_atol>=0.0, "negative pws_atol"
 		assert pws_rtol>=0.0, "negative pws_rtol"
 		assert 0<pws_max_iterations, "non-positive pws_max_iterations"
@@ -723,7 +728,7 @@ class jitcdde(jitcxde):
 		self.count = 0
 		
 		if pws_fuzzy_increase:
-			self.do_increase = lambda p: np.random.random() < p
+			self.do_increase = lambda p: self.rng.random() < p
 		else:
 			self.increase_credit = 0.0
 			def do_increase(p):
@@ -741,9 +746,9 @@ class jitcdde(jitcxde):
 		if self.dt < self.min_step:
 			message = (["",
 					"Could not integrate with the given tolerance parameters:\n",
-					"atol: %e" % self.atol,
-					"rtol: %e" % self.rtol,
-					"min_step: %e\n" % self.min_step,
+					f"atol: {self.atol:e}",
+					f"rtol: {self.rtol:e}",
+					f"min_step: {self.min_step:e}\n",
 					"The most likely reasons for this are:",
 				])
 			
@@ -817,10 +822,10 @@ class jitcdde(jitcxde):
 		self._initiate()
 		
 		if self.DDE.get_t() > target_time:
-			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step. You may see this because you try to integrate backwards in time, in which case you did something wrong. You may see this just because your sampling step is small, in which case there is no need to worry (though you should think about increasing your sampling time).")
+			warn("The target time is smaller than the current time. No integration step will happen. The returned state will be extrapolated from the interpolating Hermite polynomial for the last integration step. You may see this because you try to integrate backwards in time, in which case you did something wrong. You may see this just because your sampling step is small, in which case there is no need to worry (though you should think about increasing your sampling time).", stacklevel=2)
 		
 		if not self.initial_discontinuities_handled:
-			warn("You did not explicitly handle initial discontinuities. Proceed only if you know what you are doing. This is only fine if you somehow chose your initial past such that the derivative of the last anchor complies with the DDE. In this case, you can set the attribute `initial_discontinuities_handled` to `True` to suppress this warning. See https://jitcdde.rtfd.io/#discontinuities for details.")
+			warn("You did not explicitly handle initial discontinuities. Proceed only if you know what you are doing. This is only fine if you somehow chose your initial past such that the derivative of the last anchor complies with the DDE. In this case, you can set the attribute `initial_discontinuities_handled` to `True` to suppress this warning. See https://jitcdde.rtfd.io/#discontinuities for details.", stacklevel=2)
 		
 		while self.DDE.get_t() < target_time:
 			if self.try_single_step(self.dt):
@@ -843,7 +848,8 @@ class jitcdde(jitcxde):
 				return False
 			
 			# Try to come within an acceptable error within pws_max_iterations iterations; otherwise adjust step size:
-			for self.count in range(1,self.pws_max_iterations+1):
+			for count in range(1,self.pws_max_iterations+1):
+				self.count = count
 				self.DDE.get_next_step(self.dt)
 				if self.DDE.check_new_y_diff(self.pws_atol, self.pws_rtol):
 					break
@@ -963,7 +969,7 @@ class jitcdde(jitcxde):
 		assert isinstance(propagations,int), "Non-integer number of propagations."
 		
 		if max_step is not None:
-			warn("The max_step parameter is retired and does not need to be used anymore. Instead, step_on_discontinuities now adapts the step size. This will raise an error in the future.")
+			warn("The max_step parameter is retired and does not need to be used anymore. Instead, step_on_discontinuities now adapts the step size. This will raise an error in the future.", stacklevel=2)
 		
 		if not all(symengine.sympify(delay).is_number for delay in self.delays):
 			raise ValueError("At least one delay depends on time, dynamics, or control parameters; cannot automatically determine steps.")
@@ -1065,7 +1071,7 @@ def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0, simplify=Tru
 				
 				for _ in range(n):
 					expression = 0
-					for delay,jac in zip(delays,jacs):
+					for delay,jac in zip(delays,jacs,strict=True):
 						for k,entry in enumerate(next(jac)):
 							expression += entry * y(k+(i+1)*n,t-delay)
 					
@@ -1123,7 +1129,7 @@ class jitcdde_lyap(jitcdde):
 				simplify = simplify
 			)
 		
-		super(jitcdde_lyap, self).__init__(
+		super().__init__(
 				f_lyap,
 				n = self.n_basic*(self._n_lyap+1),
 				**kwargs
@@ -1153,7 +1159,7 @@ class jitcdde_lyap(jitcdde):
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
-		result = super(jitcdde_lyap, self).integrate(target_time)[:self.n_basic]
+		result = super().integrate(target_time)[:self.n_basic]
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t!=0:
@@ -1170,16 +1176,16 @@ class jitcdde_lyap(jitcdde):
 			if "max_step" in kwargs.keys():
 				if kwargs["max_step"] > required_max_step:
 					kwargs["max_step"] = required_max_step
-					warn("Decreased max_step to %f to ensure sufficient dimensionality for Lyapunov exponents." % required_max_step)
+					warn(f"Decreased max_step to {required_max_step} to ensure sufficient dimensionality for Lyapunov exponents.", stacklevel=2)
 			else:
 				kwargs["max_step"] = required_max_step
 			
 			kwargs.setdefault("min_step",_default_min_step)
 			
 			if kwargs["min_step"] > required_max_step:
-				warn("Given the number of desired Lyapunov exponents and the maximum delay in the system, the highest possible step size is lower than the default min_step or the min_step set by you. This is almost certainly a very bad thing. Nonetheless I will lower min_step accordingly.")
+				warn("Given the number of desired Lyapunov exponents and the maximum delay in the system, the highest possible step size is lower than the default min_step or the min_step set by you. This is almost certainly a very bad thing. Nonetheless I will lower min_step accordingly.", stacklevel=2)
 			
-		super(jitcdde_lyap, self).set_integration_parameters(**kwargs)
+		super().set_integration_parameters(**kwargs)
 	
 	def integrate_blindly(self, target_time, step=None):
 		"""
@@ -1210,7 +1216,7 @@ class jitcdde_restricted_lyap(jitcdde):
 	Parameters
 	----------
 	vectors : iterable of pairs of NumPy arrays
-		A basis of the plane, whose projection shall be removed. The first vector in each pair is the component coresponding to the the state, the second vector corresponds to the derivative.
+		A basis of the plane, whose projection shall be removed. The first vector in each pair is the component corresponding to the the state, the second vector corresponds to the derivative.
 		
 	"""
 	
@@ -1260,7 +1266,7 @@ class jitcdde_restricted_lyap(jitcdde):
 				simplify = simplify
 			)
 		
-		super(jitcdde_restricted_lyap, self).__init__(
+		super().__init__(
 				f_lyap,
 				n = self.n_basic*(2+2*len(self.vectors)),
 				**kwargs
@@ -1277,9 +1283,9 @@ class jitcdde_restricted_lyap(jitcdde):
 		return norm
 	
 	def set_integration_parameters(self, *args, **kwargs):
-		super(jitcdde_restricted_lyap, self).set_integration_parameters(*args, **kwargs)
+		super().set_integration_parameters(*args, **kwargs)
 		if (self.state_components or self.diff_components) and not self.atol:
-			warn("At least one of your vectors has only one component while your absolute error (atol) is 0. This may cause problems due to spuriously high relative errors. Consider setting atol to some small, non-zero value (e.g., 1e-10) to avoid this.")
+			warn("At least one of your vectors has only one component while your absolute error (atol) is 0. This may cause problems due to spuriously high relative errors. Consider setting atol to some small, non-zero value (e.g., 1e-10) to avoid this.", stacklevel=2)
 	
 	def integrate(self, target_time):
 		"""
@@ -1303,11 +1309,11 @@ class jitcdde_restricted_lyap(jitcdde):
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
-		result = super(jitcdde_restricted_lyap, self).integrate(target_time)[:self.n_basic]
+		result = super().integrate(target_time)[:self.n_basic]
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t==0:
-			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent; therefore I return 0 instead.")
+			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent; therefore I return 0 instead.", stacklevel=2)
 			lyap = 0
 		else:
 			norm = self.remove_projections()
@@ -1391,12 +1397,12 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 			
 			for _ in range(self.n):
 				expression = 0
-				for delay,jac in zip(delays,jacs):
+				for delay,jac in zip(delays,jacs,strict=True):
 					try:
 						for k,entry in enumerate(next(jac)):
 							expression += entry * tangent_vectors[delay][k]
 					except StopIteration:
-						raise AssertionError("Something got horribly wrong")
+						raise AssertionError("Something got horribly wrong") from None
 				yield expression
 		
 		current_z_conflate = lambda i: current_z(self.map_to_main(i))
@@ -1413,14 +1419,14 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		
 		def f_lyap():
 			for entry in self.iterate(tangent_vector_f()):
-				if type(entry)==int:
+				if type(entry) is int:
 					yield finalise(extracted[self.main_indices[entry]])
 				else:
 					yield finalise(entry[0]-entry[1])
 		
 		helpers = ((helper[0],finalise(helper[1])) for helper in helpers)
 		
-		super(jitcdde_transversal_lyap, self).__init__(
+		super().__init__(
 				f_lyap,
 				n = self.n,
 				delays = delays,
@@ -1440,7 +1446,7 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		norm = np.linalg.norm(tangent_vector)
 		tangent_vector /= norm
 		if not np.isfinite(norm):
-			warn("Norm of perturbation vector for Lyapunov exponent out of numerical bounds. You probably waited too long before renormalising and should call integrate with smaller intervals between steps (as renormalisations happen once with every call of integrate).")
+			warn("Norm of perturbation vector for Lyapunov exponent out of numerical bounds. You probably waited too long before renormalising and should call integrate with smaller intervals between steps (as renormalisations happen once with every call of integrate).", stacklevel=2)
 		self._y[self.tangent_indices] = tangent_vector
 		return norm
 	
@@ -1466,11 +1472,11 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		
 		self._initiate()
 		old_t = self.DDE.get_t()
-		result = super(jitcdde_transversal_lyap, self).integrate(target_time)[self.main_indices]
+		result = super().integrate(target_time)[self.main_indices]
 		delta_t = self.DDE.get_t()-old_t
 		
 		if delta_t==0:
-			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent; therefore I return 0 instead.")
+			warn("No actual integration happened in this call of integrate. This happens because the sampling step became smaller than the actual integration step. While this is not a problem per se, I cannot return a meaningful local Lyapunov exponent; therefore I return 0 instead.", stacklevel=2)
 			lyap = 0
 		else:
 			norm = self.DDE.normalise_indices(self.max_delay)
@@ -1506,7 +1512,7 @@ def input(index,time=t):
 	Function representing an external input (for `jitcdde_input`). The first integer argument denotes the component. The second, optional argument is a symbolic expression denoting the time. This automatically expands to using `current_y`, `past_y`, `anchors`, `input_base_n`, and `input_shift`; so do not be surprised when you look at the output and it is different than what you entered or expected. You can import a SymPy variant from the submodule `sympy_symbols` instead (see `SymPy vs. SymEngine`_ for details).
 	"""
 	if time!=t:
-		warn("Do not use delayed inputs unless you also have undelayed inputs (otherwise you can just shift your time frame). If you use delayed and undelayed inputs, you have to rely on automatic delay detection or explicitly add `input[-1].time+delay` to the delays (and consider it as a max_delay) for each delayed input.")
+		warn("Do not use delayed inputs unless you also have undelayed inputs (otherwise you can just shift your time frame). If you use delayed and undelayed inputs, you have to rely on automatic delay detection or explicitly add `input[-1].time+delay` to the delays (and consider it as a max_delay) for each delayed input.", stacklevel=2)
 	return y(index+input_base_n,time-input_shift)
 
 class jitcdde_input(jitcdde):
@@ -1524,11 +1530,11 @@ class jitcdde_input(jitcdde):
 	
 	"""
 	
-	def __init__( self, f_sym=(), input=None, **kwargs ):
+	def __init__( self, f_sym=(), input=None, **kwargs ):  # noqa: A002
 		if input is None:
 			raise ValueError("You must define an input; otherwise just use plain jitcdde.")
 		if input[0].time > 0:
-			warn(f"Your input past does not begin at t=0 but at t={input[0].time}. Values before the beginning of the past will be extrapolated. You very likely do not want this.")
+			warn(f"Your input past does not begin at t=0 but at t={input[0].time}. Values before the beginning of the past will be extrapolated. You very likely do not want this.", stacklevel=2)
 		
 		self.n = kwargs.pop("n",None)
 		f_basic = self._handle_input(f_sym)
@@ -1634,7 +1640,7 @@ class jitcdde_input(jitcdde):
 	
 	def integrate(self,target_time):
 		if target_time>self.input_duration:
-			warn("Integrating beyond duration of input. From now on, the input will be extrapolated. You very likely do not want this. Instead define a longer input or stop integrating.")
+			warn("Integrating beyond duration of input. From now on, the input will be extrapolated. You very likely do not want this. Instead define a longer input or stop integrating.", stacklevel=2)
 		return super().integrate(target_time)[:self.input_base_n]
 	
 	def integrate_blindly(self,*args,**kwargs):

@@ -1,17 +1,17 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 import platform
 import unittest
-from jitcdde import t, y, jitcdde
+
 import numpy as np
 from numpy.testing import assert_allclose
+
+from jitcdde import jitcdde, t, y
+
 
 if platform.system() == "Windows":
 	compile_args = None
 else:
 	from jitcxde_common import DEFAULT_COMPILE_ARGS
-	compile_args = DEFAULT_COMPILE_ARGS+["-g","-UNDEBUG"]
+	compile_args = [*DEFAULT_COMPILE_ARGS,"-g","-UNDEBUG"]
 
 # control values:
 
@@ -19,9 +19,9 @@ else:
 y0 = np.array([ -0.00338158, -0.00223185, 0.01524253, -0.00613449 ])
 
 y1 = np.array([
-	 0.0011789485114731,
+	0.0011789485114731,
 	-0.0021947158873226,
-	 0.0195744683782066,
+	0.0195744683782066,
 	-0.0057801623466600,
 	])
 
@@ -74,9 +74,10 @@ class blind_integration(basic_test):
 
 class no_derivative(basic_test):
 	def setUp(self):
+		rng = np.random.default_rng()
 		self.ODE.purge_past()
-		self.ODE.add_past_point(-1.0, y0, np.random.random(4))
-		self.ODE.add_past_point( 0.0, y0, np.random.random(4))
+		self.ODE.add_past_point(-1.0, y0, rng.random(4))
+		self.ODE.add_past_point( 0.0, y0, rng.random(4))
 	
 	def integrate(self):
 		self.ODE.step_on_discontinuities()

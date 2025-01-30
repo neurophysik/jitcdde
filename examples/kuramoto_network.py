@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 
 """
 Suppose, we want to implement a network of :math:`n=100` delay-coupled Kuramoto oscillators, governed by the following differential equations:
@@ -35,16 +34,19 @@ Explanation of selected features and choices:
 
 if __name__ == "__main__":
 	# example-start
-	from jitcdde import jitcdde, y, t
-	from numpy import pi, arange, random, max
+	import numpy as np
 	from symengine import sin
+
+	from jitcdde import jitcdde, t, y
 	
+
+	rng = np.random.default_rng()
 	n = 100
 	ω = 1
 	c = 42
 	q = 0.05
-	A = random.choice( [1,0], size=(n,n), p=[q,1-q] )
-	τ = random.uniform( pi/5, 2*pi, size=(n,n) )
+	A = rng.choice( [1,0], size=(n,n), p=[q,1-q] )
+	τ = rng.uniform( np.pi/5, 2*np.pi, size=(n,n) )
 	
 	def kuramotos():
 		for i in range(n):
@@ -54,11 +56,11 @@ if __name__ == "__main__":
 						if A[j,i]
 					)
 	
-	I = jitcdde(kuramotos,n=n,verbose=False,delays=τ.flatten())
-	I.set_integration_parameters(rtol=0,atol=1e-5)
+	solver = jitcdde(kuramotos,n=n,verbose=False,delays=τ.flatten())
+	solver.set_integration_parameters(rtol=0,atol=1e-5)
 	
-	I.constant_past( random.uniform(0,2*pi,n), time=0.0 )
-	I.integrate_blindly( max(τ) , 0.1 )
+	solver.constant_past( rng.uniform(0,2*np.pi,n), time=0.0 )
+	solver.integrate_blindly( np.max(τ) , 0.1 )
 	
-	for time in I.t + arange(0,400,0.2):
-		print(*I.integrate(time) % (2*pi))
+	for time in solver.t + np.arange(0,400,0.2):
+		print(*solver.integrate(time) % (2*np.pi))

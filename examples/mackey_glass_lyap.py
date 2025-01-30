@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 
 """
 For instance, we can calculate and print the Lyapunov exponents for the Mackey–Glass system as follows (central changes to the example from `example` highlighted):
@@ -14,9 +13,10 @@ Note that `integrate` does not only return local Lyapunov exponents but also the
 """
 
 if __name__ == "__main__":
-	from jitcdde import jitcdde_lyap, y, t
 	import numpy
 	from scipy.stats import sem
+
+	from jitcdde import jitcdde_lyap, t, y
 	
 	τ = 15
 	n = 10
@@ -46,4 +46,4 @@ if __name__ == "__main__":
 	for i in range(n_lyap):
 		Lyap = numpy.average(lyaps[400:,i], weights=weights[400:])
 		stderr = sem(lyaps[400:,i]) # Note that this only an estimate
-		print("%i. Lyapunov exponent: % .4f +/- %.4f" % (i+1,Lyap,stderr))
+		print(f"{i+1}. Lyapunov exponent: {Lyap:.4f} +/- {stderr:.4f}")

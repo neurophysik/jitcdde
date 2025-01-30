@@ -1,9 +1,9 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 import numpy as np
+
+from chspy import CubicHermiteSpline, extrema_from_anchors, interpolate, interpolate_diff
+
 from jitcdde.past import Past
-from chspy import interpolate, interpolate_diff, extrema_from_anchors, CubicHermiteSpline
+
 
 NORM_THRESHOLD = 1e-30
 
@@ -25,8 +25,9 @@ class dde_integrator(Past):
 		
 		self.parameters = []
 		
-		from jitcdde._jitcdde import t, y, past_y, past_dy, anchors
-		from sympy import DeferredVector, sympify, lambdify
+		from sympy import DeferredVector, lambdify, sympify
+
+		from jitcdde._jitcdde import anchors, past_dy, past_y, t, y
 		Y = DeferredVector("Y")
 		substitutions = list(reversed(helpers)) + [(y(i),Y[i]) for i in range(self.n)]
 		
@@ -40,7 +41,7 @@ class dde_integrator(Past):
 			f_wc.append(new_entry)
 		
 		F = lambdify(
-				[t, Y] + list(control_pars),
+				[t, Y, *control_pars],
 				f_wc,
 				[
 					{
@@ -132,7 +133,7 @@ class dde_integrator(Past):
 		"""
 			computes the coefficient that summarises the integration error.
 		"""
-		with np.errstate(divide='ignore', invalid='ignore'):
+		with np.errstate(divide="ignore", invalid="ignore"):
 			return np.nanmax(
 					np.abs(self.error)
 					/(atol + rtol*np.abs(self[-1].state))

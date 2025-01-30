@@ -1,9 +1,9 @@
 """
-The following are a set of examples that implement the Mackey-Glass system with a jump in the value of a parameter. Here we will change the value of β from β₀ to β₁ at time t₀. 
+The following are a set of examples that implement the Mackey-Glass system with a jump in the value of a parameter. Here we will change the value of β from β₀ to β₁ at time t₀.
 
 The methods range from the most straightforward to more involved ones.
 
-    1. Integrate two separate models with diferent β values.
+    1. Integrate two separate models with different β values.
     2. Use β as a control parameter for a system and modify its value midway through the integration.
     3. Use jitcdde.input.
     4. Use jitcxde_common.conditional.
@@ -17,8 +17,10 @@ Note that if the parameter that needs to jump is the delay, you’ll need to man
 ### Makey–Glass with time-dependent parameter
 
 import numpy as np
-from jitcdde import y, t, jitcdde
 from matplotlib.pyplot import subplots
+
+from jitcdde import jitcdde, t, y
+
 
 # Defining parameters
 # --------------
@@ -59,7 +61,7 @@ data = np.vstack( data + [DDE1.integrate(t) for t in times1] )
 # Plot
 fig, ax = subplots()
 ax.plot(np.hstack((times0, times1)), data)
-ax.set_title('two separate models')
+ax.set_title("two separate models")
 
 
 # 2. Using a control parameter we modify mid-run
@@ -68,8 +70,9 @@ ax.set_title('two separate models')
 
 from symengine import Symbol
 
+
 # Create the model with β being a symbol instead of having a value, and integrate it up to t0:
-β = Symbol('beta')
+β = Symbol("beta")
 f = [ β * y(0,t-τ) / (1 + y(0,t-τ)**n) - γ*y(0) ]
 
 # Run the model with β as its control parameter:
@@ -90,15 +93,17 @@ data = np.vstack( data + [DDE.integrate(t) for t in times1] )
 # Plot
 fig, ax = subplots()
 ax.plot(np.hstack((times0, times1)), data)
-ax.set_title('control parameter')
+ax.set_title("control parameter")
 
 
 # 3. Using input to modify the parameter mid-run
 # --------------
 # This method requires more preparation and integration time, but can handle frequent and continuous changes of the input.
 
-from jitcdde import jitcdde_input, input
 from chspy import CubicHermiteSpline
+
+from jitcdde import input, jitcdde_input  # noqa: A004
+
 
 # Define how the parameter changes over time and put that information into a spline:
 input_times = np.arange(0, tf)
@@ -106,7 +111,7 @@ parameter_over_time = lambda t: β0 if t<t0 else β1
 parameter_spline = CubicHermiteSpline(n=1)
 parameter_spline.from_function(parameter_over_time, times_of_interest = input_times)
 
-# Defining Dynamics 
+# Defining Dynamics
 β = input(0)
 f = [ β * y(0,t-τ) / (1 + y(0,t-τ)**n) - γ*y(0) ]
 
@@ -120,7 +125,7 @@ data = np.vstack([DDE.integrate(time) for time in times])
 # Plot
 fig, ax = subplots()
 ax.plot(times, data)
-ax.set_title('input')
+ax.set_title("input")
 
 
 # 4. Using jitcxde_common.conditional to approximate a jump
@@ -128,6 +133,7 @@ ax.set_title('input')
 # This method is very similar to Method 2 in its pros and cons. Its main advantage is that it’s more straightforward to implement and that the conditional can trigger on inputs other than time.
 
 from jitcxde_common import conditional
+
 
 # Define how the parameter changes over time and define the system dynamics:
 β = conditional(t, t0, β0, β1)
@@ -143,7 +149,7 @@ data = np.vstack([DDE.integrate(time) for time in times])
 # Plot
 fig, ax = subplots()
 ax.plot(times, data)
-ax.set_title('conditional')
+ax.set_title("conditional")
 
 # 5. Writing the jump ourselves using a callback
 # --------------
@@ -151,8 +157,9 @@ ax.set_title('conditional')
 
 from symengine import Function
 
+
 # Define the the ~ython function that will handle the jump and the Symengine symbol corresponding to the parameter, which this time is a Function
-β = Function('param_jump')
+β = Function("param_jump")
 def param_jump_callback(y, t):
     return β0 if t<t0 else β1
 
@@ -169,4 +176,4 @@ data = np.vstack([DDE.integrate(time) for time in times])
 # Plot
 fig, ax = subplots()
 ax.plot(times, data)
-ax.set_title('callback')
+ax.set_title("callback")

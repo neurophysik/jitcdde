@@ -2,9 +2,11 @@
 This is an example implementing laminar chaos as discovered by: https://doi.org/10.1103/PhysRevLett.120.084102
 """
 
-from jitcdde import t, y, jitcdde
-from symengine import sin
 import numpy as np
+from symengine import sin
+
+from jitcdde import jitcdde, t, y
+
 
 T = 200
 A = 0.9/2/np.pi
