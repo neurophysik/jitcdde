@@ -6,7 +6,7 @@ from chspy import CubicHermiteSpline
 from jitcdde import input, jitcdde_input, t, y  # noqa: A004
 
 
-rng = np.random.default_rng()
+rng = np.random.default_rng(seed=42)
 
 # Defining Input
 # --------------

@@ -112,7 +112,7 @@ class TestIntegration(unittest.TestCase):
 		self.assert_consistency_with_previous(value)
 	
 	def test_integration_with_annihilating_jumps(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 
 		self.DDE.integrate(T/2)
 		change = rng.normal(0,10,n)
@@ -352,7 +352,7 @@ class TestIntegrationParameters(unittest.TestCase):
 
 class TestJump(unittest.TestCase):
 	def test_jump(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 
 		DDE = jitcdde(f)
 		DDE.set_integration_parameters(**test_parameters)
@@ -434,7 +434,7 @@ class TestInput(unittest.TestCase):
 		self.result = DDE.get_state()
 	
 	def test_input(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 		combos = np.array([
 			combo
 			for k in range(1,n)

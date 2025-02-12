@@ -74,7 +74,7 @@ class blind_integration(basic_test):
 
 class no_derivative(basic_test):
 	def setUp(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 		self.ODE.purge_past()
 		self.ODE.add_past_point(-1.0, y0, rng.random(4))
 		self.ODE.add_past_point( 0.0, y0, rng.random(4))

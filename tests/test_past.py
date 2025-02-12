@@ -8,7 +8,7 @@ from jitcdde.past import Past
 
 class normalisation_test(unittest.TestCase):
 	def test_orthonormalisation(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 		m = 4
 		past = Past(n=m,anchors=[
 				(time, rng.normal(0,1,m), rng.normal(0,1,m))
@@ -27,7 +27,7 @@ class normalisation_test(unittest.TestCase):
 
 class remove_projection_test(unittest.TestCase):
 	def setUp(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 		self.n_basic = 3
 		self.n = 6*self.n_basic
 		
@@ -44,7 +44,7 @@ class remove_projection_test(unittest.TestCase):
 		self.past = self.original_past.copy()
 	
 	def test_remove_first_component(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 		empty = lambda: np.zeros(self.n_basic)
 		vectors = [
 				(empty(), empty()),
@@ -61,7 +61,7 @@ class remove_projection_test(unittest.TestCase):
 			self.assertAlmostEqual(anchor[2][self.n_basic+component], 0.0)
 	
 	def test_double_removal(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 		random_vector = lambda: rng.random(self.n_basic)
 		vectors = [
 			(random_vector(), random_vector()),

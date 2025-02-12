@@ -52,7 +52,7 @@ def f():
 n = 8
 
 errors = 0
-rng = np.random.default_rng()
+rng = np.random.default_rng(seed=42)
 pyrng = random.Random(int(rng.integers(1_000_000)))
 
 for i,realisation in enumerate(range(number_of_runs)):

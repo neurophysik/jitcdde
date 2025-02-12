@@ -196,7 +196,7 @@ class jitcdde(jitcxde):
 			rng = None,
 		):
 		if rng is None:
-			rng = np.random.default_rng()
+			rng = np.random.default_rng(seed=42)
 		
 		super().__init__(n,verbose,module_location)
 		

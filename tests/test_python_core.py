@@ -92,7 +92,7 @@ class double_integration_test(unittest.TestCase):
 
 class jump_test(unittest.TestCase):
 	def test_jump(self):
-		rng = np.random.default_rng()
+		rng = np.random.default_rng(seed=42)
 
 		n = 10
 		τ = 10
