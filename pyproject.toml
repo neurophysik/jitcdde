@@ -54,6 +54,7 @@ jitcdde = [
 
 [tool.setuptools_scm]
 write_to = "jitcdde/version.py"
+local_scheme = "no-local-version"
 
 [tool.ruff]
 target-version = "py310"
