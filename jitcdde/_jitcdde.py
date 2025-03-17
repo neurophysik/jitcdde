@@ -888,7 +888,7 @@ class jitcdde(jitcxde):
 		if total_integration_time>0:
 			if total_integration_time < step:
 				step = total_integration_time
-			number = int(round(total_integration_time/step))
+			number = round(total_integration_time/step)
 			dt = total_integration_time/number
 		elif total_integration_time==0:
 			number = 0
