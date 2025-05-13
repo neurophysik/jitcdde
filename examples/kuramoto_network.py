@@ -15,21 +15,21 @@ Without further ado, here is the example code; highlighted lines will be comment
 	:linenos:
 	:start-after: example-st\u0061rt
 	:dedent: 1
-	:emphasize-lines: 9, 10, 15, 20, 21, 24
+	:emphasize-lines: 11, 12, 17, 22, 23, 26
 
 Explanation of selected features and choices:
 
-* Line 9 is just a quick way to generate the network described above. For more complex networks, you will either have to write more complex function or use dedicated modules. (In fact this example was chosen such that the network creation is very simple.)
+* Line 11 is just a quick way to generate the network described above. For more complex networks, you will either have to write more complex function or use dedicated modules. (In fact this example was chosen such that the network creation is very simple.)
 
-* The values of :math:`τ` are initialised globally (line 10). We should not just define a function here, because if we were trying to calculate Lyapunov exponents or the Jacobian, the generator function would be called multiple times, and thus the value of the parameter would not be consistent (which would be disastrous).
+* The values of :math:`τ` are initialised globally (line 12). We should not just define a function here, because if we were trying to calculate Lyapunov exponents or the Jacobian, the generator function would be called multiple times, and thus the value of the parameter would not be consistent (which would be disastrous).
 
-* In line 15, we use `symengine.sin` – in contrast to `math.sin` or `numpy.sin`.
+* In line 17, we use `symengine.sin` – in contrast to `math.sin` or `numpy.sin`.
 
-* In line 20, we explicitly specify the delays to speed things up a little.
+* In line 22, we explicitly specify the delays to speed things up a little.
 
-* In line 21, we explicitly use absolute instead of relative errors, as the latter make no sense for Kuramoto oscillators.
+* In line 23, we explicitly use absolute instead of relative errors, as the latter make no sense for Kuramoto oscillators.
 
-* In line 24, we integrate blindly with a maximum time step of 0.1 up to the maximal delay to ensure that initial discontinuities have smoothened out.
+* In line 26, we integrate blindly with a maximum time step of 0.1 up to the maximal delay to ensure that initial discontinuities have smoothened out.
 """
 
 if __name__ == "__main__":
@@ -39,7 +39,6 @@ if __name__ == "__main__":
 
 	from jitcdde import jitcdde, t, y
 	
-
 	rng = np.random.default_rng(seed=42)
 	n = 100
 	ω = 1
