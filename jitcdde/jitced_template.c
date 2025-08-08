@@ -349,29 +349,31 @@ static PyObject * get_full_state(dde_integrator const * const self)
 	return py_past;
 }
 
-
-{% if callbacks|length %}
-static inline double callback(PyObject * Python_function, PyObject * arglist)
-{
-	PyObject * py_result = PyObject_CallObject(Python_function,arglist);
-	Py_DECREF(arglist);
-	double result = PyFloat_AsDouble(py_result);
-	Py_DECREF(py_result);
-	return result;
-}
-{% endif %}
-
 {% for function,nargs in callbacks %}
 static PyObject * callback_{{function}};
-# define {{function}}(...) callback(\
-		callback_{{function}}, \
-		Py_BuildValue( \
-				{% if nargs -%}
-				"(O{{'d'*nargs}})", n_dim_read_only_array_from_data(y) , __VA_ARGS__ \
-				{% else -%}
-				"(O)", n_dim_read_only_array_from_data(y) \
-				{% endif -%}
-			))
+# define {{function}}(...) perform_callback_{{function}}( y {% if nargs -%}, __VA_ARGS__{% endif %} )
+static inline double perform_callback_{{function}}(
+		double * Y
+		{% for i in range(nargs) %}
+			, double {{function}}_argument_{{i}}
+		{% endfor %}
+	)
+{
+	PyObject * Y_array = n_dim_read_only_array_from_data(Y);
+	PyObject * arglist = Py_BuildValue(
+				"(O{{'d'*nargs}})",
+				Y_array
+				{% for i in range(nargs) %}
+					, {{function}}_argument_{{i}}
+				{% endfor %}
+			);
+	PyObject * py_result = PyObject_CallObject(callback_{{function}},arglist);
+	double result = PyFloat_AsDouble(py_result);
+	Py_DECREF(arglist);
+	Py_DECREF(py_result);
+	Py_DECREF(Y_array);
+	return result;
+}
 {% endfor %}
 
 
