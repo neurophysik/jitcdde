@@ -12,7 +12,7 @@ First we do some importing and define the constants:
 
 .. literalinclude:: ../examples/mackey_glass.py
 	:dedent: 1
-	:lines: 60-66
+	:lines: 62-67
 
 Amongst our imports were the symbols for the state (`y`) and time (`t`), which have to be used to write down the differential equation such that JiTCDDE can process it.
 Using them, we can write down the right-hand side of the differential equation as a list of expressions.
@@ -21,7 +21,7 @@ We can then initiate JiTCDDE:
 
 .. literalinclude:: ../examples/mackey_glass.py
 	:dedent: 1
-	:lines: 68-69
+	:lines: 69-70
 
 We want the initial condition and past to be :math:`y(t<0) = 1`.
 Hence we can use `constant_past`.
@@ -29,7 +29,7 @@ This automatically results in the integration starting at :math:`t=0`.
 
 .. literalinclude:: ../examples/mackey_glass.py
 	:dedent: 1
-	:lines: 71
+	:lines: 72
 
 If we calculate the derivative from our initial conditions, we obtain :math:`f(t=0) = 0.025`, which does not agree with the :math:`\\dot{y}(t=0) = 0` as explicitly defined in the initial conditions. Practically, this would result in an error if we started integrating without further precautions.
 `step_on_discontinuities` makes some tailored integration steps to avoid this problem and to allow for the discontinuity to be smoothed out by temporal evolution.
@@ -37,7 +37,7 @@ If we calculate the derivative from our initial conditions, we obtain :math:`f(t
 
 .. literalinclude:: ../examples/mackey_glass.py
 	:dedent: 1
-	:lines: 73
+	:lines: 74
 
 Finally, we can perform the actual integration.
 In our case, we integrate for 10000 time units with a sampling rate of 10 time units. We query the current time of the integrator (`DDE.t`) to start wherever `step_on_discontinuities` ended. `integrate` returns the state after integration, which we collect in the list `data`.
@@ -45,18 +45,19 @@ Finally, we use `numpy.savetxt` to store this to the file `timeseries.dat`.
 
 .. literalinclude:: ../examples/mackey_glass.py
 	:dedent: 1
-	:lines: 75-78
+	:lines: 76-79
 
 Taking everything together, our code is:
 
 .. literalinclude:: ../examples/mackey_glass.py
+	:linenos:
 	:dedent: 1
-	:lines: 60-78
+	:lines: 62-79
 """
 
 
 if __name__ == "__main__":
-	import numpy
+	import numpy as np
 
 	from jitcdde import jitcdde, t, y
 	
@@ -73,6 +74,6 @@ if __name__ == "__main__":
 	DDE.step_on_discontinuities()
 	
 	data = []
-	for time in numpy.arange(DDE.t, DDE.t+10000, 10):
+	for time in np.arange(DDE.t, DDE.t+10000, 10):
 		data.append( DDE.integrate(time) )
-	numpy.savetxt("timeseries.dat", data)
+	np.savetxt("timeseries.dat", data)
