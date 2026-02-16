@@ -40,7 +40,7 @@ test = [
 
 [project.urls]
 Documentation = "https://jitcdde.readthedocs.io"
-Homepage = "http://github.com/neurophysik/jitcdde"
+Homepage = "https://github.com/neurophysik/jitcdde"
 
 [tool.setuptools.packages.find]
 include = [

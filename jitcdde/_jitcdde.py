@@ -146,7 +146,7 @@ class jitcdde(jitcxde):
 		If an iterable or generator function, the `i`-th element is the `i`-th component of the value of the DDE’s derivative :math:`f(t,y)`. If a dictionary, it has to map the dynamical variables to its derivatives and the dynamical variables must be `y(0), y(1), …`.
 	
 	helpers : list of length-two iterables, each containing a symbol and an expression
-		Each helper is a variable that will be calculated before evaluating the derivative and can be used in the latter’s computation. The first component of the tuple is the helper’s symbol as referenced in the derivative or other helpers, the second component describes how to compute it from `t`, `y` and other helpers. This is for example useful to realise a mean-field coupling, where the helper could look like `(mean, sum(y(i) for i an range(100))/100)`. (See `the JiTCODE documentation <http://jitcode.readthedocs.io/#module-SW_of_Roesslers>`_ for an example.)
+		Each helper is a variable that will be calculated before evaluating the derivative and can be used in the latter’s computation. The first component of the tuple is the helper’s symbol as referenced in the derivative or other helpers, the second component describes how to compute it from `t`, `y` and other helpers. This is for example useful to realise a mean-field coupling, where the helper could look like `(mean, sum(y(i) for i an range(100))/100)`. (See `the JiTCODE documentation <https://jitcode.readthedocs.io/#module-SW_of_Roesslers>`__ for an example.)
 	
 	n : integer
 		Length of `f_sym`. While JiTCDDE can easily determine this itself (and will, if necessary), this may take some time if `f_sym` is a generator function and `n` is large. Take care that this value is correct – if it isn’t, you will not get a helpful error message.
@@ -170,7 +170,7 @@ class jitcdde(jitcxde):
 		*	The Python function to be called. This function will receive the state array (`y`) as the first argument. All further arguments are whatever you use as arguments of the SymEngine function in `f_sym`. These can be any expression that you might use in the definition of the derivative and contain, e.g., dynamical variables (current or delayed), time, control parameters, and helpers. The only restriction is that the arguments are floats (and not vectors, anchors or similar). The return value must also be a float (or something castable to float). It is your responsibility to ensure that this function adheres to these criteria, is deterministic and sufficiently smooth with respect its arguments; expect nasty errors otherwise.
 		*	The number of arguments, **excluding** the state array as mandatory first argument. This means if you have a variadic Python function, you cannot just call it with different numbers of arguments in `f_sym`, but you have to define separate callbacks for each of number of arguments.
 		
-		See `this example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_ for how to use this.
+		See `this example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`__ for how to use this.
 	
 	verbose : boolean
 		Whether JiTCDDE shall give progress reports on the processing steps.
@@ -356,7 +356,7 @@ class jitcdde(jitcxde):
 	
 	def get_state(self):
 		"""
-		Returns an object that represents all anchors currently used by the integrator, which completely define the current state. The object is a `CubicHermiteSpline <https://chspy.readthedocs.io>`_ instance (with a few special extensions for JiTCDDE), which allows you to extract all sorts of information from it if you want.
+		Returns an object that represents all anchors currently used by the integrator, which completely define the current state. The object is a `CubicHermiteSpline <https://chspy.readthedocs.io>`__ instance (with a few special extensions for JiTCDDE), which allows you to extract all sorts of information from it if you want.
 		
 		The format can also be used as an argument for `add_past_points`. An example where this is useful is when you want to switch between plain integration and one that also obtains Lyapunov exponents. You can also use this to implement time-dependent equations, however, you need to be careful to truncate the result properly. Moreover, if your delay changes, you may need to set the `max_delay` accordingly to avoid too much past being discarded before you call this method.
 		
@@ -393,7 +393,7 @@ class jitcdde(jitcxde):
 		Parameter
 		---------
 		simplify : boolean
-			Whether the derivative should be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`). The main reason why you could want to disable this is if your derivative is already optimised and so large that simplifying takes a considerable amount of time. If `None`, this will be automatically disabled for `n>10`.
+			Whether the derivative should be `simplified <https://docs.sympy.org/dev/modules/simplify/simplify.html>`__ (with `ratio=1.0`). The main reason why you could want to disable this is if your derivative is already optimised and so large that simplifying takes a considerable amount of time. If `None`, this will be automatically disabled for `n>10`.
 			
 		"""
 		
@@ -429,20 +429,20 @@ class jitcdde(jitcxde):
 			omp = False,
 		):
 		"""
-		translates the derivative to C code using SymEngine’s `C-code printer <https://github.com/symengine/symengine/pull/1054>`_.
-		For detailed information many of the arguments and other ways to tweak the compilation, read `these notes <jitcde-common.readthedocs.io>`_.
+		translates the derivative to C code using SymEngine’s `C-code printer <https://github.com/symengine/symengine/pull/1054>`__.
+		For detailed information many of the arguments and other ways to tweak the compilation, read `these notes <https://jitcde-common.readthedocs.io>`__.
 
 		Parameters
 		----------
 		simplify : boolean
-			Whether the derivative should be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`) before translating to C code. The main reason why you could want to disable this is if your derivative is already optimised and so large that simplifying takes a considerable amount of time. If `None`, this will be automatically disabled for `n>10`.
+			Whether the derivative should be `simplified <https://docs.sympy.org/dev/modules/simplify/simplify.html>`__ (with `ratio=1.0`) before translating to C code. The main reason why you could want to disable this is if your derivative is already optimised and so large that simplifying takes a considerable amount of time. If `None`, this will be automatically disabled for `n>10`.
 		
 		do_cse : boolean
-			Whether SymPy’s `common-subexpression detection <http://docs.sympy.org/dev/modules/rewriting.html#module-sympy.simplify.cse_main>`_ should be applied before translating to C code.
+			Whether SymPy’s `common-subexpression detection <https://docs.sympy.org/dev/modules/rewriting.html#common-subexpression-detection-and-collection>`__ should be applied before translating to C code.
 			This is worthwhile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input. Also, this feature uses SymPy and not SymEngine.
 		
 		chunk_size : integer
-			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. See `Handling very large differential equations <http://jitcde-common.readthedocs.io/#handling-very-large-differential-equations>`_ on why this is useful and how to best choose this value.
+			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. See `Handling very large differential equations <https://jitcde-common.readthedocs.io/en/latest/#networks-or-other-very-large-differential-equations>`__ on why this is useful and how to best choose this value.
 			If smaller than 1, no chunking will happen.
 		
 		extra_compile_args : iterable of strings
@@ -644,7 +644,7 @@ class jitcdde(jitcxde):
 		----------
 		atol : float
 		rtol : float
-			The tolerance of the estimated integration error is determined as :math:`\\texttt{atol} + \\texttt{rtol}·|y|`. The step-size adaption algorithm is the same as for the GSL. For details see `its documentation <http://www.gnu.org/software/gsl/manual/html_node/Adaptive-Step_002dsize-Control.html>`_.
+			The tolerance of the estimated integration error is determined as :math:`\\texttt{atol} + \\texttt{rtol}·|y|`. The step-size adaption algorithm is the same as for the GSL. For details see `its documentation <https://www.gnu.org/software/gsl/doc/html/ode-initval.html#adaptive-step-size-control>`__.
 		
 		first_step : float
 			The step-size adaption starts with this value.
@@ -1096,7 +1096,7 @@ class jitcdde_lyap(jitcdde):
 		Number of Lyapunov exponents to calculate.
 	
 	simplify : boolean
-		Whether the differential equations for the separation function shall be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`). Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations). If `None`, this will be automatically disabled for `n>10`.
+		Whether the differential equations for the separation function shall be `simplified <https://docs.sympy.org/dev/modules/simplify/simplify.html>`__ (with `ratio=1.0`). Doing so may speed up the time evolution but may slow down the generation of the code (considerably for large differential equations). If `None`, this will be automatically disabled for `n>10`.
 		"""
 	
 	def __init__( self, f_sym=(), n_lyap=1, simplify=None, **kwargs ):
@@ -1209,7 +1209,7 @@ class jitcdde_lyap(jitcdde):
 
 class jitcdde_restricted_lyap(jitcdde):
 	"""
-	Calculates the largest Lyapunov exponent in orthogonal direction to a predefined plane, i.e. the projection of the separation function onto that plane vanishes. See `this test <https://github.com/neurophysik/jitcdde/blob/master/tests/test_restricted_lyap.py>`_ for an example of usage. Note that coordinate planes (i.e., planes orthogonal to vectors with only one non-zero component) are handled considerably faster. Consider transforming your differential equation to achieve this.
+	Calculates the largest Lyapunov exponent in orthogonal direction to a predefined plane, i.e. the projection of the separation function onto that plane vanishes. See `this test <https://github.com/neurophysik/jitcdde/blob/master/tests/test_transversal_lyap.py>`__ for an example of usage. Note that coordinate planes (i.e., planes orthogonal to vectors with only one non-zero component) are handled considerably faster. Consider transforming your differential equation to achieve this.
 
 	The handling is the same as that for `jitcdde_lyap` except for:
 	
