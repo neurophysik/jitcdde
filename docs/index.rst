@@ -44,13 +44,13 @@ This documentation assumes that the delay differential equation (DDE) you want t
 The gist of Shampine’s and Thompson’s method [ST01]_ is this:
 The differential equation is integrated adaptively with the Bogacki–Shampine pair [BS89]_, like an ODE.
 After every successful integration step, the state and derivative of the integration (which is an automatic by-product) are stored.
-Whenever the derivative :math:`(f)` is evaluated, the required past states :math:`\left ( y(t-τ_1), y(t-τ_2), … \right )` are obtained through piece-wise cubic `Hermite interpolation <http://en.wikipedia.org/wiki/Hermite_interpolation>`_, using previously stored pairs of state and derivative (“anchor”).
+Whenever the derivative :math:`(f)` is evaluated, the required past states :math:`\left ( y(t-τ_1), y(t-τ_2), … \right )` are obtained through piece-wise cubic `Hermite interpolation <https://en.wikipedia.org/wiki/Hermite_interpolation>`__, using previously stored pairs of state and derivative (“anchor”).
 In some extreme cases, they may also be extrapolated.
 
 Note that unlike most other DDE software, JiTCDDE stores and accesses the initial past in exactly this way, i.e., as anchor points.
 Thus, if you want to have maximum control, you have to initiate the past in exactly this way, i.e., you have to give at least two such anchor points (via `add_past_point`).
 If you do not want or need this, there are utility functions available that automatically determine the anchors from a given function (`past_from_function`) or just set it to a fixed value (`constant_past`).
-You can also use the `get_state` method to obtain a representation of the past that you can dissect and modify using `CubicHermiteSpline <https://chspy.readthedocs.io/en/latest/>`_.
+You can also use the `get_state` method to obtain a representation of the past that you can dissect and modify using `CubicHermiteSpline <https://chspy.readthedocs.io/en/latest/>`__.
 
 .. _example:
 
@@ -144,7 +144,7 @@ However, the error estimate is not accurate anymore as it does not take into acc
 This should not be a problem if your delays change sufficiently slowly in comparison to your step size.
 
 Note that if you want to make use of this, you must provide the maximum delay manually.
-See `this file <https://github.com/neurophysik/jitcdde/blob/master/examples/state_dependent.py>`_ for an example.
+See `this file <https://github.com/neurophysik/jitcdde/blob/master/examples/state_dependent.py>`__ for an example.
 
 Multi-dimensional equations and networks
 ----------------------------------------
@@ -202,7 +202,7 @@ Before you give up or report an issue, please follow the following protocol:
 3. If the integration is not successful, try to locate the point where things go awry. This may be before you actually get an error message. Look for infinite values or not-a-numbers. Reduce the respective parameters that control the frequency of resizing, namely the `max_step` parameter of `step_on_discontinuities`, the `step` parameter of `integrate_blindly`, or the sampling rate of the regular integration.
 4. Increase the number of computed Lyapunov exponents one at a time. Repeat Step 3 as needed. Be aware that once you are in the negative Lyapunov exponents, it may happen that the amplitude of the next exponent is orders of magnitude higher that of the preceding one – thus requiring a much more frequent rescaling to avoid numerical underflows.
 
-As the Lyapunov vectors (separation functions) are quite difficult to interpret, they are not returned as of now (if you need them, please `make a feature request <http://github.com/neurophysik/jitcdde/issues>`_).
+As the Lyapunov vectors (separation functions) are quite difficult to interpret, they are not returned as of now (if you need them, please `make a feature request <https://github.com/neurophysik/jitcdde/issues>`__).
 There also two classes (`jitcdde_transversal_lyap` and `jitcdde_restricted_lyap`) that allows to calculate the largest transversal Lyapunov exponents to the synchronisation manifold and arbitrary hyperplanes, respectively.
 See the `JiTCODE documentation`_ for an example on how to use the former and `the accompanying paper`_ for a mathematical background (and another example).
 
@@ -212,23 +212,23 @@ More Features and Examples
 JiTCDDE has several more features for which there are no extensively documented examples, but that are pretty self-explanatory.
 The following is a list of example scripts that may help you with specific problems:
 
-* `Laminar Chaos <https://github.com/neurophysik/jitcdde/blob/master/examples/laminar_chaos.py>`_ and `State Dependent <https://github.com/neurophysik/jitcdde/blob/master/examples/state_dependent.py>`_ are examples employing **state-dependent delays**.
+* `Laminar Chaos <https://github.com/neurophysik/jitcdde/blob/master/examples/laminar_chaos.py>`__ and `State Dependent <https://github.com/neurophysik/jitcdde/blob/master/examples/state_dependent.py>`__ are examples employing **state-dependent delays**.
 
-* `Mackey–Glass with Jumps <https://github.com/neurophysik/jitcdde/blob/master/examples/mackey_glass_jump.py>`_ shows how to use the `jump` method to introduce discontinuities of the state.
+* `Mackey–Glass with Jumps <https://github.com/neurophysik/jitcdde/blob/master/examples/mackey_glass_jump.py>`__ shows how to use the `jump` method to introduce discontinuities of the state.
 
-* `Simple Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`_ and `Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/neutral.py>`_ show how to implement **neutral DDEs**. The latter additionally shows how to optimise a DDE with several delay terms with the same delay, making it considerably faster.
+* `Simple Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/simple_neutral.py>`__ and `Neutral <https://github.com/neurophysik/jitcdde/blob/master/examples/neutral.py>`__ show how to implement **neutral DDEs**. The latter additionally shows how to optimise a DDE with several delay terms with the same delay, making it considerably faster.
 
-* If you want to have **input or time-dependent parameters**, there are several options depending on the details of your problem, exemplified in `this toy problem <https://github.com/neurophysik/jitcdde/blob/master/examples/mackey_glass_parameter_jump.py>`_:
+* If you want to have **input or time-dependent parameters**, there are several options depending on the details of your problem, exemplified in `this toy problem <https://github.com/neurophysik/jitcdde/blob/master/examples/mackey_glass_parameter_jump.py>`__:
 
-  * If you want a parameter to be a straightforward function of time, you can just implement this symbolically directly in the derivative. For an example, see the “regular implementation” `here <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_.
-  * If you want a parameter to change its value at a small number of time points (jumps), you can use the techniques outlined `here <https://jitcde-common.readthedocs.io/en/latest/#conditionals>`_, i.e., either use `jitcxde_common.conditional` to approximate a step function in time or change a control parameter at the desired time point (and then `adjust_diff`).
-  * For complex time dependencies, you can use `jitcdde_input <https://jitcdde.rtfd.io#input>`_ 
-    `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/data_input.py>`_ demonstrates how to use this.
+  * If you want a parameter to be a straightforward function of time, you can just implement this symbolically directly in the derivative. For an example, see the “regular implementation” `here <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`__.
+  * If you want a parameter to change its value at a small number of time points (jumps), you can use the techniques outlined `here <https://jitcde-common.readthedocs.io/en/latest/#conditionals>`__, i.e., either use `jitcxde_common.conditional` to approximate a step function in time or change a control parameter at the desired time point (and then `adjust_diff`).
+  * For complex time dependencies, you can use `jitcdde_input <https://jitcdde.rtfd.io#input>`__ 
+    `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/data_input.py>`__ demonstrates how to use this.
   * Finally, you can use a callback (see the next point).
 
-* If you want to **call a Python function** within the derivative, use the `callback_functions` argument. `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`_ demonstrates how to use this.
+* If you want to **call a Python function** within the derivative, use the `callback_functions` argument. `This example <https://github.com/neurophysik/jitcdde/blob/master/examples/sunflower_callback.py>`__ demonstrates how to use this.
 
-* If you want to do some sort of **event detection**, the best way is to use `get_state`, and use the features of `CHSPy <https://chspy.readthedocs.io>`_ to determine the time of events as precisely as you need them. As the interpolant has the same error as the integration, you won’t gain a much better event location by integrating again at a finer step size. Particularly note the `solve`, `extrema`, and `truncate` methods of `CubicHermiteSpline`.
+* If you want to do some sort of **event detection**, the best way is to use `get_state`, and use the features of `CHSPy <https://chspy.readthedocs.io>`__ to determine the time of events as precisely as you need them. As the interpolant has the same error as the integration, you won’t gain a much better event location by integrating again at a finer step size. Particularly note the `solve`, `extrema`, and `truncate` methods of `CubicHermiteSpline`.
 
 Command reference
 -----------------
@@ -274,27 +274,27 @@ References
 
 .. _common JiTC*DE documentation: https://jitcde-common.readthedocs.io
 
-.. [ST01] L.F. Shampine, S. Thompson: Solving DDEs in Matlab, Applied Numerical Mathematics 37, pp. 441–458 (2001), `10.1016/S0168-9274(00)00055-6 <http://dx.doi.org/10.1016/S0168-9274(00)00055-6>`_.
+.. [ST01] L.F. Shampine, S. Thompson: Solving DDEs in Matlab, Applied Numerical Mathematics 37, pp. 441–458 (2001), `doi:10.1016/S0168-9274(00)00055-6 <https://doi.org/10.1016/S0168-9274(00)00055-6>`__.
 
-.. [BS89] P. Bogacki, L.F. Shampine: A 3(2) pair of Runge–Kutta formulas, Applied Mathematics Letters 2, pp. 321–325 (1989), `10.1016/0893-9659(89)90079-7 <http://dx.doi.org/10.1016/0893-9659(89)90079-7>`_.
+.. [BS89] P. Bogacki, L.F. Shampine: A 3(2) pair of Runge–Kutta formulas, Applied Mathematics Letters 2, pp. 321–325 (1989), `doi:10.1016/0893-9659(89)90079-7 <https://doi.org/10.1016/0893-9659(89)90079-7>`__.
 
-.. [F82] J.D. Farmer: Chaotic attractors of an infinite-dimensional dynamical system, Physica D 4, pp. 366–393 (1982), `10.1016/0167-2789(82)90042-2 <http://dx.doi.org/10.1016/0167-2789(82)90042-2>`_.
+.. [F82] J.D. Farmer: Chaotic attractors of an infinite-dimensional dynamical system, Physica D 4, pp. 366–393 (1982), `doi:10.1016/0167-2789(82)90042-2 <https://doi.org/10.1016/0167-2789(82)90042-2>`__.
 
-.. [BGGS80]  G. Benettin, L. Galgani, A. Giorgilli, and J.-M. Strelcyn: Lyapunov Characteristic Exponents for smooth dynamical systems and for Hamiltonian systems; A method for computing all of them. Meccanica 15, pp. 9–30 (1980), `10.1007/BF02128236 <http://dx.doi.org/10.1007/BF02128236>`_.
+.. [BGGS80]  G. Benettin, L. Galgani, A. Giorgilli, and J.-M. Strelcyn: Lyapunov Characteristic Exponents for smooth dynamical systems and for Hamiltonian systems; A method for computing all of them. Meccanica 15, pp. 9–30 (1980), `doi:10.1007/BF02128236 <https://doi.org/10.1007/BF02128236>`__.
 
-.. _JiTCODE: http://github.com/neurophysik/jitcode
+.. _JiTCODE: https://github.com/neurophysik/jitcode
 
-.. _JiTCODE documentation: http://jitcode.readthedocs.io
+.. _JiTCODE documentation: https://jitcode.readthedocs.io
 
-.. _SciPy’s ODE: http://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html
+.. _SciPy’s ODE: https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html
 
 .. _SymPy Issue 8997: https://github.com/sympy/sympy/issues/8997
 
 .. _SymEngine: https://github.com/symengine/symengine
 
-.. _SymPy: http://www.sympy.org/
+.. _SymPy: https://www.sympy.org/
 
 .. _SymPy vs. SymEngine: https://jitcde-common.readthedocs.io/#sympy-vs-symengine
 
-.. _the accompanying paper: http://arxiv.org/abs/1711.09886
+.. _the accompanying paper: https://arxiv.org/abs/1711.09886
 
