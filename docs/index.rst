@@ -156,8 +156,8 @@ JiTCDDE is specifically designed to be able to handle large delay differential e
 We give an example for a network on one-dimensional oscillators below.
 As the caveats, tools, and tricks when doing this are the same as for JiTCODE; its documentation may be helpful to you, in particular the sections:
 
-* `Handling very large differential equations <http://jitcode.readthedocs.io/en/latest/#handling-very-large-differential-equations>`_
-* `A more complicated example <http://jitcode.readthedocs.io/en/latest/#module-SW_of_Roesslers>`_ (featuring multi-dimensional oscillators)
+* `Handling very large differential equations <https://jitcde-common.readthedocs.io/en/latest/#networks-or-other-very-large-differential-equations>`__
+* `A more complicated example <https://jitcode.readthedocs.io/en/latest/#module-SW_of_Roesslers>`__ (featuring multi-dimensional oscillators)
 
 Example: Kuromato oscillators with distributed delays
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

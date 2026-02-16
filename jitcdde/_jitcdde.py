@@ -429,8 +429,8 @@ class jitcdde(jitcxde):
 			omp = False,
 		):
 		"""
-		translates the derivative to C code using SymEngine’s `C-code printer <https://github.com/symengine/symengine/pull/1054>`_.
-		For detailed information many of the arguments and other ways to tweak the compilation, read `these notes <jitcde-common.readthedocs.io>`_.
+		translates the derivative to C code using SymEngine’s `C-code printer <https://github.com/symengine/symengine/pull/1054>`__.
+		For detailed information many of the arguments and other ways to tweak the compilation, read `these notes <https://jitcde-common.readthedocs.io>`__.
 
 		Parameters
 		----------
@@ -438,11 +438,11 @@ class jitcdde(jitcxde):
 			Whether the derivative should be `simplified <http://docs.sympy.org/dev/modules/simplify/simplify.html>`_ (with `ratio=1.0`) before translating to C code. The main reason why you could want to disable this is if your derivative is already optimised and so large that simplifying takes a considerable amount of time. If `None`, this will be automatically disabled for `n>10`.
 		
 		do_cse : boolean
-			Whether SymPy’s `common-subexpression detection <http://docs.sympy.org/dev/modules/rewriting.html#module-sympy.simplify.cse_main>`_ should be applied before translating to C code.
+			Whether SymPy’s `common-subexpression detection <https://docs.sympy.org/dev/modules/rewriting.html#common-subexpression-detection-and-collection>`__ should be applied before translating to C code.
 			This is worthwhile if your DDE contains the same delay more than once. Otherwise it is almost always better to let the compiler do this (unless you want to set the compiler optimisation to `-O2` or lower). As this requires all entries of `f` at once, it may void advantages gained from using generator functions as an input. Also, this feature uses SymPy and not SymEngine.
 		
 		chunk_size : integer
-			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. See `Handling very large differential equations <http://jitcde-common.readthedocs.io/#handling-very-large-differential-equations>`_ on why this is useful and how to best choose this value.
+			If the number of instructions in the final C code exceeds this number, it will be split into chunks of this size. See `Handling very large differential equations <https://jitcde-common.readthedocs.io/en/latest/#networks-or-other-very-large-differential-equations>`__ on why this is useful and how to best choose this value.
 			If smaller than 1, no chunking will happen.
 		
 		extra_compile_args : iterable of strings
