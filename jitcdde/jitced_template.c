@@ -1167,7 +1167,10 @@ static PyObject * apply_jump(dde_integrator * const self, PyObject * args)
 				(double *) PyArray_GETPTR1(maxima,i)
 			);
 	
-	return PyTuple_Pack( 2, (PyObject *) minima, (PyObject *) maxima );
+	PyObject * result = PyTuple_Pack( 2, (PyObject *) minima, (PyObject *) maxima );
+	Py_DECREF(minima);
+	Py_DECREF(maxima);
+	return result;
 }
 
 // ======================================================
