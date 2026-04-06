@@ -1050,12 +1050,12 @@ def _jac(f, helpers, delay, n, simplify=True):
 		]
 	
 	def line(f_entry):
-		if simplify:
-			f_entry = f_entry.simplify()
 		for j in range(n):
 			entry = f_entry.diff(y(j,t-delay))
 			for helper in dependent_helpers[j]:
 				entry += f_entry.diff(helper[0]) * helper[1]
+			if simplify:
+				entry = entry.simplify()
 			yield entry
 	
 	for f_entry in f():
