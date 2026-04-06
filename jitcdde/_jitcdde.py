@@ -536,7 +536,7 @@ class jitcdde(jitcxde):
 			if helper_i:
 				arguments.append(("f_helper","double", helper_i))
 			if anchor_i:
-				arguments.append(("f_anchor_helper","anchor", anchor_i))
+				arguments.append(("f_anchor_helper","anchor *", anchor_i))
 			
 			self.render_and_write_code(
 				converted_helpers,

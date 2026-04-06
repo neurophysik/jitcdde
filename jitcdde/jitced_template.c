@@ -190,7 +190,7 @@ static PyObject * get_t(dde_integrator const * const self)
 }
 
 {% if anchor_mem_length: %}
-anchor get_past_anchors(dde_integrator * const self, double const t)
+anchor * get_past_anchors(dde_integrator * const self, double const t)
 {
 	assert (self->anchor_mem_cursor <= &( self->anchor_mem[{{anchor_mem_length}}-1] ));
 	anchor ** this_cursor;
@@ -213,7 +213,7 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 		self->past_within_step = fmax(self->past_within_step,t-self->current->time);
 	
 	*this_cursor = ca;
-	return *ca;
+	return ca;
 }
 {% endif %}
 
@@ -221,48 +221,48 @@ anchor get_past_anchors(dde_integrator * const self, double const t)
 double get_past_value(
 	double const t,
 	unsigned int const index,
-	anchor const v)
+	anchor const * const v)
 {
-	anchor const w = *(v.next);
-	double const q = w.time-v.time;
-	double const x = (t - v.time)/q;
-	double const a = v.state[index];
-	double const b = v.diff[index] * q;
-	double const c = w.state[index];
-	double const d = w.diff[index] * q;
-	
+	anchor const * const w = v->next;
+	double const q = w->time-v->time;
+	double const x = (t - v->time)/q;
+	double const a = v->state[index];
+	double const b = v->diff[index] * q;
+	double const c = w->state[index];
+	double const d = w->diff[index] * q;
+
 	return (1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x*x) + c;
 }
 
 double get_past_diff(
 	double const t,
 	unsigned int const index,
-	anchor const v)
+	anchor const * const v)
 {
-	anchor const w = *(v.next);
-	double const q = w.time-v.time;
-	double const x = (t - v.time)/q;
-	double const a = v.state[index];
-	double const b = v.diff[index] * q;
-	double const c = w.state[index];
-	double const d = w.diff[index] * q;
-	
+	anchor const * const w = v->next;
+	double const q = w->time-v->time;
+	double const x = (t - v->time)/q;
+	double const a = v->state[index];
+	double const b = v->diff[index] * q;
+	double const c = w->state[index];
+	double const d = w->diff[index] * q;
+
 	return ( (1-x)*(b-x*3*(2*(a-c)+b+d)) + d*x ) /q;
 }
 
 void extrema(
 	unsigned int const index,
-	anchor const v,
+	anchor const * const v,
 	double * const minimum,
 	double * const maximum)
 {
-	anchor const w = *(v.next);
-	double const q = w.time-v.time;
-	double const a = v.state[index];
-	double const b = v.diff[index] * q;
-	double const c = w.state[index];
-	double const d = w.diff[index] * q;
-	
+	anchor const * const w = v->next;
+	double const q = w->time-v->time;
+	double const a = v->state[index];
+	double const b = v->diff[index] * q;
+	double const c = w->state[index];
+	double const d = w->diff[index] * q;
+
 	*minimum = fmin(a,c);
 	*maximum = fmax(a,c);
 	
@@ -298,21 +298,21 @@ static PyObject * get_recent_state(dde_integrator const * const self, PyObject *
 	
 	npy_intp dims[1] = { {{n}} };
 	PyArrayObject * result = (PyArrayObject *)PyArray_SimpleNew(1, dims, TYPE_INDEX);
-	
-	anchor const w = *(self->last_anchor);
-	anchor const v = *(w.previous);
-	double const q = w.time-v.time;
-	double const x = (t - v.time)/q;
-	
+
+	anchor const * const w = self->last_anchor;
+	anchor const * const v = w->previous;
+	double const q = w->time-v->time;
+	double const x = (t - v->time)/q;
+
 	#pragma omp parallel for schedule(dynamic, {{chunk_size}})
 	for (int index=0; index<{{n}}; index++)
 	{
-		double const a = v.state[index];
-		double const b = v.diff[index] * q;
-		double const c = w.state[index];
-		double const d = w.diff[index] * q;
-	
-		* (double *) PyArray_GETPTR1(result, index) = 
+		double const a = v->state[index];
+		double const b = v->diff[index] * q;
+		double const c = w->state[index];
+		double const d = w->diff[index] * q;
+
+		* (double *) PyArray_GETPTR1(result, index) =
 				(1-x) * ( (1-x) * (b*x + (a-c)*(2*x+1)) - d*x*x) + c;
 	}
 	
@@ -381,8 +381,8 @@ static inline double perform_callback_{{function}}(
 
 # define set_dy(i, value) (dY[i] = value)
 # define current_y(i) (y[i])
-# define past_y(t, i, anchor) (get_past_value(t, i, anchor))
-# define past_dy(t, i, anchor) (get_past_diff (t, i, anchor))
+# define past_y(t, i, anchor) (get_past_value(t, i, (anchor)))
+# define past_dy(t, i, anchor) (get_past_diff (t, i, (anchor)))
 # define anchors(t) (get_past_anchors(self, t))
 
 # define get_f_helper(i) ((f_helper[i]))
@@ -409,7 +409,7 @@ void eval_f(
 	double f_helper[{{number_of_helpers}}];
 	{% endif %}
 	{% if number_of_anchor_helpers>0: %}
-	anchor f_anchor_helper[{{number_of_anchor_helpers}}];
+	anchor * f_anchor_helper[{{number_of_anchor_helpers}}];
 	{% endif %}
 	
 	{% if has_any_helpers>0: %}
@@ -737,14 +737,14 @@ void calculate_sp_matrices(dde_integrator const * const self, double const delay
 // Functions for normal Lyapunov exponents
 {% if n_basic != n: %}
 
-double norm_sq_interval(anchor const v, unsigned int const begin)
+double norm_sq_interval(anchor const * const v, unsigned int const begin)
 {
-	anchor const w = *(v.next);
+	anchor const * const w = v->next;
 	double const * const vector[4] = {
-				&(v.state[begin]), // a
-				&(v.diff [begin]), // b/q
-				&(w.state[begin]), // c
-				&(w.diff [begin])  // d/q
+				&(v->state[begin]), // a
+				&(v->diff [begin]), // b/q
+				&(w->state[begin]), // c
+				&(w->diff [begin])  // d/q
 			};
 	
 	double sum = 0;
@@ -752,8 +752,8 @@ double norm_sq_interval(anchor const v, unsigned int const begin)
 	for (unsigned int i=0; i<4; i++)
 		for (unsigned int j=0; j<4; j++)
 			for (unsigned int index=0; index<{{n_basic}}; index++)
-				sum += v.sp_matrix[i][j] * vector[i][index] * vector[j][index];
-	
+				sum += v->sp_matrix[i][j] * vector[i][index] * vector[j][index];
+
 	return sum;
 }
 
@@ -765,29 +765,29 @@ double norm_sq(dde_integrator const * const self, unsigned int const begin)
 	for (anchor * ca = self->first_anchor; ca->next; ca = ca->next)
 		#pragma omp task firstprivate(ca)
 		#pragma omp atomic update
-		sum += norm_sq_interval(*ca, begin);
-	
+		sum += norm_sq_interval(ca, begin);
+
 	return sum;
 }
 
 double scalar_product_interval(
-	anchor const v,
+	anchor const * const v,
 	unsigned int const begin_1,
 	unsigned int const begin_2)
 {
-	anchor const w = *(v.next);
+	anchor const * const w = v->next;
 	double const * const vector_1[4] = {
-				&(v.state[begin_1]), // a_1
-				&(v.diff [begin_1]), // b_1/q
-				&(w.state[begin_1]), // c_1
-				&(w.diff [begin_1])  // d_1/q
+				&(v->state[begin_1]), // a_1
+				&(v->diff [begin_1]), // b_1/q
+				&(w->state[begin_1]), // c_1
+				&(w->diff [begin_1])  // d_1/q
 			};
 	
 	double const * const vector_2[4] = {
-				&(v.state[begin_2]), // a_2
-				&(v.diff [begin_2]), // b_2/q
-				&(w.state[begin_2]), // c_2
-				&(w.diff [begin_2])  // d_2/q
+				&(v->state[begin_2]), // a_2
+				&(v->diff [begin_2]), // b_2/q
+				&(w->state[begin_2]), // c_2
+				&(w->diff [begin_2])  // d_2/q
 			};
 	
 	double sum = 0;
@@ -795,8 +795,8 @@ double scalar_product_interval(
 	for (unsigned int i=0; i<4; i++)
 		for (unsigned int j=0; j<4; j++)
 			for (unsigned int index=0; index<{{n_basic}}; index++)
-				sum += v.sp_matrix[i][j] * vector_1[i][index] * vector_2[j][index];
-	
+				sum += v->sp_matrix[i][j] * vector_1[i][index] * vector_2[j][index];
+
 	return sum;
 }
 
@@ -811,8 +811,8 @@ double scalar_product(
 	for (anchor * ca = self->first_anchor; ca->next; ca = ca->next)
 		#pragma omp task firstprivate(ca)
 		#pragma omp atomic update
-		sum += scalar_product_interval(*ca, begin_1, begin_2);
-	
+		sum += scalar_product_interval(ca, begin_1, begin_2);
+
 	return sum;
 }
 
@@ -1012,14 +1012,14 @@ unsigned int const tangent_indices[ {{tangent_indices|length}} ] = {
 	{% endfor %}
 };
 
-double norm_sq_interval_tangent(anchor const v)
+double norm_sq_interval_tangent(anchor const * const v)
 {
-	anchor const w = *(v.next);
+	anchor const * const w = v->next;
 	double const * const vector[4] = {
-				v.state, // a
-				v.diff , // b/q
-				w.state, // c
-				w.diff   // d/q
+				v->state, // a
+				v->diff , // b/q
+				w->state, // c
+				w->diff   // d/q
 			};
 	
 	double sum = 0;
@@ -1029,7 +1029,7 @@ double norm_sq_interval_tangent(anchor const v)
 			for (unsigned int ti_index=0; ti_index<{{tangent_indices|length}}; ti_index++)
 			{
 				unsigned int const index = tangent_indices[ti_index];
-				sum += v.sp_matrix[i][j] * vector[i][index] * vector[j][index];
+				sum += v->sp_matrix[i][j] * vector[i][index] * vector[j][index];
 			}
 	
 	return sum;
@@ -1043,8 +1043,8 @@ double norm_sq_tangent(dde_integrator const * const self)
 	for (anchor * ca = self->first_anchor; ca->next; ca = ca->next)
 		#pragma omp task firstprivate(ca)
 		#pragma omp atomic update
-		sum += norm_sq_interval_tangent(*ca);
-	
+		sum += norm_sq_interval_tangent(ca);
+
 	return sum;
 }
 
@@ -1093,9 +1093,9 @@ void truncate_past(dde_integrator * const self, double time)
 	
 	while (self->last_anchor->previous->time >= time)
 		remove_last_anchor(self);
-	
-	anchor left_anchor = *(self->last_anchor->previous);
-	
+
+	anchor * left_anchor = self->last_anchor->previous;
+
 	anchor * new = safe_malloc(sizeof(anchor));
 	new->time = time;
 	for (int i=0; i<{{n}}; i++)
@@ -1139,11 +1139,11 @@ static PyObject * apply_jump(dde_integrator * const self, PyObject * args)
 	
 	anchor * new = safe_malloc(sizeof(anchor));
 	new->time = time+width;
-	
-	anchor left_anchor = *(self->last_anchor->previous);
-	while (left_anchor.time >= new->time)
-		left_anchor = *(left_anchor.previous);
-	
+
+	anchor * left_anchor = self->last_anchor->previous;
+	while (left_anchor->time >= new->time)
+		left_anchor = left_anchor->previous;
+
 	for (unsigned int i=0; i<{{n}}; i++)
 	{
 		double value = get_past_value(new->time,i,left_anchor);
@@ -1162,7 +1162,7 @@ static PyObject * apply_jump(dde_integrator * const self, PyObject * args)
 	for (unsigned int i=0; i<{{n}}; i++)
 		extrema(
 				i,
-				*(self->last_anchor->previous),
+				self->last_anchor->previous,
 				(double *) PyArray_GETPTR1(minima,i),
 				(double *) PyArray_GETPTR1(maxima,i)
 			);
