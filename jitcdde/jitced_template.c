@@ -337,15 +337,17 @@ static PyObject * get_full_state(dde_integrator const * const self)
 {
 	PyObject * py_past = PyList_New(0);
 	for (anchor * ca = self->first_anchor; ca; ca = ca->next)
-		PyList_Append(
-			py_past,
-			PyTuple_Pack(
-					3,
-					PyFloat_FromDouble(ca->time),
-					n_dim_read_only_array_from_data(ca->state),
-					n_dim_read_only_array_from_data(ca->diff )
-				)
-			);
+	{
+		PyObject * t   = PyFloat_FromDouble(ca->time);
+		PyObject * st  = n_dim_read_only_array_from_data(ca->state);
+		PyObject * df  = n_dim_read_only_array_from_data(ca->diff);
+		PyObject * tup = PyTuple_Pack(3, t, st, df);
+		Py_DECREF(t);
+		Py_DECREF(st);
+		Py_DECREF(df);
+		PyList_Append(py_past, tup);
+		Py_DECREF(tup);
+	}
 	return py_past;
 }
 
@@ -1165,7 +1167,10 @@ static PyObject * apply_jump(dde_integrator * const self, PyObject * args)
 				(double *) PyArray_GETPTR1(maxima,i)
 			);
 	
-	return PyTuple_Pack( 2, (PyObject *) minima, (PyObject *) maxima );
+	PyObject * result = PyTuple_Pack( 2, (PyObject *) minima, (PyObject *) maxima );
+	Py_DECREF(minima);
+	Py_DECREF(maxima);
+	return result;
 }
 
 // ======================================================
