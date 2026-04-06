@@ -1043,18 +1043,19 @@ class jitcdde(jitcxde):
 		else:
 			return self.DDE.apply_jump( amplitude, time-width, width )
 
-def _jac(f, helpers, delay, n):
+def _jac(f, helpers, delay, n, simplify=True):
 	dependent_helpers = [
 			find_dependent_helpers(helpers,y(i,t-delay))
 			for i in range(n)
 		]
 	
 	def line(f_entry):
-		f_entry = f_entry.simplify()
 		for j in range(n):
 			entry = f_entry.diff(y(j,t-delay))
 			for helper in dependent_helpers[j]:
 				entry += f_entry.diff(helper[0]) * helper[1]
+			if simplify:
+				entry = entry.simplify()
 			yield entry
 	
 	for f_entry in f():
@@ -1067,7 +1068,7 @@ def tangent_vector_f(f, helpers, n, n_lyap, delays, zero_padding=0, simplify=Tru
 			yield from f()
 			
 			for i in range(n_lyap):
-				jacs = [_jac(f, helpers, delay, n) for delay in delays]
+				jacs = [_jac(f, helpers, delay, n, simplify=simplify) for delay in delays]
 				
 				for _ in range(n):
 					expression = 0
@@ -1391,7 +1392,7 @@ class jitcdde_transversal_lyap(jitcdde,GroupHandler):
 		
 		def tangent_vector_f():
 			jacs = [
-					_jac( f_basic, helpers, delay, self.n )
+					_jac( f_basic, helpers, delay, self.n, simplify=simplify )
 					for delay in delays
 				]
 			
