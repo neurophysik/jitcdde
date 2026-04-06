@@ -99,3 +99,6 @@ combine-as-imports = true
 known-local-folder = [ "jitcdde" ]
 known-first-party = [ "chspy", "jitcxde_common" ]
 lines-after-imports = 2
+
+[tool.typos.default.extend-words]
+writeable = "writeable"
