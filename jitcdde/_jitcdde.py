@@ -726,22 +726,22 @@ class jitcdde(jitcxde):
 		self.q = 3.
 		self.last_pws = False
 		self.count = 0
-		
-		if pws_fuzzy_increase:
-			self.do_increase = lambda p: self.rng.random() < p
-		else:
-			self.increase_credit = 0.0
-			def do_increase(p):
-				self.increase_credit += p
-				if self.increase_credit >= 0.9:
-					self.increase_credit = 0.0
-					return True
-				else:
-					return False
-			self.do_increase = do_increase
-		
+		self.increase_credit = 0.0
+		self.pws_fuzzy_increase = pws_fuzzy_increase
+
 		self.integration_parameters_set = True
-	
+
+	def do_increase(self,p):
+		if self.pws_fuzzy_increase:
+			return self.rng.random() < p
+
+		self.increase_credit += p
+		if self.increase_credit >= 0.9:
+			self.increase_credit = 0.0
+			return True
+		else:
+			return False
+
 	def _control_for_min_step(self):
 		if self.dt < self.min_step:
 			message = (["",
